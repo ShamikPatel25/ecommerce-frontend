@@ -10,8 +10,9 @@ export default function Sidebar() {
 
   const menuItems = [
     { name: 'Dashboard', href: '/dashboard', icon: '📊' },
+    { name: 'Orders', href: '/orders', icon: '🛒' },
     { name: 'Products', href: '/products', icon: '📦' },
-    { name: 'Catalogs', href: '/catalogs', icon: '📚' }, // NEW
+    { name: 'Catalogs', href: '/catalogs', icon: '📚' },
     { name: 'Stores', href: '/stores', icon: '🏪' },
     { name: 'Categories', href: '/categories', icon: '📁' },
     { name: 'Attributes', href: '/attributes', icon: '🏷️' },
@@ -50,11 +51,10 @@ export default function Sidebar() {
             <Link
               key={item.href}
               href={item.href}
-              className={`flex items-center gap-3 px-4 py-3 rounded-lg transition ${
-                isActive
+              className={`flex items-center gap-3 px-4 py-3 rounded-lg transition ${isActive
                   ? 'bg-orange-500 text-white'
                   : 'text-gray-300 hover:bg-gray-800 hover:text-white'
-              }`}
+                }`}
             >
               <span className="text-lg">{item.icon}</span>
               <span className="font-medium">{item.name}</span>

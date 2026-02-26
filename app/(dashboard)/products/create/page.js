@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
 import { productAPI, categoryAPI, attributeAPI } from '@/lib/api';
@@ -28,22 +28,22 @@ export default function CreateProductPage() {
     is_active: true,
   });
 
-
-  useEffect(() => {
-    if (!user) { router.push('/login'); return; }
-    fetchCategories();
-  }, [user]);
-
-  const fetchCategories = async () => {
+  const fetchCategories = useCallback(async () => {
     try {
       const res = await categoryAPI.list();
       setCategories(Array.isArray(res.data) ? res.data : res.data?.results || []);
-    } catch (error) {
+    } catch {
       toast.error('Failed to load categories');
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+
+  useEffect(() => {
+    if (!user) { router.push('/login'); return; }
+    fetchCategories();
+  }, [user, router, fetchCategories]);
 
   const fetchAttributes = async (categoryId) => {
     try {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
 import { attributeAPI, categoryAPI } from '@/lib/api';
@@ -17,12 +17,7 @@ export default function AttributesPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
 
-  useEffect(() => {
-    if (!user) { router.push('/login'); return; }
-    fetchData();
-  }, [user]);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       const [attrRes, catRes] = await Promise.all([attributeAPI.list(), categoryAPI.list()]);
       const attrData = attrRes.data;
@@ -35,7 +30,12 @@ export default function AttributesPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (!user) { router.push('/login'); return; }
+    fetchData();
+  }, [user, router, fetchData]);
 
   const handleDeleteAttribute = async (id) => {
     const attr = attributes.find(a => a.id === id);

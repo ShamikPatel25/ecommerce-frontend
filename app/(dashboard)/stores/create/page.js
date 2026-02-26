@@ -20,7 +20,7 @@ export default function CreateStorePage() {
 
     useEffect(() => {
         if (!user) router.push('/login');
-    }, [user]);
+    }, [user, router]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();

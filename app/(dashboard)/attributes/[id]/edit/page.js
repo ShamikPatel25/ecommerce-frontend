@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
 import { attributeAPI, categoryAPI } from '@/lib/api';
@@ -27,12 +27,7 @@ export default function EditAttributePage() {
     // Confirmation dialog state
     const [confirmDialog, setConfirmDialog] = useState(null); // { id, name }
 
-    useEffect(() => {
-        if (!user) { router.push('/login'); return; }
-        fetchData();
-    }, [user, attributeId]);
-
-    const fetchData = async () => {
+    const fetchData = useCallback(async () => {
         try {
             const [attrRes, catRes] = await Promise.all([
                 attributeAPI.get(attributeId),
@@ -49,7 +44,12 @@ export default function EditAttributePage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [attributeId, router]);
+
+    useEffect(() => {
+        if (!user) { router.push('/login'); return; }
+        fetchData();
+    }, [user, attributeId, router, fetchData]);
 
     // Step 1: click × → show confirmation dialog
     const requestDeleteValue = (id, name) => {

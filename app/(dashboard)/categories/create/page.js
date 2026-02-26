@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
 import { categoryAPI } from '@/lib/api';
@@ -14,12 +14,7 @@ export default function CreateCategoryPage() {
     const [submitting, setSubmitting] = useState(false);
     const [formData, setFormData] = useState({ name: '', slug: '', parent: '' });
 
-    useEffect(() => {
-        if (!user) { router.push('/login'); return; }
-        fetchCategories();
-    }, [user]);
-
-    const fetchCategories = async () => {
+    const fetchCategories = useCallback(async () => {
         try {
             const res = await categoryAPI.list();
             const data = res.data;
@@ -27,7 +22,12 @@ export default function CreateCategoryPage() {
         } catch {
             toast.error('Failed to load categories');
         }
-    };
+    }, []);
+
+    useEffect(() => {
+        if (!user) { router.push('/login'); return; }
+        fetchCategories();
+    }, [user, router, fetchCategories]);
 
     const generateSlug = (name) =>
         name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');

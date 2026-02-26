@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
 import { productAPI, categoryAPI } from '@/lib/api';
@@ -18,12 +19,7 @@ export default function ProductsPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
 
-  useEffect(() => {
-    if (!user) { router.push('/login'); return; }
-    fetchData();
-  }, [user]);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       const [prodRes, catRes] = await Promise.all([
         productAPI.list(),
@@ -32,12 +28,17 @@ export default function ProductsPage() {
 
       setProducts(Array.isArray(prodRes.data) ? prodRes.data : prodRes.data?.results || []);
       setCategories(Array.isArray(catRes.data) ? catRes.data : catRes.data?.results || []);
-    } catch (error) {
+    } catch {
       toast.error('Failed to load products');
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (!user) { router.push('/login'); return; }
+    fetchData();
+  }, [user, router, fetchData]);
 
   const handleDelete = async (id) => {
     if (!confirm('Delete this product?')) return;
@@ -66,7 +67,7 @@ export default function ProductsPage() {
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden">
             {row.image ? (
-              <img src={row.image} alt={row.name} className="w-full h-full object-cover" />
+              <Image src={row.image} alt={row.name} fill className="object-cover" />
             ) : (
               <span className="text-xl">{row.product_type === 'catalog' ? '📚' : '📦'}</span>
             )}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
 import { productAPI } from '@/lib/api';
@@ -17,26 +17,15 @@ export default function CatalogsPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
 
-  useEffect(() => {
-    if (!user) { router.push('/login'); return; }
-    fetchCatalogs();
-  }, [user]);
-
-  const fetchCatalogs = async () => {
+  const fetchCatalogs = useCallback(async () => {
     try {
-      // Fetch all products
       const response = await productAPI.list();
       const products = Array.isArray(response.data) ? response.data : response.data?.results || [];
-      
-      // Get all catalog products
       const catalogProducts = products.filter(p => p.product_type === 'catalog');
-      
-      // Fetch variants for each catalog product
       const allVariants = [];
       for (const product of catalogProducts) {
         const productDetail = await productAPI.get(product.id);
         const variants = productDetail.data?.variants || [];
-        
         variants.forEach(variant => {
           allVariants.push({
             ...variant,
@@ -45,7 +34,6 @@ export default function CatalogsPage() {
           });
         });
       }
-      
       setCatalogs(allVariants);
     } catch (error) {
       console.error('Fetch catalogs error:', error);
@@ -53,7 +41,12 @@ export default function CatalogsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (!user) { router.push('/login'); return; }
+    fetchCatalogs();
+  }, [user, router, fetchCatalogs]);
 
   const filteredCatalogs = catalogs.filter(c =>
     c.variant_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -104,7 +97,7 @@ export default function CatalogsPage() {
     {
       header: '',
       accessor: 'actions',
-      cell: (row) => (
+      cell: () => (
         <button className="p-2 hover:bg-gray-100 rounded-lg transition">
           <svg className="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
             <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />

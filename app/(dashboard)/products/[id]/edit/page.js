@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
 import { productAPI, categoryAPI } from '@/lib/api';
+import MediaUploader from '@/components/MediaUploader';
 import { toast } from 'sonner';
 import Sidebar from '@/components/Sidebar';
 
@@ -37,17 +38,13 @@ export default function EditProductPage() {
   const [singleCatalogMode, setSingleCatalogMode] = useState(true);
   const [selections, setSelections] = useState({});
   const [catalogs, setCatalogs] = useState([]);
+  const [media, setMedia] = useState([]);
 
   // Staged variant deletion
   const [pendingVariantDeletes, setPendingVariantDeletes] = useState(new Set());
   const [confirmVariantDialog, setConfirmVariantDialog] = useState(null); // { id, label }
 
-  useEffect(() => {
-    if (!user) { router.push('/login'); return; }
-    fetchData();
-  }, [user, productId]);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       const [productRes, catRes] = await Promise.all([
         productAPI.get(productId),
@@ -78,18 +75,24 @@ export default function EditProductPage() {
       const attrs = p.selected_attributes || [];
       setAttributes(attrs);
       setCatalogs(p.variants || []);
+      setMedia(p.media || []);
 
       const initialSelections = {};
       attrs.forEach(attr => { initialSelections[attr.attribute] = []; });
       setSelections(initialSelections);
 
-    } catch (error) {
+    } catch {
       toast.error('Failed to load product');
       router.push('/products');
     } finally {
       setLoading(false);
     }
-  };
+  }, [productId, router]);
+
+  useEffect(() => {
+    if (!user) { router.push('/login'); return; }
+    fetchData();
+  }, [user, productId, router, fetchData]);
 
   // Save basic product info + fire all staged variant deletes
   const handleSave = async (e) => {
@@ -642,6 +645,13 @@ export default function EditProductPage() {
               </div>
             </>
           )}
+
+          {/* ── MEDIA UPLOAD ── */}
+          <MediaUploader
+            productId={productId}
+            initialMedia={media}
+            onMediaChange={setMedia}
+          />
 
           {/* ── STICKY BOTTOM ACTION BAR ── */}
           <div className="fixed bottom-0 left-64 right-0 z-50 bg-white border-t border-gray-200 px-8 py-4 flex justify-end gap-3 shadow-lg">

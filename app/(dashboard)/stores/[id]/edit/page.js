@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
 import { storeAPI } from '@/lib/api';
@@ -23,12 +23,7 @@ export default function EditStorePage() {
         is_active: true,
     });
 
-    useEffect(() => {
-        if (!user) { router.push('/login'); return; }
-        fetchStore();
-    }, [user, storeId]);
-
-    const fetchStore = async () => {
+    const fetchStore = useCallback(async () => {
         try {
             const res = await storeAPI.get(storeId);
             const s = res.data;
@@ -45,7 +40,12 @@ export default function EditStorePage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [storeId, router]);
+
+    useEffect(() => {
+        if (!user) { router.push('/login'); return; }
+        fetchStore();
+    }, [user, storeId, router, fetchStore]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();

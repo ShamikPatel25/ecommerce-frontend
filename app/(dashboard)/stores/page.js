@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { storeAPI } from '@/lib/api';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
@@ -15,7 +15,7 @@ export default function StoresPage() {
   const [stores, setStores] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
-  const [editStore, setEditStore] = useState(null);
+  const [editStore] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [formData, setFormData] = useState({
     name: '',
@@ -25,12 +25,7 @@ export default function StoresPage() {
   });
   const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => {
-    if (!user) { router.push('/login'); return; }
-    fetchStores();
-  }, [user]);
-
-  const fetchStores = async () => {
+  const fetchStores = useCallback(async () => {
     try {
       const response = await storeAPI.list();
       const data = response.data;
@@ -38,25 +33,18 @@ export default function StoresPage() {
       else if (data?.results) setStores(data.results);
       else if (typeof data === 'object') setStores([data]);
       else setStores([]);
-    } catch (error) {
+    } catch {
       toast.error('Failed to fetch stores');
       setStores([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const handleCreate = () => {
-    setEditStore(null);
-    setFormData({ name: '', subdomain: '', description: '', currency: 'USD' });
-    setShowModal(true);
-  };
-
-  const handleEdit = (store) => {
-    setEditStore(store);
-    setFormData({ name: store.name, subdomain: store.subdomain, description: store.description || '', currency: store.currency });
-    setShowModal(true);
-  };
+  useEffect(() => {
+    if (!user) { router.push('/login'); return; }
+    fetchStores();
+  }, [user, router, fetchStores]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

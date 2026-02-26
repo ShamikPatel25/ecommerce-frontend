@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
 import { categoryAPI } from '@/lib/api';
@@ -18,12 +18,7 @@ export default function EditCategoryPage() {
     const [saving, setSaving] = useState(false);
     const [formData, setFormData] = useState({ name: '', slug: '', parent: '' });
 
-    useEffect(() => {
-        if (!user) { router.push('/login'); return; }
-        fetchData();
-    }, [user, categoryId]);
-
-    const fetchData = async () => {
+    const fetchData = useCallback(async () => {
         try {
             const [catRes, allRes] = await Promise.all([
                 categoryAPI.get(categoryId),
@@ -43,7 +38,12 @@ export default function EditCategoryPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [categoryId, router]);
+
+    useEffect(() => {
+        if (!user) { router.push('/login'); return; }
+        fetchData();
+    }, [user, categoryId, router, fetchData]);
 
     const generateSlug = (name) =>
         name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
