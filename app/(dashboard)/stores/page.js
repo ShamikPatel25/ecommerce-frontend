@@ -1,29 +1,26 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { storeAPI } from '@/lib/api';
 import { toast } from 'sonner';
-import { useRouter } from 'next/navigation';
-import { useAuthStore } from '@/store/authStore';
-import Sidebar from '@/components/Sidebar';
-import DataTable from '@/components/DataTable';
-import SearchBar from '@/components/SearchBar';
+import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
+import { Plus, Search, Filter, ChevronLeft, ChevronRight, MoreHorizontal, Trash2, Eye, EyeOff } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from '@/components/ui/dropdown-menu';
 
 export default function StoresPage() {
   const router = useRouter();
-  const user = useAuthStore((state) => state.user);
   const [stores, setStores] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showModal, setShowModal] = useState(false);
-  const [editStore] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [formData, setFormData] = useState({
-    name: '',
-    subdomain: '',
-    description: '',
-    currency: 'USD',
-  });
-  const [submitting, setSubmitting] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [deleteModal, setDeleteModal] = useState({ open: false, store: null });
+  const itemsPerPage = 10;
 
   const fetchStores = useCallback(async () => {
     try {
@@ -42,38 +39,30 @@ export default function StoresPage() {
   }, []);
 
   useEffect(() => {
-    if (!user) { router.push('/login'); return; }
     fetchStores();
-  }, [user, router, fetchStores]);
+  }, [fetchStores]);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setSubmitting(true);
+  const handleDelete = async () => {
+    if (!deleteModal.store) return;
     try {
-      if (editStore) {
-        await storeAPI.update(editStore.id, formData);
-        toast.success('Store updated!');
-      } else {
-        await storeAPI.create(formData);
-        toast.success('Store created!');
-      }
-      setShowModal(false);
+      await storeAPI.delete(deleteModal.store.id);
+      toast.success('Store deleted!');
+      setDeleteModal({ open: false, store: null });
       fetchStores();
-    } catch (error) {
-      toast.error(error.response?.data?.subdomain?.[0] || 'Something went wrong');
-    } finally {
-      setSubmitting(false);
+    } catch {
+      toast.error('Failed to delete store');
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!confirm('Delete this store?')) return;
+  const handleToggleActive = async (store) => {
     try {
-      await storeAPI.delete(id);
-      toast.success('Store deleted!');
+      await storeAPI.patch(store.id, { is_active: !store.is_active });
+      toast.success(store.is_active ? 'Store deactivated' : 'Store activated');
       fetchStores();
-    } catch {
-      toast.error('Failed to delete');
+    } catch (err) {
+      const detail = err.response?.data;
+      const msg = typeof detail === 'string' ? detail : detail?.detail || JSON.stringify(detail) || 'Failed to update store status';
+      toast.error(msg);
     }
   };
 
@@ -82,128 +71,225 @@ export default function StoresPage() {
     s.subdomain?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const columns = [
-    {
-      header: 'STORE',
-      accessor: 'name',
-      sortable: true,
-      cell: (row) => (
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center text-lg">🏪</div>
-          <div>
-            <p className="font-semibold text-gray-900">{row.name}</p>
-            <p className="text-xs text-blue-600">{row.subdomain}.myplatform.com</p>
-          </div>
-        </div>
-      ),
-    },
-    {
-      header: 'DESCRIPTION',
-      accessor: 'description',
-      cell: (row) => (
-        <span className="text-gray-500 text-sm">{row.description || '—'}</span>
-      ),
-    },
-    {
-      header: 'CURRENCY',
-      accessor: 'currency',
-      cell: (row) => (
-        <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs font-mono font-semibold">{row.currency}</span>
-      ),
-    },
-    {
-      header: 'STATUS',
-      accessor: 'is_active',
-      cell: (row) => (
-        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${row.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-          {row.is_active ? 'Active' : 'Inactive'}
-        </span>
-      ),
-    },
-    {
-      header: '',
-      accessor: 'actions',
-      cell: (row) => (
-        <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
-          <button onClick={() => handleDelete(row.id)} className="px-3 py-1.5 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 text-sm">🗑️</button>
-        </div>
-      ),
-    },
-  ];
+  // Pagination
+  const totalPages = Math.max(1, Math.ceil(filteredStores.length / itemsPerPage));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const paginatedStores = filteredStores.slice(
+    (safeCurrentPage - 1) * itemsPerPage,
+    safeCurrentPage * itemsPerPage
+  );
 
-  if (!user) return null;
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
-      <Sidebar />
-      <main className="flex-1 ml-64 p-8">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-3xl font-bold text-gray-900">Stores</h1>
+    <div className="p-4 md:p-8">
+      <div className="max-w-6xl mx-auto">
+        {/* Page Header */}
+        <div className="flex flex-wrap justify-between items-end gap-4 mb-8">
+          <div>
+            <h2 className="text-slate-900 dark:text-white text-3xl font-black leading-tight tracking-tight">Stores</h2>
+            <p className="text-slate-500 dark:text-gray-400 text-sm mt-1">Manage your stores, domains, and settings.</p>
+          </div>
           <button
             onClick={() => router.push('/stores/create')}
-            className="px-6 py-2.5 bg-orange-500 text-white font-medium rounded-lg hover:bg-orange-600 transition flex items-center gap-2"
+            className="flex items-center gap-2 cursor-pointer rounded-lg h-11 px-6 bg-orange-500 text-white text-sm font-bold shadow-lg shadow-orange-500/20 hover:bg-orange-600 transition-all"
           >
-            <span className="text-xl">+</span>
-            Create Store
+            <Plus size={20} />
+            <span>Create Store</span>
           </button>
         </div>
 
-        {/* Search */}
-        <SearchBar placeholder="Search by store name or subdomain" onSearch={setSearchQuery} />
-
-        {/* Table */}
-        <DataTable
-          columns={columns}
-          data={filteredStores}
-          loading={loading}
-          onRowClick={(row) => router.push(`/stores/${row.id}/edit`)}
-        />
-      </main>
-
-      {/* Modal */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
-            <div className="flex items-center justify-between p-6 border-b">
-              <h2 className="text-xl font-bold">{editStore ? 'Edit Store' : 'Create Store'}</h2>
-              <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600 text-2xl">×</button>
+        {/* Search Bar */}
+        <div className="mb-6">
+          <div className="flex w-full items-stretch rounded-xl h-12 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden focus-within:ring-2 focus-within:ring-orange-500/20 transition-all">
+            <div className="text-slate-400 dark:text-gray-500 flex items-center justify-center px-4">
+              <Search size={20} />
             </div>
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Store Name *</label>
-                <input type="text" className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500" placeholder="My Awesome Store" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Subdomain *</label>
-                <div className="flex items-center border border-gray-300 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-orange-500">
-                  <input type="text" className="flex-1 px-4 py-3 focus:outline-none" placeholder="mystore" value={formData.subdomain} onChange={(e) => setFormData({ ...formData, subdomain: e.target.value.toLowerCase() })} required disabled={!!editStore} />
-                  <span className="px-3 py-3 bg-gray-50 text-gray-500 text-sm border-l">.myplatform.com</span>
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
-                <textarea className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500" rows={3} placeholder="Describe your store..." value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Currency</label>
-                <select className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500" value={formData.currency} onChange={(e) => setFormData({ ...formData, currency: e.target.value })}>
-                  <option value="USD">USD</option>
-                  <option value="EUR">EUR</option>
-                  <option value="GBP">GBP</option>
-                  <option value="INR">INR</option>
-                </select>
-              </div>
-              <div className="flex gap-3 pt-2">
-                <button type="button" onClick={() => setShowModal(false)} className="flex-1 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition">Cancel</button>
-                <button type="submit" disabled={submitting} className="flex-1 py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition disabled:opacity-50">
-                  {submitting ? 'Saving...' : editStore ? 'Update' : 'Create'}
-                </button>
-              </div>
-            </form>
+            <input
+              className="flex-1 bg-transparent border-none focus:ring-0 focus:outline-none text-slate-900 dark:text-white text-base placeholder:text-slate-400 dark:text-gray-500"
+              placeholder="Search by store name or subdomain..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+            <button className="px-4 text-slate-400 dark:text-gray-500 hover:text-slate-600 dark:text-gray-300 border-l border-slate-100 dark:border-gray-700">
+              <Filter size={20} />
+            </button>
           </div>
         </div>
-      )}
+
+        {/* DataTable Container */}
+        <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden shadow-sm">
+          {loading ? (
+            <div className="p-12 flex items-center justify-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div>
+            </div>
+          ) : (
+            <>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-slate-50 dark:bg-gray-700/50 text-slate-600 dark:text-gray-300">
+                      <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider">Store</th>
+                      <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider">Description</th>
+                      <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider">Currency</th>
+                      <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider">Status</th>
+                      <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-right w-20">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-gray-700">
+                    {paginatedStores.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="px-6 py-16 text-center">
+                          <div className="text-slate-400 dark:text-gray-500">
+                            <p className="text-4xl mb-3">🏪</p>
+                            <p className="text-sm font-medium">No stores found</p>
+                            <p className="text-xs text-slate-400 dark:text-gray-500 mt-1">Try adjusting your search or create a new store.</p>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : (
+                      paginatedStores.map((store) => (
+                        <tr
+                          key={store.id}
+                          className={`hover:bg-slate-50 dark:hover:bg-gray-700/50 transition-colors group cursor-pointer ${!store.is_active ? 'opacity-60' : ''}`}
+                          onClick={() => router.push(`/stores/${store.id}/edit`)}
+                        >
+                          {/* Store Name */}
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-3">
+                              <div className="size-10 bg-blue-100 rounded-lg flex items-center justify-center text-lg flex-shrink-0">🏪</div>
+                              <div className="min-w-0">
+                                <p className="text-sm font-semibold truncate text-slate-900 dark:text-white">{store.name}</p>
+                                <p className="text-xs text-blue-600">{store.subdomain}.myplatform.com</p>
+                              </div>
+                            </div>
+                          </td>
+
+                          {/* Description */}
+                          <td className="px-6 py-4">
+                            <span className="text-slate-500 dark:text-gray-400 text-sm">{store.description || '—'}</span>
+                          </td>
+
+                          {/* Currency */}
+                          <td className="px-6 py-4">
+                            <span className="font-mono text-xs bg-slate-100 dark:bg-gray-700 px-2 py-1 rounded text-slate-600 dark:text-gray-300 font-semibold">{store.currency}</span>
+                          </td>
+
+                          {/* Status */}
+                          <td className="px-6 py-4">
+                            <span className={`px-3 py-1 rounded-full text-xs font-semibold ${store.is_active ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'}`}>
+                              {store.is_active ? 'Active' : 'Inactive'}
+                            </span>
+                          </td>
+
+                          {/* Actions */}
+                          <td className="px-6 py-4 text-right">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <button
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="inline-flex items-center justify-center size-8 rounded-lg text-slate-400 dark:text-gray-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-gray-700 transition-all opacity-40 group-hover:opacity-100"
+                                >
+                                  <MoreHorizontal size={18} />
+                                </button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" sideOffset={8} className="w-44 rounded-xl shadow-lg border border-slate-200 dark:border-gray-700 p-1.5 bg-white dark:bg-gray-800 z-[100]">
+                                <DropdownMenuItem
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleToggleActive(store);
+                                  }}
+                                  className="cursor-pointer flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-700 dark:text-gray-300 hover:bg-slate-50 dark:bg-gray-700/50 dark:hover:bg-gray-700"
+                                >
+                                  {store.is_active ? <EyeOff size={16} className="text-slate-400 dark:text-gray-500" /> : <Eye size={16} className="text-slate-400 dark:text-gray-500" />}
+                                  <span>{store.is_active ? 'Deactivate' : 'Activate'}</span>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setDeleteModal({ open: true, store });
+                                  }}
+                                  className="cursor-pointer flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50"
+                                >
+                                  <Trash2 size={16} />
+                                  <span>Delete</span>
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Pagination */}
+              {filteredStores.length > 0 && (
+                <div className="px-6 py-4 border-t border-slate-100 dark:border-gray-700 bg-slate-50/30 dark:bg-gray-800/50 flex items-center justify-between">
+                  <p className="text-xs text-slate-500 dark:text-gray-400">
+                    Showing {(safeCurrentPage - 1) * itemsPerPage + 1} to{' '}
+                    {Math.min(safeCurrentPage * itemsPerPage, filteredStores.length)} of{' '}
+                    {filteredStores.length} stores
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                      disabled={safeCurrentPage === 1}
+                      className="p-1 rounded border border-slate-200 dark:border-gray-700 hover:bg-white dark:hover:bg-gray-700 text-slate-400 dark:text-gray-500 disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      <ChevronLeft size={18} />
+                    </button>
+                    {Array.from({ length: totalPages }, (_, i) => i + 1)
+                      .filter(page => {
+                        if (totalPages <= 5) return true;
+                        if (page === 1 || page === totalPages) return true;
+                        return Math.abs(page - safeCurrentPage) <= 1;
+                      })
+                      .map((page, idx, arr) => (
+                        <span key={page} className="flex items-center gap-1">
+                          {idx > 0 && arr[idx - 1] !== page - 1 && (
+                            <span className="text-slate-400 dark:text-gray-500 text-xs px-1">...</span>
+                          )}
+                          <button
+                            onClick={() => setCurrentPage(page)}
+                            className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
+                              page === safeCurrentPage
+                                ? 'bg-orange-500 text-white font-bold'
+                                : 'hover:bg-white dark:hover:bg-gray-700 text-slate-600 dark:text-gray-300'
+                            }`}
+                          >
+                            {page}
+                          </button>
+                        </span>
+                      ))}
+                    <button
+                      onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                      disabled={safeCurrentPage === totalPages}
+                      className="p-1 rounded border border-slate-200 dark:border-gray-700 hover:bg-white dark:hover:bg-gray-700 text-slate-400 dark:text-gray-500 disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      <ChevronRight size={18} />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmDeleteModal
+        open={deleteModal.open}
+        title="Delete Store?"
+        itemName={deleteModal.store?.name || ''}
+        description="This action cannot be undone and will permanently remove this store and all its data."
+        confirmLabel="Delete Store"
+        onCancel={() => setDeleteModal({ open: false, store: null })}
+        onConfirm={handleDelete}
+      />
     </div>
   );
 }

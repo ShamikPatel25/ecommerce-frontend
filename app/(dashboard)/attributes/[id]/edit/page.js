@@ -2,360 +2,406 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { useAuthStore } from '@/store/authStore';
 import { attributeAPI, categoryAPI } from '@/lib/api';
 import { toast } from 'sonner';
-import Sidebar from '@/components/Sidebar';
+import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
+import {
+  ArrowLeft, ChevronRight, Info, List, PlusCircle,
+  ChevronDown, X, Undo2, Loader2, RefreshCw,
+} from 'lucide-react';
 
 export default function EditAttributePage() {
-    const router = useRouter();
-    const params = useParams();
-    const user = useAuthStore((state) => state.user);
-    const attributeId = params.id;
+  const router      = useRouter();
+  const params      = useParams();
+  const attributeId = params.id;
 
-    const [loading, setLoading] = useState(true);
-    const [attribute, setAttribute] = useState(null);
-    const [categories, setCategories] = useState([]);
-    const [saving, setSaving] = useState(false);
-    const [addingValue, setAddingValue] = useState(false);
-    const [newValue, setNewValue] = useState('');
-    const [formData, setFormData] = useState({ name: '', category: '' });
+  const [loading,      setLoading]      = useState(true);
+  const [attribute,    setAttribute]    = useState(null);
+  const [categories,   setCategories]   = useState([]);
+  const [saving,       setSaving]       = useState(false);
+  const [newValue,     setNewValue]     = useState('');
+  const [formData,     setFormData]     = useState({ name: '', category: '' });
+  const [pendingDeletes, setPendingDeletes] = useState(new Set());
+  const [pendingAdds,    setPendingAdds]    = useState([]); // { tempId, value }
+  const [confirmDialog,  setConfirmDialog]  = useState(null); // { id, name, isNew }
 
-    // IDs of values staged for deletion (not yet sent to backend)
-    const [pendingDeletes, setPendingDeletes] = useState(new Set());
+  /* ── fetch ── */
+  const fetchData = useCallback(async () => {
+    try {
+      const [attrRes, catRes] = await Promise.all([
+        attributeAPI.get(attributeId),
+        categoryAPI.list(),
+      ]);
+      const a = attrRes.data;
+      setAttribute(a);
+      setFormData({ name: a.name || '', category: String(a.category || '') });
+      const catData = catRes.data;
+      setCategories(Array.isArray(catData) ? catData : (catData?.results || []));
+    } catch {
+      toast.error('Failed to load attribute');
+      router.push('/attributes');
+    } finally {
+      setLoading(false);
+    }
+  }, [attributeId, router]);
 
-    // Confirmation dialog state
-    const [confirmDialog, setConfirmDialog] = useState(null); // { id, name }
+  useEffect(() => {
+    fetchData();
+  }, [attributeId, fetchData]);
 
-    const fetchData = useCallback(async () => {
-        try {
-            const [attrRes, catRes] = await Promise.all([
-                attributeAPI.get(attributeId),
-                categoryAPI.list(),
-            ]);
-            const a = attrRes.data;
-            setAttribute(a);
-            setFormData({ name: a.name || '', category: String(a.category || '') });
-            const catData = catRes.data;
-            setCategories(Array.isArray(catData) ? catData : (catData?.results || []));
-        } catch {
-            toast.error('Failed to load attribute');
-            router.push('/attributes');
-        } finally {
-            setLoading(false);
-        }
-    }, [attributeId, router]);
+  /* ── deletion staging ── */
+  const requestDeleteValue = (id, name, isNew = false) => setConfirmDialog({ id, name, isNew });
 
-    useEffect(() => {
-        if (!user) { router.push('/login'); return; }
-        fetchData();
-    }, [user, attributeId, router, fetchData]);
+  const confirmDeleteValue = () => {
+    if (!confirmDialog) return;
+    if (confirmDialog.isNew) {
+      setPendingAdds((prev) => prev.filter((a) => a.tempId !== confirmDialog.id));
+    } else {
+      setPendingDeletes((prev) => new Set([...prev, confirmDialog.id]));
+    }
+    setConfirmDialog(null);
+  };
 
-    // Step 1: click × → show confirmation dialog
-    const requestDeleteValue = (id, name) => {
-        setConfirmDialog({ id, name });
-    };
+  const undoPendingDelete = (id) => {
+    setPendingDeletes((prev) => {
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+  };
 
-    // Step 2: User confirmed → mark as pending (visual only, not yet deleted)
-    const confirmDeleteValue = () => {
-        if (!confirmDialog) return;
-        setPendingDeletes((prev) => new Set([...prev, confirmDialog.id]));
-        setConfirmDialog(null);
-    };
+  /* ── save ── */
+  const handleSave = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      await attributeAPI.update(attributeId, formData);
+      // Delete pending values
+      if (pendingDeletes.size > 0) {
+        await Promise.all(
+          [...pendingDeletes].map((id) =>
+            attributeAPI.deleteValue(attributeId, id).catch(() => null)
+          )
+        );
+        setPendingDeletes(new Set());
+      }
+      // Add pending new values
+      if (pendingAdds.length > 0) {
+        await Promise.all(
+          pendingAdds.map((a) =>
+            attributeAPI.addValue(attributeId, a.value).catch(() => null)
+          )
+        );
+        setPendingAdds([]);
+      }
+      toast.success('Attribute saved!');
+      const res = await attributeAPI.get(attributeId);
+      setAttribute(res.data);
+    } catch (error) {
+      toast.error(error.response?.data?.name?.[0] || 'Failed to save');
+    } finally {
+      setSaving(false);
+    }
+  };
 
-    // Undo a pending delete
-    const undoPendingDelete = (id) => {
-        setPendingDeletes((prev) => {
-            const next = new Set(prev);
-            next.delete(id);
-            return next;
-        });
-    };
+  /* ── add value (local only, saved on Save Changes) ── */
+  const handleAddValue = () => {
+    const v = newValue.trim();
+    if (!v) return;
+    // Check for duplicates in existing values and pending adds
+    const existingValues = (attribute?.values || []).map((val) => val.value.toLowerCase());
+    const pendingValues = pendingAdds.map((a) => a.value.toLowerCase());
+    if (existingValues.includes(v.toLowerCase()) || pendingValues.includes(v.toLowerCase())) {
+      toast.error(`"${v}" already exists`);
+      return;
+    }
+    setPendingAdds((prev) => [...prev, { tempId: `new-${Date.now()}`, value: v }]);
+    setNewValue('');
+  };
 
-    // Save: update attribute info AND fire all staged deletes
-    const handleSave = async (e) => {
-        e.preventDefault();
-        setSaving(true);
-        try {
-            await attributeAPI.update(attributeId, formData);
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); handleAddValue(); }
+  };
 
-            if (pendingDeletes.size > 0) {
-                await Promise.all(
-                    [...pendingDeletes].map((id) =>
-                        attributeAPI.deleteValue(attributeId, id).catch(() => null)
-                    )
-                );
-                setPendingDeletes(new Set());
-            }
+  /* ── cancel ── */
+  const handleCancel = () => {
+    setPendingDeletes(new Set());
+    setPendingAdds([]);
+    router.push('/attributes');
+  };
 
-            toast.success('Attribute saved!');
-            const res = await attributeAPI.get(attributeId);
-            setAttribute(res.data);
-        } catch (error) {
-            toast.error(error.response?.data?.name?.[0] || 'Failed to save');
-        } finally {
-            setSaving(false);
-        }
-    };
+  const getCategoryName = (catId) =>
+    categories.find((c) => String(c.id) === String(catId))?.name || '';
 
-    const handleAddValue = async () => {
-        const v = newValue.trim();
-        if (!v) return;
-        setAddingValue(true);
-        try {
-            await attributeAPI.addValue(attributeId, v);
-            toast.success(`"${v}" added!`);
-            setNewValue('');
-            const res = await attributeAPI.get(attributeId);
-            setAttribute(res.data);
-        } catch (error) {
-            toast.error(error.response?.data?.error || 'Failed to add value');
-        } finally {
-            setAddingValue(false);
-        }
-    };
+  /* ── loading ── */
+  if (loading) return (
+    <div className="min-h-[60vh] flex items-center justify-center">
+      <Loader2 className="w-10 h-10 text-[#ff6600] animate-spin" />
+    </div>
+  );
 
-    const handleKeyDown = (e) => {
-        if (e.key === 'Enter') { e.preventDefault(); handleAddValue(); }
-    };
+  if (!attribute) return null;
 
-    // Cancel: if pending deletes exist, restore them. Otherwise navigate back.
-    const handleCancel = () => {
-        if (pendingDeletes.size > 0) {
-            setPendingDeletes(new Set());
-            toast.info('Pending deletions restored');
-        } else {
-            router.push('/attributes');
-        }
-    };
+  const pendingCount = pendingDeletes.size;
+  const pendingAddCount = pendingAdds.length;
+  const hasChanges = pendingCount > 0 || pendingAddCount > 0 || formData.name !== (attribute?.name || '') || formData.category !== String(attribute?.category || '');
 
-    const getCategoryName = (catId) =>
-        categories.find(c => String(c.id) === String(catId))?.name || '';
+  /* ──────────────────────────────────────────────────────────────── */
+  return (
+    <div className="p-4 md:p-8 max-w-5xl">
 
-    if (!user || loading) return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div>
+      {/* ── Breadcrumbs ─────────────────────────────────────────── */}
+      <nav className="flex items-center gap-1.5 text-sm text-slate-500 dark:text-gray-400 mb-6">
+        <button
+          onClick={() => router.push('/attributes')}
+          className="hover:text-[#ff6600] transition-colors"
+        >
+          Attributes
+        </button>
+        <ChevronRight className="w-3.5 h-3.5" />
+        <span className="font-semibold text-slate-900 dark:text-white">{attribute.name}</span>
+      </nav>
+
+      {/* ── Page Header ─────────────────────────────────────────── */}
+      <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-8">
+        <div>
+          <h1 className="text-3xl font-black tracking-tight text-slate-900 dark:text-white">Edit Attribute</h1>
+          <p className="mt-2 text-slate-500 dark:text-gray-400 text-sm">
+            Configure global product attributes like color, size, or material used across your store.
+          </p>
         </div>
-    );
+        <button
+          onClick={() => router.push('/attributes')}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg border border-[#ff6600]/20 bg-white dark:bg-gray-800 hover:bg-[#ff6600]/5 transition-colors text-sm font-bold self-start md:self-auto"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to Attributes
+        </button>
+      </div>
 
-    if (!attribute) return null;
+      {/* ── Attribute Information ────────────────────────────────── */}
+      <section className="rounded-xl border border-[#ff6600]/10 dark:border-gray-700 bg-white dark:bg-gray-800 p-6 md:p-8 shadow-sm mb-6">
+        <div className="flex items-center gap-2 mb-6">
+          <Info className="w-5 h-5 text-[#ff6600]" />
+          <h2 className="text-lg font-bold text-slate-900 dark:text-white">Attribute Information</h2>
+        </div>
 
-    const pendingCount = pendingDeletes.size;
+        <form id="edit-attribute-form" onSubmit={handleSave}>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Name */}
+            <div className="space-y-1.5">
+              <label className="text-sm font-semibold text-slate-700 dark:text-gray-300">Attribute Name</label>
+              <input
+                type="text"
+                required
+                className="w-full h-12 rounded-lg border border-[#ff6600]/20 bg-[#ff6600]/5 px-4 text-slate-900 focus:outline-none focus:border-[#ff6600] focus:ring-2 focus:ring-[#ff6600]/20 transition-all dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              />
+              <p className="text-xs text-slate-400 dark:text-gray-500">The public label shown to customers.</p>
+            </div>
 
-    return (
-        <div className="flex min-h-screen bg-gray-50">
-            <Sidebar />
-            <main className="flex-1 ml-64 p-8 pb-28">
-                <div className="max-w-4xl">
-                    {/* Header */}
-                    <div className="mb-8">
-                        <button
-                            onClick={() => router.push('/attributes')}
-                            className="text-gray-600 hover:text-gray-900 mb-4 flex items-center gap-2"
-                        >
-                            ← Back to Attributes
-                        </button>
-                        <h1 className="text-3xl font-bold text-gray-900">Edit Attribute</h1>
-                        <p className="text-gray-500 mt-1">
-                            {getCategoryName(attribute.category)} → <strong>{attribute.name}</strong>
-                        </p>
-                    </div>
+            {/* Category */}
+            <div className="space-y-1.5">
+              <label className="text-sm font-semibold text-slate-700 dark:text-gray-300">Category</label>
+              <div className="relative">
+                <select
+                  className="w-full h-12 rounded-lg border border-[#ff6600]/20 bg-[#ff6600]/5 px-4 pr-10 appearance-none text-slate-900 focus:outline-none focus:border-[#ff6600] focus:ring-2 focus:ring-[#ff6600]/20 transition-all dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  value={formData.category}
+                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                >
+                  <option value="">Select Category</option>
+                  {categories.map((c) => (
+                    <option key={c.id} value={c.id}>{c.full_path || c.name}</option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-gray-500 pointer-events-none" />
+              </div>
+              <p className="text-xs text-slate-400 dark:text-gray-500">Used for filtering and organization.</p>
+            </div>
+          </div>
+        </form>
+      </section>
 
-                    <div className="space-y-6">
-                        {/* Basic Info Form */}
-                        <form id="edit-attribute-form" onSubmit={handleSave}>
-                            <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-4">
-                                <h2 className="text-lg font-semibold text-gray-900">Attribute Information</h2>
+      {/* ── Attribute Values ─────────────────────────────────────── */}
+      <section className="rounded-xl border border-[#ff6600]/10 dark:border-gray-700 bg-white dark:bg-gray-800 p-6 md:p-8 shadow-sm">
 
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">Attribute Name *</label>
-                                        <input
-                                            type="text"
-                                            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-                                            value={formData.name}
-                                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                            required
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
-                                        <select
-                                            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-                                            value={formData.category}
-                                            onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                                        >
-                                            <option value="">Select Category</option>
-                                            {categories.map((c) => (
-                                                <option key={c.id} value={c.id}>{c.full_path || c.name}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
-                        </form>
-
-                        {/* Values Section */}
-                        <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-4">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <h2 className="text-lg font-semibold text-gray-900">Attribute Values</h2>
-                                    <p className="text-sm text-gray-500 mt-0.5">
-                                        Manage all possible values for <strong>{attribute.name}</strong>
-                                    </p>
-                                </div>
-                                {pendingCount > 0 && (
-                                    <span className="px-3 py-1 bg-red-100 text-red-700 text-sm font-medium rounded-full">
-                                        {pendingCount} pending deletion{pendingCount > 1 ? 's' : ''}
-                                    </span>
-                                )}
-                            </div>
-
-                            {/* Add Value Input */}
-                            <div className="flex gap-3">
-                                <input
-                                    type="text"
-                                    className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-                                    placeholder="Type a value and press Enter or Add"
-                                    value={newValue}
-                                    onChange={(e) => setNewValue(e.target.value)}
-                                    onKeyDown={handleKeyDown}
-                                />
-                                <button
-                                    type="button"
-                                    disabled={addingValue || !newValue.trim()}
-                                    onClick={handleAddValue}
-                                    className="px-5 py-2.5 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition disabled:opacity-50 font-medium"
-                                >
-                                    {addingValue ? 'Adding...' : '+ Add'}
-                                </button>
-                            </div>
-
-                            {/* Values chips */}
-                            {attribute.values?.length > 0 ? (
-                                <div className="flex flex-wrap gap-2 p-4 bg-gray-50 rounded-lg min-h-12">
-                                    {attribute.values.map((v) => {
-                                        const isPending = pendingDeletes.has(v.id);
-                                        return (
-                                            <span
-                                                key={v.id}
-                                                className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${isPending
-                                                        ? 'bg-red-100 text-red-400 line-through opacity-60'
-                                                        : 'bg-orange-100 text-orange-800'
-                                                    }`}
-                                            >
-                                                {v.value}
-                                                {isPending ? (
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => undoPendingDelete(v.id)}
-                                                        title="Restore this value"
-                                                        className="text-red-400 hover:text-orange-600 font-bold leading-none text-base"
-                                                    >
-                                                        ↩
-                                                    </button>
-                                                ) : (
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => requestDeleteValue(v.id, v.value)}
-                                                        title="Mark for deletion"
-                                                        className="text-orange-400 hover:text-red-600 font-bold leading-none text-base"
-                                                    >
-                                                        ×
-                                                    </button>
-                                                )}
-                                            </span>
-                                        );
-                                    })}
-                                </div>
-                            ) : (
-                                <div className="p-6 bg-gray-50 rounded-lg text-center text-gray-400 text-sm">
-                                    No values yet — add the first one above
-                                </div>
-                            )}
-
-                            {pendingCount > 0 && (
-                                <p className="text-xs text-red-500">
-                                    ⚠️ {pendingCount} value{pendingCount > 1 ? 's' : ''} will be permanently deleted when you click <strong>Save Changes</strong>. Click ↩ on a chip to restore it.
-                                </p>
-                            )}
-
-                            <p className="text-xs text-gray-400">
-                                {(attribute.values?.length ?? 0) - pendingCount} active · {pendingCount} pending deletion
-                            </p>
-                        </div>
-                    </div>
-
-                    {/* ── STICKY BOTTOM ACTION BAR ── */}
-                    <div className="fixed bottom-0 left-64 right-0 z-50 bg-white border-t border-gray-200 px-8 py-4 flex justify-end gap-3 shadow-lg">
-                        <button
-                            type="button"
-                            onClick={handleCancel}
-                            className="px-6 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-medium"
-                        >
-                            {pendingCount > 0 ? 'Restore Deletions' : 'Cancel'}
-                        </button>
-                        <button
-                            type="submit"
-                            form="edit-attribute-form"
-                            disabled={saving}
-                            className="px-8 py-2.5 bg-orange-500 text-white font-medium rounded-lg hover:bg-orange-600 transition disabled:opacity-50 shadow-sm"
-                        >
-                            {saving
-                                ? 'Saving...'
-                                : pendingCount > 0
-                                    ? `Save & Delete ${pendingCount} Value${pendingCount > 1 ? 's' : ''}`
-                                    : 'Save Changes'}
-                        </button>
-                    </div>
-
-                    {/* ── CONFIRMATION DIALOG ── */}
-                    {confirmDialog && (
-                        <div className="fixed inset-0 z-[60] flex items-center justify-center">
-                            {/* Backdrop */}
-                            <div
-                                className="absolute inset-0 bg-black/40"
-                                onClick={() => setConfirmDialog(null)}
-                            />
-                            {/* Dialog box */}
-                            <div className="relative bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm mx-4">
-                                <div className="flex items-center gap-3 mb-4">
-                                    <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center text-xl">
-                                        🗑️
-                                    </div>
-                                    <div>
-                                        <h3 className="text-base font-semibold text-gray-900">Delete Value?</h3>
-                                        <p className="text-sm text-gray-500">Changes apply only after Save</p>
-                                    </div>
-                                </div>
-                                <p className="text-gray-700 mb-1">
-                                    Delete <span className="font-semibold text-red-600">&ldquo;{confirmDialog.name}&rdquo;</span>?
-                                </p>
-                                <p className="text-xs text-gray-400 mb-6">
-                                    The value won&apos;t be permanently removed until you click <strong>Save Changes</strong>.
-                                </p>
-                                <div className="flex gap-3 justify-end">
-                                    <button
-                                        type="button"
-                                        onClick={() => setConfirmDialog(null)}
-                                        className="px-5 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-medium"
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={confirmDeleteValue}
-                                        className="px-5 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition font-medium"
-                                    >
-                                        Mark for Deletion
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    )}
+        {/* Section header */}
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+          <div className="flex items-center gap-2">
+            <List className="w-5 h-5 text-[#ff6600]" />
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white">Attribute Values</h2>
+          </div>
+          {(pendingCount > 0 || pendingAddCount > 0) && (
+            <div className="flex items-center gap-3">
+              {pendingAddCount > 0 && (
+                <div className="flex items-center gap-1.5 rounded-full bg-green-100 dark:bg-green-900/30 border border-green-200 dark:border-green-800 px-3 py-1 text-xs font-bold text-green-600 dark:text-green-400">
+                  <PlusCircle className="w-3 h-3" />
+                  {pendingAddCount} NEW
                 </div>
-            </main>
+              )}
+              {pendingCount > 0 && (
+                <div className="flex items-center gap-1.5 rounded-full bg-red-100 dark:bg-red-900/30 border border-red-200 dark:border-red-800 px-3 py-1 text-xs font-bold text-red-600 dark:text-red-400">
+                  <X className="w-3 h-3" />
+                  {pendingCount} PENDING DELETION{pendingCount > 1 ? 'S' : ''}
+                </div>
+              )}
+            </div>
+          )}
         </div>
-    );
+
+        {/* Add value */}
+        <div className="flex flex-col sm:flex-row gap-3 mb-8">
+          <div className="relative flex-1">
+            <PlusCircle className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-gray-500" />
+            <input
+              type="text"
+              placeholder="Add new value (e.g. XL, Red, 10oz)"
+              className="w-full h-12 rounded-lg border border-[#ff6600]/20 bg-[#ff6600]/5 pl-10 pr-4 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-[#ff6600] focus:ring-2 focus:ring-[#ff6600]/20 transition-all dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder:text-gray-500"
+              value={newValue}
+              onChange={(e) => setNewValue(e.target.value)}
+              onKeyDown={handleKeyDown}
+            />
+          </div>
+          <button
+            type="button"
+            disabled={!newValue.trim()}
+            onClick={handleAddValue}
+            className="h-12 px-8 rounded-lg bg-[#ff6600] text-white font-bold hover:bg-[#ff6600]/90 transition-all disabled:opacity-50 shadow-lg shadow-orange-500/20 whitespace-nowrap"
+          >
+            Add Value
+          </button>
+        </div>
+
+        {/* Current values */}
+        <div className="space-y-3">
+          <label className="text-xs font-bold text-slate-400 dark:text-gray-500 uppercase tracking-wider">
+            Current Values
+          </label>
+
+          {(attribute.values?.length > 0 || pendingAdds.length > 0) ? (
+            <>
+              <div className="flex flex-wrap gap-3">
+                {attribute.values.map((v) => {
+                  const isPending = pendingDeletes.has(v.id);
+                  return isPending ? (
+                    /* Pending deletion chip */
+                    <div
+                      key={v.id}
+                      className="flex items-center gap-2 rounded-lg bg-red-500/10 border border-red-500/30 px-4 py-2 text-red-500 line-through italic"
+                    >
+                      <span className="font-medium text-sm">{v.value}</span>
+                      <button
+                        type="button"
+                        onClick={() => undoPendingDelete(v.id)}
+                        title="Undo deletion"
+                        className="flex h-5 w-5 items-center justify-center rounded-full hover:bg-red-500/20 transition-colors"
+                      >
+                        <Undo2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ) : (
+                    /* Active chip */
+                    <div
+                      key={v.id}
+                      className="group flex items-center gap-2 rounded-lg bg-[#ff6600] px-4 py-2 text-white shadow-sm hover:shadow-md transition-all"
+                    >
+                      <span className="font-medium text-sm">{v.value}</span>
+                      <button
+                        type="button"
+                        onClick={() => requestDeleteValue(v.id, v.value)}
+                        title="Mark for deletion"
+                        className="flex h-5 w-5 items-center justify-center rounded-full hover:bg-white/20 transition-colors"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  );
+                })}
+                {/* Pending add chips */}
+                {pendingAdds.map((a) => (
+                  <div
+                    key={a.tempId}
+                    className="group flex items-center gap-2 rounded-lg bg-green-500 px-4 py-2 text-white shadow-sm hover:shadow-md transition-all"
+                  >
+                    <span className="font-medium text-sm">{a.value}</span>
+                    <button
+                      type="button"
+                      onClick={() => requestDeleteValue(a.tempId, a.value, true)}
+                      title="Remove"
+                      className="flex h-5 w-5 items-center justify-center rounded-full hover:bg-white/20 transition-colors"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              {/* Status line */}
+              <p className="text-xs text-slate-400 dark:text-gray-500 pt-1">
+                <span className="text-slate-600 dark:text-gray-300 font-medium">
+                  {(attribute.values?.length ?? 0) - pendingCount}
+                </span> active
+                {pendingAddCount > 0 && (
+                  <>
+                    {' · '}
+                    <span className="text-green-600 dark:text-green-400 font-medium">{pendingAddCount}</span> new (unsaved)
+                  </>
+                )}
+                {pendingCount > 0 && (
+                  <>
+                    {' · '}
+                    <span className="text-red-500 dark:text-red-400 font-medium">{pendingCount}</span> pending deletion
+                  </>
+                )}
+                {(pendingCount > 0 || pendingAddCount > 0) && (
+                  <>
+                    {' · '}
+                    <span className="text-slate-500 dark:text-gray-400">click Save Changes to apply</span>
+                  </>
+                )}
+              </p>
+            </>
+          ) : (
+            <div className="flex items-center justify-center py-10 rounded-lg bg-slate-50 dark:bg-gray-700/50 border border-dashed border-slate-200 dark:border-gray-700 text-slate-400 dark:text-gray-500 text-sm">
+              No values yet — add the first one above
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* ── Bottom Action Buttons ─────────────────────────────────── */}
+      <div className="flex items-center justify-end gap-3 mt-6">
+        <button
+          type="button"
+          onClick={handleCancel}
+          className="px-8 py-3 rounded-lg font-bold border border-slate-200 dark:border-gray-700 text-slate-700 dark:text-gray-300 hover:bg-slate-100 dark:hover:bg-gray-700 transition-colors"
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          form="edit-attribute-form"
+          disabled={saving}
+          className="px-12 py-3 rounded-lg font-bold bg-[#ff6600] text-white shadow-lg shadow-orange-500/30 hover:bg-[#ff6600]/90 active:scale-95 transition-all disabled:opacity-50"
+        >
+          {saving ? (
+            <span className="flex items-center gap-2">
+              <Loader2 className="w-4 h-4 animate-spin" /> Saving...
+            </span>
+          ) : 'Save Changes'}
+        </button>
+      </div>
+
+      {/* ── Deletion Confirm Modal ───────────────────────────────── */}
+      <ConfirmDeleteModal
+        open={!!confirmDialog}
+        title="Delete Value?"
+        itemName={confirmDialog?.name}
+        description="The value won't be permanently removed until you click Save Changes."
+        onCancel={() => setConfirmDialog(null)}
+        onConfirm={confirmDeleteValue}
+      />
+    </div>
+  );
 }
