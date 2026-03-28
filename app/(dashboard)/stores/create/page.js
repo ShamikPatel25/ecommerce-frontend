@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { storeAPI } from '@/lib/api';
 import { useStoreStore } from '@/store/storeStore';
 import { toast } from 'sonner';
 import {
-  ArrowLeft, ChevronRight, ChevronDown, Info, Loader2, Store,
+  ArrowLeft, ChevronRight, ChevronDown, Loader2, Store,
 } from 'lucide-react';
 
 const INPUT_CLS =

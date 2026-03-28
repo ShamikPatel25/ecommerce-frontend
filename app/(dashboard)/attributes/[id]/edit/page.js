@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
 import {
   ArrowLeft, ChevronRight, Info, List, PlusCircle,
-  ChevronDown, X, Undo2, Loader2, RefreshCw,
+  ChevronDown, X, Undo2, Loader2,
 } from 'lucide-react';
 
 export default function EditAttributePage() {

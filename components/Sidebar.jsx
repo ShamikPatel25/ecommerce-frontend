@@ -7,7 +7,8 @@ import { useStoreStore } from '@/store/storeStore';
 import { storeAPI } from '@/lib/api';
 import { useState, useEffect, useRef } from 'react';
 import { useThemeStore } from '@/store/themeStore';
-import { Sun, Moon, Bell } from 'lucide-react';
+import { Sun, Moon } from 'lucide-react';
+import NotificationBell from '@/components/NotificationBell';
 
 export default function Sidebar() {
   const pathname = usePathname();
@@ -290,11 +291,7 @@ export default function Sidebar() {
           >
             {theme === 'light' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5 text-amber-400" />}
           </button>
-          <button
-            className="p-2 rounded-lg hover:bg-gray-800 transition relative"
-          >
-            <Bell className="w-5 h-5" />
-          </button>
+          <NotificationBell />
           <button
             onClick={() => setOpen(true)}
             className="p-2 rounded-lg hover:bg-gray-800 transition"

@@ -47,6 +47,7 @@ export default function CreateProductPage() {
     product_type:     'single',
     is_active:        true,
   });
+  const [skuError, setSkuError] = useState('');
 
   /* ── fetch categories ── */
   const fetchCategories = useCallback(async () => {
@@ -114,7 +115,7 @@ export default function CreateProductPage() {
   };
 
   /* ── Step 1 → Step 2 (Generate Catalog clicked) ── */
-  const handleGenerateCatalog = () => {
+  const handleGenerateCatalog = async () => {
     if (!formData.name.trim() || !formData.sku.trim() || !formData.price) {
       toast.error('Please fill in Product Name, SKU and Price first');
       return;
@@ -131,6 +132,20 @@ export default function CreateProductPage() {
       }
       return;
     }
+
+    // Check SKU before proceeding to step 2
+    try {
+      const res = await productAPI.checkSku(formData.sku.trim());
+      if (res.data?.exists) {
+        setSkuError('A product with this SKU already exists.');
+        toast.error('A product with this SKU already exists.');
+        return;
+      }
+    } catch {
+      // If check fails, let it proceed — final submit will catch it
+    }
+
+    setSkuError('');
     resetSelections();
     setCatalogCombos([]);
     setStep(2);
@@ -188,7 +203,7 @@ export default function CreateProductPage() {
         return;
       }
 
-      setCatalogCombos((prev) => [...prev, { values, stock: 0, price: '' }]);
+      setCatalogCombos((prev) => [...prev, { values, stock: '', price: '' }]);
     } else {
       // Checkbox mode: multiple values per attribute → generate all combinations
       for (const attr of selectedAttrs) {
@@ -218,7 +233,7 @@ export default function CreateProductPage() {
           const key = combo.map((v) => v.valId).sort().join('-');
           const exists = next.some((c) => c.values.map((v) => v.valId).sort().join('-') === key);
           if (!exists) {
-            next.push({ values: combo, stock: 0, price: '' });
+            next.push({ values: combo, stock: '', price: '' });
             added++;
           } else {
             skipped++;
@@ -257,6 +272,21 @@ export default function CreateProductPage() {
         toast.error('Please add at least one catalog combination');
         return;
       }
+    }
+
+    // Check SKU for single products before submit
+    if (formData.product_type === 'single') {
+      try {
+        const res = await productAPI.checkSku(formData.sku.trim());
+        if (res.data?.exists) {
+          setSkuError('A product with this SKU already exists.');
+          toast.error('A product with this SKU already exists.');
+          return;
+        }
+      } catch {
+        // proceed — final create will catch it
+      }
+      setSkuError('');
     }
 
     setSubmitting(true);
@@ -672,10 +702,11 @@ export default function CreateProductPage() {
               <input
                 type="text" required
                 placeholder="barcode-123-xyz"
-                className={INPUT_CLS}
+                className={`${INPUT_CLS} ${skuError ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' : ''}`}
                 value={formData.sku}
-                onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
+                onChange={(e) => { setFormData({ ...formData, sku: e.target.value }); setSkuError(''); }}
               />
+              {skuError && <p className="text-xs text-red-500 font-medium">{skuError}</p>}
             </div>
 
             <div className="space-y-1.5">

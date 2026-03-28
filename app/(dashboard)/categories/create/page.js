@@ -46,7 +46,9 @@ export default function CreateCategoryPage() {
       toast.success('Category created!');
       router.push('/categories');
     } catch (error) {
-      toast.error(error.response?.data?.name?.[0] || 'Something went wrong');
+      const d = error.response?.data;
+      const msg = d?.name?.[0] || d?.slug?.[0] || d?.parent?.[0] || d?.non_field_errors?.[0] || 'Something went wrong';
+      toast.error(msg);
     } finally {
       setSubmitting(false);
     }

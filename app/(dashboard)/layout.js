@@ -7,6 +7,7 @@ import { useStoreStore } from '@/store/storeStore';
 import { useThemeStore } from '@/store/themeStore';
 import { storeAPI } from '@/lib/api';
 import Sidebar from '@/components/Sidebar';
+import { useNotificationSocket } from '@/lib/useNotificationSocket';
 
 export default function DashboardLayout({ children }) {
   const router = useRouter();
@@ -17,6 +18,9 @@ export default function DashboardLayout({ children }) {
   const { activeStore, setActiveStore, setStores } = useStoreStore();
   const [ready, setReady] = useState(false);
   const [storeResolved, setStoreResolved] = useState(false);
+
+  // Connect to notification WebSocket
+  useNotificationSocket();
 
   // Apply dark class to <html>
   useEffect(() => {
