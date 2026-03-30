@@ -645,6 +645,17 @@ export default function EditProductPage() {
         productId={productId}
         initialMedia={media}
         onMediaChange={setMedia}
+        attributeValues={
+          product.product_type === 'catalog'
+            ? (attributes || []).flatMap(attr =>
+                (attr.attribute_values || []).map(v => ({
+                  id: v.id,
+                  value: v.value,
+                  attribute_name: attr.attribute_name,
+                }))
+              )
+            : []
+        }
       />
 
       {/* ── Action Buttons ── */}

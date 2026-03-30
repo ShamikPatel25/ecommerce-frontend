@@ -1,22 +1,46 @@
 'use client';
 
-import { useState, useRef } from 'react';
-import Image from 'next/image';
+import { useState, useRef, useMemo, useEffect } from 'react';
 import { productAPI } from '@/lib/api';
 import { toast } from 'sonner';
-import { ImageIcon, CloudUpload, Loader2, Trash2 } from 'lucide-react';
+import { ImageIcon, CloudUpload, Loader2, Trash2, ChevronDown } from 'lucide-react';
 
-export default function MediaUploader({ productId, initialMedia = [], onMediaChange }) {
+export default function MediaUploader({ productId, initialMedia = [], onMediaChange, attributeValues = [] }) {
   const [media, setMedia] = useState(initialMedia);
+  useEffect(() => {
+    setMedia(initialMedia);
+  }, [initialMedia]);
   const [dragging, setDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [selectedAttrValue, setSelectedAttrValue] = useState('');
   const inputRef = useRef();
+
+  // Group media: general (no attribute_value) + per-attribute-value
+  const groupedMedia = useMemo(() => {
+    const general = media.filter(m => !m.attribute_value_id);
+    const byValue = {};
+    media.forEach(m => {
+      if (m.attribute_value_id) {
+        if (!byValue[m.attribute_value_id]) {
+          byValue[m.attribute_value_id] = {
+            label: `${m.attribute_name}: ${m.attribute_value_name}`,
+            items: [],
+          };
+        }
+        byValue[m.attribute_value_id].items.push(m);
+      }
+    });
+    return { general, byValue };
+  }, [media]);
 
   const uploadFile = async (file) => {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('media_type', file.type.startsWith('video/') ? 'video' : 'image');
     formData.append('alt_text', file.name);
+    if (selectedAttrValue) {
+      formData.append('attribute_value_id', selectedAttrValue);
+    }
     const res = await productAPI.uploadMedia(productId, formData);
     return res.data;
   };
@@ -37,7 +61,12 @@ export default function MediaUploader({ productId, initialMedia = [], onMediaCha
       const next = [...media, ...uploaded];
       setMedia(next);
       onMediaChange?.(next);
-      toast.success(`${uploaded.length} file(s) uploaded!`);
+      const autoDetected = uploaded.filter(u => u.auto_detected);
+      if (autoDetected.length > 0) {
+        toast.success(`${uploaded.length} file(s) uploaded! Auto-linked: ${autoDetected.map(u => u.auto_detected_label).join(', ')}`);
+      } else {
+        toast.success(`${uploaded.length} file(s) uploaded!`);
+      }
     } catch {
       toast.error('Upload failed. Please try again.');
     } finally {
@@ -51,11 +80,92 @@ export default function MediaUploader({ productId, initialMedia = [], onMediaCha
     handleFiles(e.dataTransfer.files);
   };
 
-  const handleDelete = (mediaItem) => {
-    const next = media.filter(m => m.id !== mediaItem.id);
-    setMedia(next);
-    onMediaChange?.(next);
-    toast.info('Removed from view (refresh to confirm)');
+  const [deletingId, setDeletingId] = useState(null);
+
+  const handleDelete = async (mediaItem) => {
+    if (!productId) {
+      const next = media.filter(m => m.id !== mediaItem.id);
+      setMedia(next);
+      onMediaChange?.(next);
+      return;
+    }
+    setDeletingId(mediaItem.id);
+    try {
+      await productAPI.deleteMedia(productId, mediaItem.id);
+      const next = media.filter(m => m.id !== mediaItem.id);
+      setMedia(next);
+      onMediaChange?.(next);
+      toast.success('Image deleted successfully.');
+    } catch {
+      toast.error('Failed to delete image. Please try again.');
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const getSelectedLabel = () => {
+    if (!selectedAttrValue) return 'General (Product Main)';
+    const av = attributeValues.find(v => String(v.id) === String(selectedAttrValue));
+    return av ? `${av.attribute_name}: ${av.value}` : 'General';
+  };
+
+  const renderMediaGrid = (items, label) => {
+    if (items.length === 0) return null;
+    return (
+      <div className="mt-4">
+        <h4 className="text-sm font-bold text-slate-700 dark:text-gray-300 mb-2">{label}</h4>
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+          {items.map((item) => (
+            <div
+              key={item.id}
+              className="group relative aspect-square rounded-xl overflow-hidden border-2 border-slate-200 dark:border-gray-700 hover:border-[#ff6600]/40 dark:hover:border-[#ff6600]/40 transition-all"
+            >
+              {item.media_type === 'video' ? (
+                <video
+                  src={item.file_url}
+                  className="w-full h-full object-cover"
+                  muted
+                />
+              ) : item.file_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={item.file_url}
+                  alt={item.alt_text || 'Product image'}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full flex flex-col items-center justify-center bg-slate-100 dark:bg-gray-700 text-slate-400 gap-1">
+                  <ImageIcon className="w-8 h-8" />
+                  <span className="text-xs text-center px-1 truncate w-full">{item.alt_text}</span>
+                </div>
+              )}
+              {/* Alt text badge */}
+              <span className="absolute bottom-1 left-1 right-8 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded truncate">
+                {item.alt_text}
+              </span>
+              {/* Delete overlay */}
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); handleDelete(item); }}
+                disabled={deletingId === item.id}
+                className="absolute top-2 right-2 p-1.5 bg-white/90 dark:bg-gray-800/90 rounded-full text-red-500 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm hover:bg-red-50 dark:hover:bg-red-900/30 disabled:opacity-100 disabled:cursor-wait"
+                title="Delete"
+              >
+                {deletingId === item.id
+                  ? <Loader2 className="w-4 h-4 animate-spin text-red-400" />
+                  : <Trash2 className="w-4 h-4" />
+                }
+              </button>
+              {item.media_type === 'video' && (
+                <span className="absolute bottom-1 left-1 bg-black/60 text-white text-xs px-1.5 py-0.5 rounded font-bold">
+                  VIDEO
+                </span>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -64,6 +174,33 @@ export default function MediaUploader({ productId, initialMedia = [], onMediaCha
         <ImageIcon className="w-5 h-5 text-[#ff6600]" />
         <h2 className="text-xl font-bold text-slate-900 dark:text-white">Product Media</h2>
       </div>
+
+      {/* Attribute Value Selector */}
+      {attributeValues.length > 0 && (
+        <div className="mb-4">
+          <label className="text-sm font-semibold text-slate-700 dark:text-gray-300 mb-1.5 block">
+            Upload images for:
+          </label>
+          <div className="relative inline-block">
+            <select
+              value={selectedAttrValue}
+              onChange={(e) => setSelectedAttrValue(e.target.value)}
+              className="appearance-none rounded-lg border border-[#ff6600]/20 bg-[#ff6600]/5 px-4 py-2.5 pr-10 text-sm text-slate-900 dark:text-white dark:bg-gray-700 dark:border-gray-600 focus:outline-none focus:border-[#ff6600] focus:ring-2 focus:ring-[#ff6600]/20 transition-all font-medium"
+            >
+              <option value="">General (Product Main)</option>
+              {attributeValues.map(av => (
+                <option key={av.id} value={av.id}>
+                  {av.attribute_name}: {av.value}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+          </div>
+          <p className="text-xs text-slate-400 dark:text-gray-500 mt-1">
+            Selected: <span className="font-bold text-[#ff6600]">{getSelectedLabel()}</span>
+          </p>
+        </div>
+      )}
 
       {/* Drop Zone */}
       <div
@@ -99,47 +236,25 @@ export default function MediaUploader({ productId, initialMedia = [], onMediaCha
             <p className="text-sm text-slate-500 dark:text-gray-400 mt-1">
               PNG, JPG, WEBP, MP4 — or <span className="text-[#ff6600] font-bold">browse files</span>
             </p>
+            {selectedAttrValue && (
+              <p className="text-xs text-[#ff6600] font-bold mt-2">
+                Uploading to: {getSelectedLabel()}
+              </p>
+            )}
           </>
         )}
       </div>
 
-      {/* Media Grid */}
+      {/* Grouped Media Gallery */}
       {media.length > 0 && (
-        <div className="mt-6 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-          {media.map((item) => (
-            <div
-              key={item.id}
-              className="group relative aspect-square rounded-xl overflow-hidden border-2 border-slate-200 dark:border-gray-700 hover:border-[#ff6600]/40 dark:hover:border-[#ff6600]/40 transition-all"
-            >
-              {item.media_type === 'video' ? (
-                <video
-                  src={item.file_url}
-                  className="w-full h-full object-cover"
-                  muted
-                />
-              ) : (
-                <Image
-                  src={item.file_url}
-                  alt={item.alt_text || 'Product image'}
-                  fill
-                  className="object-cover"
-                />
-              )}
-              {/* Delete overlay */}
-              <button
-                type="button"
-                onClick={(e) => { e.stopPropagation(); handleDelete(item); }}
-                className="absolute top-2 right-2 p-1.5 bg-white/90 dark:bg-gray-800/90 rounded-full text-red-500 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm hover:bg-red-50 dark:hover:bg-red-900/30"
-                title="Remove"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
-              {/* Type badge */}
-              {item.media_type === 'video' && (
-                <span className="absolute bottom-1 left-1 bg-black/60 text-white text-xs px-1.5 py-0.5 rounded font-bold">
-                  VIDEO
-                </span>
-              )}
+        <div className="mt-6 space-y-6">
+          {/* General images */}
+          {renderMediaGrid(groupedMedia.general, 'General Product Images')}
+
+          {/* Per-attribute-value images */}
+          {Object.entries(groupedMedia.byValue).map(([valueId, group]) => (
+            <div key={valueId}>
+              {renderMediaGrid(group.items, group.label)}
             </div>
           ))}
         </div>

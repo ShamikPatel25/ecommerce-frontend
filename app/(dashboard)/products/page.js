@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { productAPI, categoryAPI } from '@/lib/api';
 import { toast } from 'sonner';
@@ -208,7 +207,7 @@ export default function ProductsPage() {
                       paginatedProducts.map((product) => {
                         const stock = getTotalStock(product);
                         const variantCount = getVariantCount(product);
-                        const mediaUrl = product.media?.[0]?.file || product.image;
+                        const mediaUrl = product.media?.[0]?.file_url || product.media?.[0]?.file || product.image;
 
                         return (
                           <tr
@@ -220,11 +219,10 @@ export default function ProductsPage() {
                             <td className="px-6 py-4">
                               <div className="size-12 rounded-lg bg-slate-100 dark:bg-gray-700 overflow-hidden border border-slate-200 dark:border-gray-700 flex items-center justify-center">
                                 {mediaUrl ? (
-                                  <Image
+                                  // eslint-disable-next-line @next/next/no-img-element
+                                  <img
                                     src={mediaUrl}
                                     alt={product.name}
-                                    width={48}
-                                    height={48}
                                     className="object-cover w-full h-full"
                                   />
                                 ) : (

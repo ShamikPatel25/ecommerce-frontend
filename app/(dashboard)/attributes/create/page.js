@@ -20,7 +20,6 @@ export default function CreateAttributePage() {
   const router = useRouter();
   const [categories, setCategories] = useState([]);
   const [submitting, setSubmitting] = useState(false);
-  const [addingValue, setAddingValue] = useState(false);
   const [formData, setFormData] = useState({ category: '', name: '' });
   const [values, setValues] = useState([]);
   const [newValue, setNewValue] = useState('');
@@ -58,25 +57,13 @@ export default function CreateAttributePage() {
     if (!formData.category) { toast.error('Please select a category'); return; }
     setSubmitting(true);
     try {
-      const res = await attributeAPI.create(formData);
-      const attributeId = res.data?.id;
-      if (attributeId && values.length > 0) {
-        setAddingValue(true);
-        try {
-          await attributeAPI.addBulkValues(attributeId, values);
-        } catch {
-          for (const v of values) {
-            try { await attributeAPI.addValue(attributeId, v); } catch { }
-          }
-        }
-      }
+      await attributeAPI.create({ ...formData, values });
       toast.success('Attribute created!');
       router.push('/attributes');
     } catch (error) {
       toast.error(error.response?.data?.name?.[0] || 'Something went wrong');
     } finally {
       setSubmitting(false);
-      setAddingValue(false);
     }
   };
 

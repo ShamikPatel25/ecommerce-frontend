@@ -26,6 +26,7 @@ export default function CreateProductPage() {
   const [loading,             setLoading]             = useState(true);
   const [submitting,          setSubmitting]          = useState(false);
   const [images,              setImages]              = useState([]);
+  const imagesRef = useRef([]);
   const [dragOver,            setDragOver]            = useState(false);
   const fileInputRef = useRef(null);
 
@@ -82,6 +83,9 @@ export default function CreateProductPage() {
   };
 
   /* ── image handling ── */
+  // Keep ref in sync with state so handleSubmit always has the latest images
+  useEffect(() => { imagesRef.current = images; }, [images]);
+
   const addFiles = (files) => {
     const valid = Array.from(files).filter((f) => f.type.startsWith('image/'));
     valid.forEach((file) => {
@@ -322,6 +326,34 @@ export default function CreateProductPage() {
         router.push('/products');
         setSubmitting(false);
         return;
+      }
+
+      // Upload images that were selected during creation
+      const currentImages = imagesRef.current;
+      if (currentImages.length > 0) {
+        // Upload main image first (order=0), then others
+        const sorted = [...currentImages].sort((a, b) => (b.isMain ? 1 : 0) - (a.isMain ? 1 : 0));
+        let uploadedCount = 0;
+        let failedCount = 0;
+        for (let i = 0; i < sorted.length; i++) {
+          const img = sorted[i];
+          if (!img.file) { failedCount++; continue; }
+          try {
+            const fd = new FormData();
+            fd.append('file', img.file);
+            fd.append('media_type', 'image');
+            fd.append('alt_text', img.file.name || '');
+            fd.append('order', String(img.isMain ? 0 : i + 1));
+            await productAPI.uploadMedia(productId, fd);
+            uploadedCount++;
+          } catch (uploadErr) {
+            failedCount++;
+            console.error('Image upload failed:', uploadErr?.response?.data || uploadErr);
+          }
+        }
+        if (failedCount > 0) {
+          toast.error(`${failedCount} image(s) failed to upload. You can add them from the edit page.`);
+        }
       }
     } catch (error) {
       const errData = error.response?.data;
