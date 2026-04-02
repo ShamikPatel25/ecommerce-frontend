@@ -12,23 +12,27 @@ import {
 const PER_PAGE = 15;
 
 const STATUS_TABS = [
-  { label: 'All Orders',  value: '' },
-  { label: 'Pending',     value: 'pending' },
-  { label: 'Confirmed',   value: 'confirmed' },
-  { label: 'Processing',  value: 'processing' },
-  { label: 'Shipped',     value: 'shipped' },
-  { label: 'Delivered',   value: 'delivered' },
-  { label: 'Cancelled',   value: 'cancelled' },
+  { label: 'All Orders',       value: '' },
+  { label: 'Pending',          value: 'pending' },
+  { label: 'Confirmed',        value: 'confirmed' },
+  { label: 'Processing',       value: 'processing' },
+  { label: 'Shipped',          value: 'shipped' },
+  { label: 'Delivered',        value: 'delivered' },
+  { label: 'Cancelled',        value: 'cancelled' },
+  { label: 'Return Requested', value: 'return_requested' },
+  { label: 'Returned',         value: 'returned' },
 ];
 
 /* dot color + pill color per status */
 const STATUS_BADGE = {
-  pending:    { dot: 'bg-slate-500',   pill: 'bg-slate-100 dark:bg-gray-700   text-slate-700 dark:text-gray-300'  },
-  confirmed:  { dot: 'bg-blue-500',    pill: 'bg-blue-100 dark:bg-blue-900/30    text-blue-700 dark:text-blue-400'   },
-  processing: { dot: 'bg-orange-500',  pill: 'bg-orange-100 dark:bg-orange-900/30  text-orange-700 dark:text-orange-400' },
-  shipped:    { dot: 'bg-emerald-500', pill: 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400'},
-  delivered:  { dot: 'bg-green-500',   pill: 'bg-green-100 dark:bg-green-900/30   text-green-700 dark:text-green-400'  },
-  cancelled:  { dot: 'bg-red-500',     pill: 'bg-red-100 dark:bg-red-900/30     text-red-700 dark:text-red-400'    },
+  pending:          { dot: 'bg-slate-500',   pill: 'bg-slate-100 dark:bg-gray-700   text-slate-700 dark:text-gray-300'  },
+  confirmed:        { dot: 'bg-blue-500',    pill: 'bg-blue-100 dark:bg-blue-900/30    text-blue-700 dark:text-blue-400'   },
+  processing:       { dot: 'bg-orange-500',  pill: 'bg-orange-100 dark:bg-orange-900/30  text-orange-700 dark:text-orange-400' },
+  shipped:          { dot: 'bg-emerald-500', pill: 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400'},
+  delivered:        { dot: 'bg-green-500',   pill: 'bg-green-100 dark:bg-green-900/30   text-green-700 dark:text-green-400'  },
+  cancelled:        { dot: 'bg-red-500',     pill: 'bg-red-100 dark:bg-red-900/30     text-red-700 dark:text-red-400'    },
+  return_requested: { dot: 'bg-amber-500',   pill: 'bg-amber-100 dark:bg-amber-900/30   text-amber-700 dark:text-amber-400'  },
+  returned:         { dot: 'bg-rose-500',    pill: 'bg-rose-100 dark:bg-rose-900/30    text-rose-600 dark:text-rose-400'   },
 };
 
 function formatDate(iso) {
@@ -222,9 +226,9 @@ export default function OrdersPage() {
 
                       {/* Status */}
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold capitalize ${badge.pill}`}>
+                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${badge.pill}`}>
                           <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${badge.dot}`} />
-                          {order.status}
+                          {order.status === 'return_requested' ? 'Return Requested' : order.status === 'returned' ? 'Returned' : order.status.charAt(0).toUpperCase() + order.status.slice(1)}
                         </span>
                       </td>
 

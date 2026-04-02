@@ -3,7 +3,7 @@
 import { useState, useRef, useMemo, useEffect } from 'react';
 import { productAPI } from '@/lib/api';
 import { toast } from 'sonner';
-import { ImageIcon, CloudUpload, Loader2, Trash2, ChevronDown } from 'lucide-react';
+import { ImageIcon, CloudUpload, Loader2, Trash2, ChevronDown, Star } from 'lucide-react';
 
 export default function MediaUploader({ productId, initialMedia = [], onMediaChange, attributeValues = [] }) {
   const [media, setMedia] = useState(initialMedia);
@@ -81,6 +81,7 @@ export default function MediaUploader({ productId, initialMedia = [], onMediaCha
   };
 
   const [deletingId, setDeletingId] = useState(null);
+  const [settingThumbId, setSettingThumbId] = useState(null);
 
   const handleDelete = async (mediaItem) => {
     if (!productId) {
@@ -91,8 +92,13 @@ export default function MediaUploader({ productId, initialMedia = [], onMediaCha
     }
     setDeletingId(mediaItem.id);
     try {
-      await productAPI.deleteMedia(productId, mediaItem.id);
-      const next = media.filter(m => m.id !== mediaItem.id);
+      const res = await productAPI.deleteMedia(productId, mediaItem.id);
+      const newThumbId = res.data?.new_thumbnail_id;
+      let next = media.filter(m => m.id !== mediaItem.id);
+      // If backend auto-promoted a new thumbnail, reflect it in UI
+      if (newThumbId) {
+        next = next.map(m => ({ ...m, is_thumbnail: m.id === newThumbId }));
+      }
       setMedia(next);
       onMediaChange?.(next);
       toast.success('Image deleted successfully.');
@@ -100,6 +106,22 @@ export default function MediaUploader({ productId, initialMedia = [], onMediaCha
       toast.error('Failed to delete image. Please try again.');
     } finally {
       setDeletingId(null);
+    }
+  };
+
+  const handleSetThumbnail = async (mediaItem) => {
+    if (!productId) return;
+    setSettingThumbId(mediaItem.id);
+    try {
+      await productAPI.setThumbnail(productId, mediaItem.id);
+      const next = media.map(m => ({ ...m, is_thumbnail: m.id === mediaItem.id }));
+      setMedia(next);
+      onMediaChange?.(next);
+      toast.success('Thumbnail set!');
+    } catch {
+      toast.error('Failed to set thumbnail.');
+    } finally {
+      setSettingThumbId(null);
     }
   };
 
@@ -118,7 +140,11 @@ export default function MediaUploader({ productId, initialMedia = [], onMediaCha
           {items.map((item) => (
             <div
               key={item.id}
-              className="group relative aspect-square rounded-xl overflow-hidden border-2 border-slate-200 dark:border-gray-700 hover:border-[#ff6600]/40 dark:hover:border-[#ff6600]/40 transition-all"
+              className={`group relative aspect-square rounded-xl overflow-hidden border-2 transition-all ${
+                item.is_thumbnail
+                  ? 'border-[#ff6600] ring-2 ring-[#ff6600]/20'
+                  : 'border-slate-200 dark:border-gray-700 hover:border-[#ff6600]/40 dark:hover:border-[#ff6600]/40'
+              }`}
             >
               {item.media_type === 'video' ? (
                 <video
@@ -139,23 +165,47 @@ export default function MediaUploader({ productId, initialMedia = [], onMediaCha
                   <span className="text-xs text-center px-1 truncate w-full">{item.alt_text}</span>
                 </div>
               )}
+              {/* Thumbnail badge */}
+              {item.is_thumbnail && (
+                <span className="absolute top-2 left-2 bg-[#ff6600] text-white text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+                  <Star className="w-3 h-3 fill-white" /> THUMBNAIL
+                </span>
+              )}
               {/* Alt text badge */}
               <span className="absolute bottom-1 left-1 right-8 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded truncate">
                 {item.alt_text}
               </span>
-              {/* Delete overlay */}
-              <button
-                type="button"
-                onClick={(e) => { e.stopPropagation(); handleDelete(item); }}
-                disabled={deletingId === item.id}
-                className="absolute top-2 right-2 p-1.5 bg-white/90 dark:bg-gray-800/90 rounded-full text-red-500 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm hover:bg-red-50 dark:hover:bg-red-900/30 disabled:opacity-100 disabled:cursor-wait"
-                title="Delete"
-              >
-                {deletingId === item.id
-                  ? <Loader2 className="w-4 h-4 animate-spin text-red-400" />
-                  : <Trash2 className="w-4 h-4" />
-                }
-              </button>
+              {/* Action buttons overlay */}
+              <div className="absolute top-2 right-2 flex flex-col gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                {/* Set Thumbnail */}
+                {item.media_type === 'image' && !item.is_thumbnail && (
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); handleSetThumbnail(item); }}
+                    disabled={settingThumbId === item.id}
+                    className="p-1.5 bg-white/90 dark:bg-gray-800/90 rounded-full text-[#ff6600] shadow-sm hover:bg-[#ff6600]/10 dark:hover:bg-[#ff6600]/20 disabled:opacity-100 disabled:cursor-wait"
+                    title="Set as Thumbnail"
+                  >
+                    {settingThumbId === item.id
+                      ? <Loader2 className="w-4 h-4 animate-spin" />
+                      : <Star className="w-4 h-4" />
+                    }
+                  </button>
+                )}
+                {/* Delete */}
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); handleDelete(item); }}
+                  disabled={deletingId === item.id}
+                  className="p-1.5 bg-white/90 dark:bg-gray-800/90 rounded-full text-red-500 shadow-sm hover:bg-red-50 dark:hover:bg-red-900/30 disabled:opacity-100 disabled:cursor-wait"
+                  title="Delete"
+                >
+                  {deletingId === item.id
+                    ? <Loader2 className="w-4 h-4 animate-spin text-red-400" />
+                    : <Trash2 className="w-4 h-4" />
+                  }
+                </button>
+              </div>
               {item.media_type === 'video' && (
                 <span className="absolute bottom-1 left-1 bg-black/60 text-white text-xs px-1.5 py-0.5 rounded font-bold">
                   VIDEO

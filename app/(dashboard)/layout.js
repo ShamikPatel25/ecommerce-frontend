@@ -6,6 +6,7 @@ import { useAuthStore } from '@/store/authStore';
 import { useStoreStore } from '@/store/storeStore';
 import { useThemeStore } from '@/store/themeStore';
 import { storeAPI } from '@/lib/api';
+import { getSubdomain } from '@/lib/subdomain';
 import Sidebar from '@/components/Sidebar';
 import { useNotificationSocket } from '@/lib/useNotificationSocket';
 
@@ -51,8 +52,18 @@ export default function DashboardLayout({ children }) {
         const res = await storeAPI.myStores();
         const storeList = res.data?.stores || res.data || [];
         setStores(storeList);
-        if (storeList.length > 0) {
-          // Keep current activeStore if it belongs to this user, else pick first
+
+        // If on a subdomain (e.g., nike.localhost:3000), auto-select that store
+        const subdomain = getSubdomain(window.location.host);
+        if (subdomain && storeList.length > 0) {
+          const subdomainStore = storeList.find(s => s.subdomain === subdomain);
+          if (subdomainStore) {
+            setActiveStore(subdomainStore);
+          } else if (!activeStore || !storeList.find(s => s.id === activeStore.id)) {
+            setActiveStore(storeList[0]);
+          }
+        } else if (storeList.length > 0) {
+          // No subdomain: keep current activeStore if valid, else pick first
           const currentValid = activeStore && storeList.find(s => s.id === activeStore.id);
           if (!currentValid) {
             setActiveStore(storeList[0]);

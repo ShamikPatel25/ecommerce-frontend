@@ -99,16 +99,17 @@ export default function DashboardPage() {
     fetchAll();
   }, [fetchAll]);
 
-  // --- Chart data computations ---
+  // --- Chart data: last 7 days ---
 
-  // Revenue by day (last 7 days)
+  const fmtLabel = (d) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
   const revenueByDay = useMemo(() => {
     const days = [];
     for (let i = 6; i >= 0; i--) {
       const d = new Date();
       d.setDate(d.getDate() - i);
       const key = d.toISOString().split('T')[0];
-      const label = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      const label = fmtLabel(d);
       const dayOrders = allOrders.filter(o => o.created_at?.startsWith(key) && o.status !== 'cancelled');
       days.push({
         date: label,
@@ -117,7 +118,7 @@ export default function DashboardPage() {
       });
     }
     return days;
-  }, [allOrders]);
+  }, [allOrders]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Status distribution for pie
   const statusData = useMemo(() => {
@@ -220,66 +221,100 @@ export default function DashboardPage() {
             <div className="p-6 border-b border-gray-200 dark:border-gray-700">
               <h3 className="text-lg font-bold text-slate-900 dark:text-white">Revenue &amp; Orders (Last 7 Days)</h3>
             </div>
+            {/* 3D Chart */}
             <div className="p-6">
-              <ResponsiveContainer width="100%" height={300}>
-                <AreaChart data={revenueByDay} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                  <defs>
-                    <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#ff6600" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#ff6600" stopOpacity={0} />
-                    </linearGradient>
-                    <linearGradient id="ordersGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#ff8533" stopOpacity={0.2} />
-                      <stop offset="95%" stopColor="#ff8533" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                  <XAxis dataKey="date" tick={{ fontSize: 12, fill: '#64748b' }} />
-                  <YAxis
-                    yAxisId="revenue"
-                    tick={{ fontSize: 12, fill: '#64748b' }}
-                    tickFormatter={(v) => `$${v.toLocaleString()}`}
-                  />
-                  <YAxis
-                    yAxisId="orders"
-                    orientation="right"
-                    tick={{ fontSize: 12, fill: '#64748b' }}
-                    allowDecimals={false}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: '#fff',
-                      border: '1px solid #e2e8f0',
-                      borderRadius: '8px',
-                      fontSize: '13px',
-                    }}
-                    formatter={(value, name) =>
-                      name === 'revenue'
-                        ? [`$${parseFloat(value).toLocaleString(undefined, { minimumFractionDigits: 2 })}`, 'Revenue']
-                        : [value, 'Orders']
-                    }
-                  />
-                  <Legend />
-                  <Area
-                    yAxisId="revenue"
-                    type="monotone"
-                    dataKey="revenue"
-                    stroke="#ff6600"
-                    strokeWidth={2}
-                    fill="url(#revenueGradient)"
-                    name="Revenue"
-                  />
-                  <Area
-                    yAxisId="orders"
-                    type="monotone"
-                    dataKey="orders"
-                    stroke="#ff8533"
-                    strokeWidth={2}
-                    fill="url(#ordersGradient)"
-                    name="Orders"
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
+              <div style={{ perspective: '900px' }}>
+                <div style={{ transform: 'rotateX(4deg)', transformOrigin: 'center bottom' }}>
+                  <ResponsiveContainer width="100%" height={320}>
+                    <AreaChart data={revenueByDay} margin={{ top: 10, right: 30, left: 20, bottom: 5 }}>
+                      <defs>
+                        <linearGradient id="revGrad3d" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#ff6600" stopOpacity={0.4} />
+                          <stop offset="50%" stopColor="#ff6600" stopOpacity={0.15} />
+                          <stop offset="100%" stopColor="#ff6600" stopOpacity={0.02} />
+                        </linearGradient>
+                        <linearGradient id="ordGrad3d" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.35} />
+                          <stop offset="50%" stopColor="#3b82f6" stopOpacity={0.1} />
+                          <stop offset="100%" stopColor="#3b82f6" stopOpacity={0.02} />
+                        </linearGradient>
+                        <filter id="shadow3d">
+                          <feDropShadow dx="0" dy="4" stdDeviation="3" floodColor="#ff6600" floodOpacity="0.15" />
+                        </filter>
+                        <filter id="shadow3dBlue">
+                          <feDropShadow dx="0" dy="3" stdDeviation="2" floodColor="#3b82f6" floodOpacity="0.12" />
+                        </filter>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                      <XAxis
+                        dataKey="date"
+                        tick={{ fontSize: 11, fill: '#94a3b8' }}
+                        axisLine={{ stroke: '#e2e8f0' }}
+                        tickLine={false}
+                      />
+                      <YAxis
+                        yAxisId="revenue"
+                        tick={{ fontSize: 11, fill: '#94a3b8' }}
+                        tickFormatter={(v) => `$${v >= 1000 ? `${(v / 1000).toFixed(1)}k` : v}`}
+                        axisLine={false}
+                        tickLine={false}
+                      />
+                      <YAxis
+                        yAxisId="orders"
+                        orientation="right"
+                        tick={{ fontSize: 11, fill: '#94a3b8' }}
+                        allowDecimals={false}
+                        axisLine={false}
+                        tickLine={false}
+                      />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: 'rgba(255,255,255,0.95)',
+                          backdropFilter: 'blur(8px)',
+                          border: '1px solid #e2e8f0',
+                          borderRadius: '12px',
+                          fontSize: '12px',
+                          boxShadow: '0 8px 30px rgba(0,0,0,0.08)',
+                        }}
+                        formatter={(value, name) =>
+                          name === 'Revenue'
+                            ? [`$${parseFloat(value).toLocaleString(undefined, { minimumFractionDigits: 2 })}`, 'Revenue']
+                            : [value, 'Orders']
+                        }
+                        cursor={{ stroke: '#ff6600', strokeWidth: 1, strokeDasharray: '4 4' }}
+                      />
+                      <Legend
+                        iconType="circle"
+                        wrapperStyle={{ fontSize: '12px', paddingTop: '12px' }}
+                      />
+                      <Area
+                        yAxisId="revenue"
+                        type="monotone"
+                        dataKey="revenue"
+                        stroke="#ff6600"
+                        strokeWidth={2.5}
+                        fill="url(#revGrad3d)"
+                        name="Revenue"
+                        dot={{ r: 3, fill: '#ff6600', stroke: '#fff', strokeWidth: 2 }}
+                        activeDot={{ r: 5, fill: '#ff6600', stroke: '#fff', strokeWidth: 2 }}
+                        filter="url(#shadow3d)"
+                      />
+                      <Area
+                        yAxisId="orders"
+                        type="monotone"
+                        dataKey="orders"
+                        stroke="#3b82f6"
+                        strokeWidth={2}
+                        fill="url(#ordGrad3d)"
+                        name="Orders"
+                        dot={{ r: 2.5, fill: '#3b82f6', stroke: '#fff', strokeWidth: 2 }}
+                        activeDot={{ r: 4.5, fill: '#3b82f6', stroke: '#fff', strokeWidth: 2 }}
+                        filter="url(#shadow3dBlue)"
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
             </div>
           </div>
 

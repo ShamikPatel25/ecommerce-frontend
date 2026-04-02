@@ -123,6 +123,15 @@ export default function ProductsPage() {
     return product.stock ?? 0;
   };
 
+  const getTotalReserved = (product) => {
+    if (product.product_type === 'catalog') {
+      const variants = product.variants || [];
+      if (variants.length === 0) return 0;
+      return variants.reduce((sum, v) => sum + (v.reserved ?? 0), 0);
+    }
+    return product.reserved ?? 0;
+  };
+
   const getVariantCount = (product) => {
     if (product.product_type === 'catalog') {
       return product.variants?.length || 0;
@@ -206,6 +215,7 @@ export default function ProductsPage() {
                     ) : (
                       paginatedProducts.map((product) => {
                         const stock = getTotalStock(product);
+                        const reserved = getTotalReserved(product);
                         const variantCount = getVariantCount(product);
                         const mediaUrl = product.media?.[0]?.file_url || product.media?.[0]?.file || product.image;
 
@@ -267,6 +277,11 @@ export default function ProductsPage() {
                                   {stock}
                                 </span>
                               </div>
+                              {reserved > 0 && (
+                                <p className="text-[11px] font-semibold text-orange-500 mt-1">
+                                  {reserved} reserved
+                                </p>
+                              )}
                             </td>
 
                             {/* Catalog */}

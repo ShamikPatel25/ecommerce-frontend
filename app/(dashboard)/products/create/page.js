@@ -6,7 +6,7 @@ import { productAPI, categoryAPI, attributeAPI } from '@/lib/api';
 import { toast } from 'sonner';
 import {
   ArrowLeft, ChevronRight, Info, ImageIcon, ChevronDown,
-  CloudUpload, Plus, X, Loader2, Sliders, Package, Trash2,
+  CloudUpload, Plus, X, Loader2, Sliders, Package, Trash2, Star,
 } from 'lucide-react';
 
 const INPUT_CLS =
@@ -86,14 +86,75 @@ export default function CreateProductPage() {
   // Keep ref in sync with state so handleSubmit always has the latest images
   useEffect(() => { imagesRef.current = images; }, [images]);
 
+  const [selectedUploadAttr, setSelectedUploadAttr] = useState('');
+
+  // Auto-detect attribute value from filename (mirrors backend logic: longest match wins)
+  const detectAttrFromFilename = (filename, selAttrs, attrs) => {
+    if (!selAttrs || selAttrs.length === 0 || !attrs || attrs.length === 0) return null;
+    // Normalize: remove extension, lowercase, replace all separators with underscore
+    const base = filename
+      .replace(/\.[^/.]+$/, '')
+      .toLowerCase()
+      .replace(/[-\s().+,]/g, '_');
+    let bestMatch = null;
+    let bestLen = 0;
+    attrs
+      .filter((a) => selAttrs.includes(a.id))
+      .forEach((a) => {
+        (a.values || []).forEach((v) => {
+          const valLower = v.value.toLowerCase();
+          const valNorm = valLower.replace(/[-\s().+,]/g, '_');
+          // Try normalized match first, then raw lowercase
+          if ((base.includes(valNorm) || base.includes(valLower)) && valNorm.length > bestLen) {
+            bestMatch = v.id;
+            bestLen = valNorm.length;
+          }
+        });
+      });
+    return bestMatch;
+  };
+
+  // Re-classify existing images when attributes are selected/changed
+  useEffect(() => {
+    if (formData.product_type !== 'catalog' || selectedAttributes.length === 0 || attributes.length === 0) return;
+    setImages((prev) => {
+      if (prev.length === 0) return prev;
+      let changed = false;
+      let reclassified = 0;
+      const updated = prev.map((img) => {
+        if (img.manualAttr) return img;
+        const detected = detectAttrFromFilename(img.file?.name || '', selectedAttributes, attributes);
+        if (detected !== img.attribute_value_id) {
+          changed = true;
+          if (detected) reclassified++;
+          return { ...img, attribute_value_id: detected };
+        }
+        return img;
+      });
+      if (!changed) return prev;
+      if (reclassified > 0) {
+        setTimeout(() => toast.success(`${reclassified} image(s) auto-classified by filename`), 0);
+      }
+      return updated;
+    });
+  }, [selectedAttributes, attributes, formData.product_type]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const addFiles = (files) => {
     const valid = Array.from(files).filter((f) => f.type.startsWith('image/'));
     valid.forEach((file) => {
       const reader = new FileReader();
       reader.onload = (e) => {
+        const manual = selectedUploadAttr || null;
+        const attrId = manual || detectAttrFromFilename(file.name, selectedAttributes, attributes) || null;
         setImages((prev) => [
           ...prev,
-          { preview: e.target.result, file, isMain: prev.length === 0 },
+          {
+            preview: e.target.result,
+            file,
+            isMain: prev.length === 0,
+            attribute_value_id: attrId,
+            manualAttr: !!manual,
+          },
         ]);
       };
       reader.readAsDataURL(file);
@@ -108,8 +169,12 @@ export default function CreateProductPage() {
 
   const removeImage = (idx) => {
     setImages((prev) => {
+      const removed = prev[idx];
       const next = prev.filter((_, i) => i !== idx);
-      if (prev[idx].isMain && next.length > 0) next[0].isMain = true;
+      // Auto-promote next image as thumbnail if the deleted one was the main
+      if (removed?.isMain && next.length > 0) {
+        return next.map((img, i) => (i === 0 ? { ...img, isMain: true } : img));
+      }
       return next;
     });
   };
@@ -329,14 +394,15 @@ export default function CreateProductPage() {
       }
 
       // Upload images that were selected during creation
-      const currentImages = imagesRef.current;
+      const currentImages = imagesRef.current.length > 0 ? imagesRef.current : images;
       if (currentImages.length > 0) {
-        // Upload main image first (order=0), then others
-        const sorted = [...currentImages].sort((a, b) => (b.isMain ? 1 : 0) - (a.isMain ? 1 : 0));
         let uploadedCount = 0;
         let failedCount = 0;
-        for (let i = 0; i < sorted.length; i++) {
-          const img = sorted[i];
+        let thumbnailMediaId = null;
+        let firstUploadedId = null;
+
+        for (let i = 0; i < currentImages.length; i++) {
+          const img = currentImages[i];
           if (!img.file) { failedCount++; continue; }
           try {
             const fd = new FormData();
@@ -344,11 +410,35 @@ export default function CreateProductPage() {
             fd.append('media_type', 'image');
             fd.append('alt_text', img.file.name || '');
             fd.append('order', String(img.isMain ? 0 : i + 1));
-            await productAPI.uploadMedia(productId, fd);
+            if (img.isMain) {
+              fd.append('is_thumbnail', 'true');
+            }
+            if (img.attribute_value_id) {
+              fd.append('attribute_value_id', img.attribute_value_id);
+            }
+            const uploadRes = await productAPI.uploadMedia(productId, fd);
+            const mediaId = uploadRes.data?.id;
             uploadedCount++;
+            if (!firstUploadedId && mediaId) {
+              firstUploadedId = mediaId;
+            }
+            if (img.isMain && mediaId) {
+              thumbnailMediaId = mediaId;
+            }
           } catch (uploadErr) {
             failedCount++;
             console.error('Image upload failed:', uploadErr?.response?.data || uploadErr);
+          }
+        }
+
+        // Always explicitly set thumbnail via the dedicated endpoint.
+        // Use the user-selected thumbnail, or fall back to the first uploaded image.
+        const thumbId = thumbnailMediaId || firstUploadedId;
+        if (thumbId) {
+          try {
+            await productAPI.setThumbnail(productId, thumbId);
+          } catch {
+            // best-effort — is_thumbnail was also sent during upload
           }
         }
         if (failedCount > 0) {
@@ -847,6 +937,44 @@ export default function CreateProductPage() {
           </div>
 
           <div className="space-y-5">
+            {/* Attribute Value Selector for catalog products */}
+            {formData.product_type === 'catalog' && selectedAttributes.length > 0 && (
+              <div>
+                <label className="text-sm font-semibold text-slate-700 dark:text-gray-300 mb-1.5 block">
+                  Upload images for:
+                </label>
+                <div className="relative inline-block">
+                  <select
+                    value={selectedUploadAttr}
+                    onChange={(e) => setSelectedUploadAttr(e.target.value)}
+                    className="appearance-none rounded-lg border border-[#ff6600]/20 bg-[#ff6600]/5 px-4 py-2.5 pr-10 text-sm text-slate-900 dark:text-white dark:bg-gray-700 dark:border-gray-600 focus:outline-none focus:border-[#ff6600] focus:ring-2 focus:ring-[#ff6600]/20 transition-all font-medium"
+                  >
+                    <option value="">General (Product Main)</option>
+                    {attributes
+                      .filter((a) => selectedAttributes.includes(a.id))
+                      .flatMap((a) =>
+                        (a.values || []).map((v) => (
+                          <option key={v.id} value={v.id}>
+                            {a.name}: {v.value}
+                          </option>
+                        ))
+                      )}
+                  </select>
+                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                </div>
+                <p className="text-xs text-slate-400 dark:text-gray-500 mt-1">
+                  Selected: <span className="font-bold text-[#ff6600]">
+                    {selectedUploadAttr
+                      ? (() => {
+                          const attr = attributes.find((a) => a.values?.some((v) => String(v.id) === String(selectedUploadAttr)));
+                          const val = attr?.values?.find((v) => String(v.id) === String(selectedUploadAttr));
+                          return attr && val ? `${attr.name}: ${val.value}` : 'General';
+                        })()
+                      : 'General (Product Main)'}
+                  </span>
+                </p>
+              </div>
+            )}
             <div
               onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
               onDragLeave={() => setDragOver(false)}
@@ -880,45 +1008,115 @@ export default function CreateProductPage() {
               />
             </div>
 
-            {images.length > 0 && (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                {images.map((img, idx) => (
-                  <div
-                    key={idx}
-                    onClick={() => setMain(idx)}
-                    className={`relative group aspect-square rounded-xl overflow-hidden border-2 cursor-pointer transition-all ${
-                      img.isMain ? 'border-[#ff6600] ring-2 ring-[#ff6600]/20' : 'border-slate-200 dark:border-gray-600 hover:border-[#ff6600]/40'
-                    }`}
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={img.preview} alt="" className="w-full h-full object-cover" />
-                    {img.isMain && (
-                      <div className="absolute inset-x-0 bottom-0 bg-[#ff6600]/90 text-white text-[10px] font-bold text-center py-1">
-                        MAIN IMAGE
-                      </div>
-                    )}
+            {images.length > 0 && (() => {
+              // Group images: general (no attribute) + per-attribute-value
+              const generalImages = images.map((img, idx) => ({ ...img, _idx: idx })).filter((img) => !img.attribute_value_id);
+              const byValue = {};
+              images.forEach((img, idx) => {
+                if (img.attribute_value_id) {
+                  if (!byValue[img.attribute_value_id]) {
+                    const attr = attributes.find((a) => a.values?.some((v) => String(v.id) === String(img.attribute_value_id)));
+                    const val = attr?.values?.find((v) => String(v.id) === String(img.attribute_value_id));
+                    byValue[img.attribute_value_id] = {
+                      label: attr && val ? `${attr.name}: ${val.value}` : `Attribute #${img.attribute_value_id}`,
+                      items: [],
+                    };
+                  }
+                  byValue[img.attribute_value_id].items.push({ ...img, _idx: idx });
+                }
+              });
+
+              const renderImageCard = (img) => (
+                <div
+                  key={img._idx}
+                  onClick={() => setMain(img._idx)}
+                  className={`relative group aspect-square rounded-xl overflow-hidden border-2 cursor-pointer transition-all ${
+                    img.isMain ? 'border-[#ff6600] ring-2 ring-[#ff6600]/20' : 'border-slate-200 dark:border-gray-600 hover:border-[#ff6600]/40'
+                  }`}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={img.preview} alt="" className="w-full h-full object-cover" />
+                  {/* Thumbnail badge */}
+                  {img.isMain && (
+                    <span className="absolute top-2 left-2 bg-[#ff6600] text-white text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+                      <Star className="w-3 h-3 fill-white" /> THUMBNAIL
+                    </span>
+                  )}
+                  {/* Set thumbnail button (only show on non-thumbnail images) */}
+                  {!img.isMain && (
                     <button
                       type="button"
-                      onClick={(e) => { e.stopPropagation(); removeImage(idx); }}
-                      className="absolute top-2 right-2 p-1 bg-white/90 dark:bg-gray-700/90 rounded-full text-red-500 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
+                      onClick={(e) => { e.stopPropagation(); setMain(img._idx); }}
+                      className="absolute top-2 left-2 p-1.5 bg-white/90 dark:bg-gray-800/90 rounded-full text-[#ff6600] shadow-sm hover:bg-[#ff6600]/10 opacity-0 group-hover:opacity-100 transition-opacity"
+                      title="Set as Thumbnail"
                     >
-                      <X className="w-3.5 h-3.5" />
+                      <Star className="w-4 h-4" />
                     </button>
-                  </div>
-                ))}
-                <div
-                  onClick={() => fileInputRef.current?.click()}
-                  className="aspect-square rounded-xl border-2 border-dashed border-[#ff6600]/20 bg-slate-50 dark:bg-gray-700 flex items-center justify-center cursor-pointer hover:border-[#ff6600]/40 hover:bg-[#ff6600]/5 transition-colors"
-                >
-                  <Plus className="w-6 h-6 text-slate-300 dark:text-gray-500" />
+                  )}
+                  {/* Delete button */}
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); removeImage(img._idx); }}
+                    className="absolute top-2 right-2 p-1.5 bg-white/90 dark:bg-gray-800/90 rounded-full text-red-500 shadow-sm hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity"
+                    title="Remove"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                  {/* Filename */}
+                  <span className="absolute bottom-1 left-1 right-1 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded truncate">
+                    {img.file?.name || ''}
+                  </span>
                 </div>
-              </div>
-            )}
+              );
+
+              return (
+                <div className="mt-4 space-y-6">
+                  {/* General Product Images */}
+                  {generalImages.length > 0 && (
+                    <div>
+                      <h4 className="text-sm font-bold text-slate-700 dark:text-gray-300 mb-2">General Product Images</h4>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                        {generalImages.map(renderImageCard)}
+                        <div
+                          onClick={() => { setSelectedUploadAttr(''); fileInputRef.current?.click(); }}
+                          className="aspect-square rounded-xl border-2 border-dashed border-[#ff6600]/20 bg-slate-50 dark:bg-gray-700 flex items-center justify-center cursor-pointer hover:border-[#ff6600]/40 hover:bg-[#ff6600]/5 transition-colors"
+                        >
+                          <Plus className="w-6 h-6 text-slate-300 dark:text-gray-500" />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Per-attribute-value groups */}
+                  {Object.entries(byValue).map(([valueId, group]) => (
+                    <div key={valueId}>
+                      <h4 className="text-sm font-bold text-slate-700 dark:text-gray-300 mb-2">{group.label}</h4>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                        {group.items.map(renderImageCard)}
+                        <div
+                          onClick={() => { setSelectedUploadAttr(valueId); fileInputRef.current?.click(); }}
+                          className="aspect-square rounded-xl border-2 border-dashed border-[#ff6600]/20 bg-slate-50 dark:bg-gray-700 flex items-center justify-center cursor-pointer hover:border-[#ff6600]/40 hover:bg-[#ff6600]/5 transition-colors"
+                        >
+                          <Plus className="w-6 h-6 text-slate-300 dark:text-gray-500" />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+
+                  {/* If no groups yet (single product or no images with attributes) */}
+                  {generalImages.length === 0 && Object.keys(byValue).length === 0 && (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                      {images.map((img, idx) => renderImageCard({ ...img, _idx: idx }))}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
 
             {images.length > 0 && (
               <p className="text-xs text-slate-400 dark:text-gray-500 flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-[#ff6600] inline-block" />
-                Click an image to set it as the main image.
+                Click the <Star className="w-3 h-3 text-[#ff6600] inline" /> star to set an image as thumbnail.
               </p>
             )}
           </div>

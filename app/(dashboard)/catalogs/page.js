@@ -26,10 +26,13 @@ export default function CatalogsPage() {
         const productDetail = await productAPI.get(product.id);
         const variants = productDetail.data?.variants || [];
         variants.forEach(variant => {
+          const valuesLabel = variant.attribute_values?.map(av => av.value).join('-') || '';
           allVariants.push({
             ...variant,
+            variant_name: valuesLabel ? `${product.name} - ${valuesLabel}` : variant.sku,
             product_name: product.name,
             product_id: product.id,
+            product_price: product.price,
           });
         });
       }
@@ -189,7 +192,7 @@ export default function CatalogsPage() {
                             {/* Price */}
                             <td className="px-6 py-4">
                               <span className="text-sm font-bold text-slate-900 dark:text-white">
-                                ${parseFloat(variant.price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                ${parseFloat(variant.price ?? variant.product_price ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                               </span>
                             </td>
 

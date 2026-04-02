@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import {
   ArrowLeft, ChevronRight, ChevronDown, Loader2, Store,
 } from 'lucide-react';
+import { getStoreUrl } from '@/lib/subdomain';
 
 const INPUT_CLS =
   'w-full rounded-lg border border-[#ff6600]/20 bg-[#ff6600]/5 px-4 py-3 text-slate-900 ' +
@@ -42,8 +43,8 @@ export default function CreateStorePage() {
         setStores(storeList);
         setActiveStore(newStore);
       }
-      // Reload to apply new store context across the app
-      window.location.href = '/stores';
+      // Stay in admin panel — go to dashboard
+      router.push('/dashboard');
     } catch (error) {
       toast.error(error.response?.data?.subdomain?.[0] || 'Something went wrong');
     } finally {
@@ -135,7 +136,7 @@ export default function CreateStorePage() {
                 onChange={(e) => setFormData({ ...formData, subdomain: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') })}
                 required
               />
-              <span className="px-4 py-3 bg-slate-50 dark:bg-gray-700/50 text-slate-400 dark:text-gray-500 text-sm border-l border-[#ff6600]/10 dark:border-gray-600 whitespace-nowrap">.myplatform.com</span>
+              <span className="px-4 py-3 bg-slate-50 dark:bg-gray-700/50 text-slate-400 dark:text-gray-500 text-sm border-l border-[#ff6600]/10 dark:border-gray-600 whitespace-nowrap">.localhost:3000</span>
             </div>
             <p className="text-xs text-slate-400 dark:text-gray-500">Only lowercase letters, numbers and hyphens</p>
           </div>

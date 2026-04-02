@@ -155,7 +155,7 @@ export default function EditStorePage() {
               <span className="flex-1 px-4 py-3 text-slate-500 dark:text-gray-400 font-mono min-w-0">
                 {formData.subdomain}
               </span>
-              <span className="px-4 py-3 bg-slate-50 dark:bg-gray-700/50 text-slate-400 dark:text-gray-500 text-sm border-l border-slate-200 dark:border-gray-600 whitespace-nowrap">.myplatform.com</span>
+              <span className="px-4 py-3 bg-slate-50 dark:bg-gray-700/50 text-slate-400 dark:text-gray-500 text-sm border-l border-slate-200 dark:border-gray-600 whitespace-nowrap">.localhost:3000</span>
             </div>
             <p className="text-xs text-slate-400 dark:text-gray-500">Subdomain is permanent and cannot be changed after creation.</p>
           </div>

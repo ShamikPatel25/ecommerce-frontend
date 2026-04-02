@@ -9,6 +9,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useThemeStore } from '@/store/themeStore';
 import { Sun, Moon } from 'lucide-react';
 import NotificationBell from '@/components/NotificationBell';
+import { getStoreUrl } from '@/lib/subdomain';
 
 export default function Sidebar() {
   const pathname = usePathname();
@@ -74,8 +75,8 @@ export default function Sidebar() {
   const handleStoreSwitch = (store) => {
     setActiveStore(store);
     setStoreDropdownOpen(false);
-    // Reload page to refetch data with new store context
-    window.location.reload();
+    // Navigate to the store's subdomain URL
+    window.location.href = getStoreUrl(store.subdomain) + '/dashboard';
   };
 
   const menuItems = [

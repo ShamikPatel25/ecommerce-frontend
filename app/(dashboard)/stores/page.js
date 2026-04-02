@@ -162,7 +162,7 @@ export default function StoresPage() {
                               <div className="size-10 bg-blue-100 rounded-lg flex items-center justify-center text-lg flex-shrink-0">🏪</div>
                               <div className="min-w-0">
                                 <p className="text-sm font-semibold truncate text-slate-900 dark:text-white">{store.name}</p>
-                                <p className="text-xs text-blue-600">{store.subdomain}.myplatform.com</p>
+                                <p className="text-xs text-blue-600">{store.full_domain || `${store.subdomain}.localhost:3000`}</p>
                               </div>
                             </div>
                           </td>

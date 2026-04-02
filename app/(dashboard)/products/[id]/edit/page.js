@@ -365,6 +365,9 @@ export default function EditProductPage() {
                   value={formData.stock}
                   onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
                 />
+                {(product?.reserved ?? 0) > 0 && (
+                  <p className="text-xs text-orange-500 mt-1">{product.reserved} reserved</p>
+                )}
               </div>
             )}
 
@@ -560,6 +563,9 @@ export default function EditProductPage() {
                               className="w-24 px-2 py-1.5 border border-[#ff6600]/20 bg-[#ff6600]/5 rounded-lg text-sm focus:outline-none focus:border-[#ff6600] focus:ring-2 focus:ring-[#ff6600]/20 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                               placeholder="0"
                             />
+                            {(catalog.reserved ?? 0) > 0 && (
+                              <p className="text-xs text-orange-500 mt-1">{catalog.reserved} reserved</p>
+                            )}
                           </td>
 
                           <td className="px-4 py-3">

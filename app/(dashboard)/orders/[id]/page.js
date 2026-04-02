@@ -10,17 +10,37 @@ import {
   ChevronDown, Loader2, Info,
 } from 'lucide-react';
 
-const STATUS_OPTIONS = [
-  'pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled',
-];
-
 const STATUS_STYLES = {
-  pending:    'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 border-yellow-200',
-  confirmed:  'bg-blue-100 dark:bg-blue-900/30   text-blue-700 dark:text-blue-400   border-blue-200',
-  processing: 'bg-amber-100  text-amber-700  border-amber-200',
-  shipped:    'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 border-purple-200',
-  delivered:  'bg-green-100 dark:bg-green-900/30  text-green-700 dark:text-green-400  border-green-200',
-  cancelled:  'bg-red-100 dark:bg-red-900/30    text-red-600    border-red-200',
+  pending:          'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 border-yellow-200',
+  confirmed:        'bg-blue-100 dark:bg-blue-900/30   text-blue-700 dark:text-blue-400   border-blue-200',
+  processing:       'bg-amber-100  text-amber-700  border-amber-200',
+  shipped:          'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 border-purple-200',
+  delivered:        'bg-green-100 dark:bg-green-900/30  text-green-700 dark:text-green-400  border-green-200',
+  cancelled:        'bg-red-100 dark:bg-red-900/30    text-red-600    border-red-200',
+  return_requested: 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 border-orange-200',
+  returned:         'bg-rose-100 dark:bg-rose-900/30   text-rose-600 dark:text-rose-400   border-rose-200',
+};
+
+const VALID_TRANSITIONS = {
+  pending:          ['confirmed', 'cancelled'],
+  confirmed:        ['processing', 'cancelled'],
+  processing:       ['shipped', 'cancelled'],
+  shipped:          ['delivered'],
+  delivered:        ['return_requested'],
+  return_requested: ['returned'],
+  cancelled:        [],
+  returned:         [],
+};
+
+const STATUS_LABELS = {
+  pending:          'Pending',
+  confirmed:        'Confirmed',
+  processing:       'Processing',
+  shipped:          'Shipped',
+  delivered:        'Delivered',
+  cancelled:        'Cancelled',
+  return_requested: 'Return Requested',
+  returned:         'Returned',
 };
 
 /* Status timeline progression */
@@ -125,7 +145,10 @@ export default function OrderDetailPage() {
 
   const statusIndex   = STATUS_FLOW.indexOf(order.status);
   const isCancelled   = order.status === 'cancelled';
+  const isReturned    = order.status === 'returned';
+  const isReturnReq   = order.status === 'return_requested';
   const customerInit  = order.customer_name?.charAt(0).toUpperCase() || '?';
+  const allowedNext   = VALID_TRANSITIONS[order.status] || [];
 
   /* ──────────────────────────────────────────────────────────────── */
   return (
@@ -152,8 +175,8 @@ export default function OrderDetailPage() {
           <h1 className="text-3xl md:text-4xl font-black tracking-tight text-slate-900 dark:text-white">
             Order #{order.id}
           </h1>
-          <span className={`px-3 py-1 rounded-full text-sm font-bold border capitalize ${STATUS_STYLES[order.status] || ''}`}>
-            {order.status}
+          <span className={`px-3 py-1 rounded-full text-sm font-bold border ${STATUS_STYLES[order.status] || ''}`}>
+            {STATUS_LABELS[order.status] || order.status}
           </span>
         </div>
 
@@ -378,10 +401,12 @@ export default function OrderDetailPage() {
                   <select
                     value={newStatus}
                     onChange={(e) => setNewStatus(e.target.value)}
-                    className="w-full h-11 rounded-lg border border-slate-200 dark:border-gray-700 bg-slate-50 dark:bg-gray-700/50 px-4 pr-10 appearance-none text-sm text-slate-800 focus:outline-none focus:border-[#ff6600] focus:ring-2 focus:ring-[#ff6600]/20 capitalize transition-all"
+                    disabled={allowedNext.length === 0}
+                    className="w-full h-11 rounded-lg border border-slate-200 dark:border-gray-700 bg-slate-50 dark:bg-gray-700/50 px-4 pr-10 appearance-none text-sm text-slate-800 focus:outline-none focus:border-[#ff6600] focus:ring-2 focus:ring-[#ff6600]/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {STATUS_OPTIONS.map((s) => (
-                      <option key={s} value={s} className="capitalize">{s}</option>
+                    <option value={order.status}>{STATUS_LABELS[order.status] || order.status} (current)</option>
+                    {allowedNext.map((s) => (
+                      <option key={s} value={s}>{STATUS_LABELS[s] || s}</option>
                     ))}
                   </select>
                   <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-gray-500 pointer-events-none" />
@@ -430,6 +455,33 @@ export default function OrderDetailPage() {
                   <p className="text-sm font-bold text-slate-900 dark:text-white">Order Placed</p>
                   <p className="text-xs text-slate-400 dark:text-gray-500">{formatDate(order.created_at)}</p>
                 </div>
+              </div>
+            ) : (isReturnReq || isReturned) ? (
+              <div className="relative pl-8 space-y-4">
+                {isReturned && (
+                  <div className="relative">
+                    <div className="absolute left-[-24px] top-1.5 w-5 h-5 rounded-full bg-rose-500 ring-4 ring-rose-100" />
+                    <p className="text-sm font-bold text-slate-900 dark:text-white">Returned</p>
+                    <p className="text-xs text-slate-400 dark:text-gray-500">{formatDate(order.updated_at)}</p>
+                  </div>
+                )}
+                <div className="relative">
+                  <div className={`absolute left-[-24px] top-1.5 w-5 h-5 rounded-full ring-4 ${isReturnReq ? 'bg-orange-500 ring-orange-100' : 'bg-slate-300 ring-slate-50'}`} />
+                  <p className="text-sm font-bold text-slate-900 dark:text-white">Return Requested</p>
+                  <p className="text-xs text-slate-400 dark:text-gray-500">{formatDate(order.updated_at)}</p>
+                </div>
+                {STATUS_FLOW.slice().reverse().map((s) => (
+                  <div key={s} className="relative">
+                    <div className="absolute left-[-24px] top-1.5 w-5 h-5 rounded-full bg-slate-300 ring-4 ring-slate-50" />
+                    <p className="text-sm font-bold text-slate-900 dark:text-white capitalize">
+                      {s === 'pending'   ? 'Order Placed' :
+                       s === 'confirmed' ? 'Order Confirmed' :
+                       s === 'processing'? 'Payment Received' :
+                       s === 'shipped'   ? 'Order Shipped' :
+                       'Delivered'}
+                    </p>
+                  </div>
+                ))}
               </div>
             ) : (
               <div className="relative pl-8 space-y-4 before:absolute before:inset-0 before:ml-2.5 before:-mt-1 before:w-0.5 before:bg-slate-100">
