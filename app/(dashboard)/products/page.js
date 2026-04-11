@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation';
 import { productAPI, categoryAPI } from '@/lib/api';
 import { toast } from 'sonner';
 import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
-import { Plus, Search, Filter, ChevronLeft, ChevronRight, MoreHorizontal, Trash2, Eye, EyeOff } from 'lucide-react';
+import { Plus, Search, MoreHorizontal, Trash2, Eye, EyeOff } from 'lucide-react';
+import Pagination from '@/components/dashboard/Pagination';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -33,7 +34,7 @@ export default function ProductsPage() {
       setProducts(Array.isArray(prodRes.data) ? prodRes.data : prodRes.data?.results || []);
       setCategories(Array.isArray(catRes.data) ? catRes.data : catRes.data?.results || []);
     } catch {
-      // Silently handle — empty state will show
+      toast.error('Failed to load products');
     } finally {
       setLoading(false);
     }
@@ -88,9 +89,10 @@ export default function ProductsPage() {
     return cat?.name || '';
   };
 
+  const lowerQuery = searchQuery.toLowerCase().trim();
   const filteredProducts = products.filter(p =>
-    p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    p.sku.toLowerCase().includes(searchQuery.toLowerCase())
+    p.name.toLowerCase().includes(lowerQuery) ||
+    p.sku.toLowerCase().includes(lowerQuery)
   );
 
   // Pagination
@@ -174,9 +176,6 @@ export default function ProductsPage() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
-            <button className="px-4 text-slate-400 dark:text-gray-500 hover:text-slate-600 dark:hover:text-gray-300 border-l border-slate-100 dark:border-gray-700">
-              <Filter size={20} />
-            </button>
           </div>
         </div>
 
@@ -189,22 +188,21 @@ export default function ProductsPage() {
           ) : (
             <>
               <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
+                <table className="w-full text-left border-collapse table-fixed">
                   <thead>
                     <tr className="bg-slate-50 dark:bg-gray-700/50 text-slate-600 dark:text-gray-300">
-                      <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider w-20">Thumbnail</th>
-                      <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider">Product & Category</th>
-                      <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider">SKU</th>
-                      <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider">Stock Level</th>
-                      <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-center">Catalog</th>
-                      <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider">Price</th>
-                      <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-right">Actions</th>
+                      <th className="px-4 py-4 text-xs font-bold uppercase tracking-wider w-[30%]">Product</th>
+                      <th className="px-4 py-4 text-xs font-bold uppercase tracking-wider w-[14%]">SKU</th>
+                      <th className="px-4 py-4 text-xs font-bold uppercase tracking-wider w-[14%]">Stock Level</th>
+                      <th className="px-4 py-4 text-xs font-bold uppercase tracking-wider w-[14%] text-center">Catalog</th>
+                      <th className="px-4 py-4 text-xs font-bold uppercase tracking-wider w-[14%]">Price</th>
+                      <th className="px-4 py-4 text-xs font-bold uppercase tracking-wider w-[14%] text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-gray-700">
                     {paginatedProducts.length === 0 ? (
                       <tr>
-                        <td colSpan={7} className="px-6 py-16 text-center">
+                        <td colSpan={6} className="px-6 py-16 text-center">
                           <div className="text-slate-400 dark:text-gray-500">
                             <p className="text-4xl mb-3">📦</p>
                             <p className="text-sm font-medium">No products found</p>
@@ -217,55 +215,56 @@ export default function ProductsPage() {
                         const stock = getTotalStock(product);
                         const reserved = getTotalReserved(product);
                         const variantCount = getVariantCount(product);
-                        const mediaUrl = product.media?.[0]?.file_url || product.media?.[0]?.file || product.image;
+                        const thumbItem = product.media?.find(m => m.is_thumbnail) || product.media?.[0];
+                        const mediaUrl = thumbItem?.file_url || thumbItem?.file;
 
                         return (
                           <tr
                             key={product.id}
-                            className={`hover:bg-slate-50/50 dark:hover:bg-gray-700 transition-colors group cursor-pointer ${!product.is_active ? 'opacity-60' : ''}`}
+                            className={`hover:bg-slate-50/50 dark:hover:bg-gray-700 transition-colors group cursor-pointer ${product.is_active ? '' : 'opacity-60'}`}
                             onClick={() => router.push(`/products/${product.id}/edit`)}
                           >
-                            {/* Thumbnail */}
-                            <td className="px-6 py-4">
-                              <div className="size-12 rounded-lg bg-slate-100 dark:bg-gray-700 overflow-hidden border border-slate-200 dark:border-gray-700 flex items-center justify-center">
-                                {mediaUrl ? (
-                                  // eslint-disable-next-line @next/next/no-img-element
-                                  <img
-                                    src={mediaUrl}
-                                    alt={product.name}
-                                    className="object-cover w-full h-full"
-                                  />
-                                ) : (
-                                  <span className="text-xl">
-                                    {product.product_type === 'catalog' ? '📚' : '📦'}
-                                  </span>
-                                )}
+                            {/* Product */}
+                            <td className="px-4 py-4">
+                              <div className="flex items-center gap-4">
+                                <div className="size-12 rounded-lg bg-slate-100 dark:bg-gray-700 overflow-hidden border border-slate-200 dark:border-gray-700 flex items-center justify-center flex-shrink-0">
+                                  {mediaUrl ? (
+                                    // eslint-disable-next-line @next/next/no-img-element
+                                    <img
+                                      src={mediaUrl}
+                                      alt={product.name}
+                                      className="object-cover w-full h-full"
+                                    />
+                                  ) : (
+                                    <span className="text-xl">
+                                      {product.product_type === 'catalog' ? '📚' : '📦'}
+                                    </span>
+                                  )}
+                                </div>
+                                <div>
+                                  <div className="flex items-center gap-2">
+                                    <p className={`text-sm font-semibold ${product.is_active ? 'text-slate-900 dark:text-white' : 'text-slate-400 dark:text-gray-500'}`}>{product.name}</p>
+                                    {!product.is_active && (
+                                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-50 dark:bg-red-900/30 text-red-500 text-[10px] font-bold uppercase tracking-wide">
+                                        <EyeOff size={10} />
+                                        Inactive
+                                      </span>
+                                    )}
+                                  </div>
+                                  <p className="text-slate-500 dark:text-gray-400 text-xs">{getCategoryName(product.category)}</p>
+                                </div>
                               </div>
-                            </td>
-
-                            {/* Product & Category */}
-                            <td className="px-6 py-4">
-                              <div className="flex items-center gap-2">
-                                <p className={`text-sm font-semibold ${product.is_active ? 'text-slate-900 dark:text-white' : 'text-slate-400 dark:text-gray-500'}`}>{product.name}</p>
-                                {!product.is_active && (
-                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-50 dark:bg-red-900/30 text-red-500 text-[10px] font-bold uppercase tracking-wide">
-                                    <EyeOff size={10} />
-                                    Inactive
-                                  </span>
-                                )}
-                              </div>
-                              <p className="text-slate-500 dark:text-gray-400 text-xs">{getCategoryName(product.category)}</p>
                             </td>
 
                             {/* SKU */}
-                            <td className="px-6 py-4">
+                            <td className="px-4 py-4">
                               <span className="font-mono text-xs bg-slate-100 dark:bg-gray-700 px-2 py-1 rounded text-slate-600 dark:text-gray-300">
                                 {product.sku}
                               </span>
                             </td>
 
                             {/* Stock Level */}
-                            <td className="px-6 py-4">
+                            <td className="px-4 py-4">
                               <div className="flex items-center gap-3">
                                 <div className="w-24 h-2 rounded-full bg-slate-100 dark:bg-gray-700 overflow-hidden">
                                   <div
@@ -285,7 +284,7 @@ export default function ProductsPage() {
                             </td>
 
                             {/* Catalog */}
-                            <td className="px-6 py-4 text-center">
+                            <td className="px-4 py-4 text-center">
                               {variantCount > 0 ? (
                                 <span className="inline-flex items-center justify-center size-7 rounded-full bg-orange-100 dark:bg-orange-900/30 text-orange-600 text-xs font-bold">
                                   {variantCount}
@@ -296,22 +295,20 @@ export default function ProductsPage() {
                             </td>
 
                             {/* Price */}
-                            <td className="px-6 py-4">
+                            <td className="px-4 py-4">
                               <span className="text-sm font-bold text-slate-900 dark:text-white">
-                                ${parseFloat(product.price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                ${Number.parseFloat(product.price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                               </span>
                             </td>
 
                             {/* Actions */}
-                            <td className="px-6 py-4 text-right">
+                            <td className="px-4 py-4 text-right">
                               <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <button
-                                    onClick={(e) => e.stopPropagation()}
-                                    className="inline-flex items-center justify-center size-8 rounded-lg text-slate-400 dark:text-gray-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-gray-700 transition-all opacity-40 group-hover:opacity-100"
-                                  >
-                                    <MoreHorizontal size={18} />
-                                  </button>
+                                <DropdownMenuTrigger
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="inline-flex items-center justify-center size-8 rounded-lg text-slate-400 dark:text-gray-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-gray-700 transition-all opacity-40 group-hover:opacity-100"
+                                >
+                                  <MoreHorizontal size={18} />
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end" sideOffset={8} className="w-44 rounded-xl shadow-lg border border-slate-200 dark:border-gray-700 p-1.5 bg-white dark:bg-gray-800 z-[100]">
                                   <DropdownMenuItem
@@ -347,52 +344,14 @@ export default function ProductsPage() {
 
               {/* Table Footer / Pagination */}
               {filteredProducts.length > 0 && (
-                <div className="px-6 py-4 border-t border-slate-100 dark:border-gray-700 bg-slate-50/30 dark:bg-gray-700/50 flex items-center justify-between">
-                  <p className="text-xs text-slate-500 dark:text-gray-400">
-                    Showing {(safeCurrentPage - 1) * itemsPerPage + 1} to{' '}
-                    {Math.min(safeCurrentPage * itemsPerPage, filteredProducts.length)} of{' '}
-                    {filteredProducts.length} products
-                  </p>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                      disabled={safeCurrentPage === 1}
-                      className="p-1 rounded border border-slate-200 dark:border-gray-700 hover:bg-white dark:hover:bg-gray-700 text-slate-400 dark:text-gray-500 disabled:opacity-40 disabled:cursor-not-allowed"
-                    >
-                      <ChevronLeft size={18} />
-                    </button>
-                    {Array.from({ length: totalPages }, (_, i) => i + 1)
-                      .filter(page => {
-                        if (totalPages <= 5) return true;
-                        if (page === 1 || page === totalPages) return true;
-                        return Math.abs(page - safeCurrentPage) <= 1;
-                      })
-                      .map((page, idx, arr) => (
-                        <span key={page} className="flex items-center gap-1">
-                          {idx > 0 && arr[idx - 1] !== page - 1 && (
-                            <span className="text-slate-400 dark:text-gray-500 text-xs px-1">...</span>
-                          )}
-                          <button
-                            onClick={() => setCurrentPage(page)}
-                            className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
-                              page === safeCurrentPage
-                                ? 'bg-orange-500 text-white font-bold'
-                                : 'hover:bg-white dark:hover:bg-gray-700 text-slate-600 dark:text-gray-300'
-                            }`}
-                          >
-                            {page}
-                          </button>
-                        </span>
-                      ))}
-                    <button
-                      onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                      disabled={safeCurrentPage === totalPages}
-                      className="p-1 rounded border border-slate-200 dark:border-gray-700 hover:bg-white dark:hover:bg-gray-700 text-slate-400 dark:text-gray-500 disabled:opacity-40 disabled:cursor-not-allowed"
-                    >
-                      <ChevronRight size={18} />
-                    </button>
-                  </div>
-                </div>
+                <Pagination
+                  currentPage={safeCurrentPage}
+                  totalPages={totalPages}
+                  onPageChange={setCurrentPage}
+                  totalItems={filteredProducts.length}
+                  perPage={itemsPerPage}
+                  itemLabel="products"
+                />
               )}
             </>
           )}

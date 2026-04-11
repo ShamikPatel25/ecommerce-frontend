@@ -3,10 +3,11 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { productAPI, categoryAPI, attributeAPI } from '@/lib/api';
+import { useFormDraft } from '@/hooks/useFormDraft';
 import { toast } from 'sonner';
 import {
   ArrowLeft, ChevronRight, Info, ImageIcon, ChevronDown,
-  CloudUpload, Plus, X, Loader2, Sliders, Package, Trash2, Star,
+  CloudUpload, Plus, Loader2, Sliders, Package, Trash2, Star,
 } from 'lucide-react';
 
 const INPUT_CLS =
@@ -17,12 +18,165 @@ const INPUT_CLS =
 
 const SELECT_CLS = INPUT_CLS + ' appearance-none pr-10';
 
+/* ── Pure utility helpers (outside component) ────────────── */
+
+const comboKey = (values) =>
+  values.map((v) => v.valId).sort((a, b) => a - b).join('-');
+
+const appendToCombo = (combo, arr) =>
+  arr.map((val) => [...combo, val]);
+
+const cartesian = (...arrays) =>
+  arrays.reduce((acc, arr) => acc.flatMap((combo) => appendToCombo(combo, arr)), [[]]);
+
+const findBestAttrMatch = (base, filteredAttrs) => {
+  let bestMatch = null;
+  let bestLen = 0;
+  for (const a of filteredAttrs) {
+    for (const v of (a.values || [])) {
+      const valLower = v.value.toLowerCase();
+      const valNorm = valLower.replaceAll(/[-\s().+,]/g, '_');
+      if ((base.includes(valNorm) || base.includes(valLower)) && valNorm.length > bestLen) {
+        bestMatch = v.id;
+        bestLen = valNorm.length;
+      }
+    }
+  }
+  return bestMatch;
+};
+
+const detectAttrFromFilename = (filename, selAttrs, attrs) => {
+  if (!selAttrs || selAttrs.length === 0 || !attrs || attrs.length === 0) return null;
+  const base = filename
+    .replace(/\.[^/.]+$/, '')
+    .toLowerCase()
+    .replaceAll(/[-\s().+,]/g, '_');
+  const filteredAttrs = attrs.filter((a) => selAttrs.includes(a.id));
+  return findBestAttrMatch(base, filteredAttrs);
+};
+
+const mapValuesToEntries = (attr, selIds) =>
+  selIds.map((vid) => {
+    const val = attr.values.find((v) => String(v.id) === String(vid));
+    return { attrId: attr.id, attrName: attr.name, valId: val.id, valName: val.value };
+  });
+
+const buildMediaFormData = (img, index) => {
+  const fd = new FormData();
+  fd.append('file', img.file);
+  fd.append('media_type', 'image');
+  fd.append('alt_text', img.file.name || '');
+  fd.append('order', String(img.isMain ? 0 : index + 1));
+  if (img.isMain) fd.append('is_thumbnail', 'true');
+  if (img.attribute_value_id) fd.append('attribute_value_id', img.attribute_value_id);
+  return fd;
+};
+
+const selectThumbnail = async (productId, thumbnailMediaId, firstUploadedId) => {
+  const thumbId = thumbnailMediaId || firstUploadedId;
+  if (thumbId) {
+    try { await productAPI.setThumbnail(productId, thumbId); } catch { /* best-effort */ }
+  }
+};
+
+const groupImagesByAttribute = (images, getAttrValueLabel) => {
+  const generalImages = images
+    .map((img, idx) => ({ ...img, _idx: idx }))
+    .filter((img) => !img.attribute_value_id);
+
+  const byValue = {};
+  images.forEach((img, idx) => {
+    if (!img.attribute_value_id) return;
+    if (!byValue[img.attribute_value_id]) {
+      byValue[img.attribute_value_id] = { label: getAttrValueLabel(img.attribute_value_id), items: [] };
+    }
+    byValue[img.attribute_value_id].items.push({ ...img, _idx: idx });
+  });
+
+  return { generalImages, byValue };
+};
+
+const reclassifyImages = (prevImages, selAttrs, allAttrs) => {
+  if (prevImages.length === 0) return prevImages;
+  let changed = false;
+  let reclassified = 0;
+  const updated = prevImages.map((img) => {
+    if (img.manualAttr) return img;
+    const detected = detectAttrFromFilename(img.file?.name || '', selAttrs, allAttrs);
+    if (detected !== img.attribute_value_id) {
+      changed = true;
+      if (detected) reclassified++;
+      return { ...img, attribute_value_id: detected };
+    }
+    return img;
+  });
+  if (!changed) return prevImages;
+  if (reclassified > 0) {
+    setTimeout(() => toast.success(`${reclassified} image(s) auto-classified by filename`), 0);
+  }
+  return updated;
+};
+
+const validateCatalogFields = (formData, selectedAttributes, attributes) => {
+  if (!formData.name.trim() || !formData.sku.trim() || !formData.price) {
+    return 'Please fill in Product Name, SKU and Price first';
+  }
+  if (!formData.category) {
+    return 'Please select a category for catalog products';
+  }
+  if (selectedAttributes.length === 0) {
+    return attributes.length === 0
+      ? 'This category has no attributes. Create attributes first.'
+      : 'Please select at least one attribute';
+  }
+  return null;
+};
+
+const removeImageAtIndex = (images, idx) => {
+  const removed = images[idx];
+  const next = images.filter((_, i) => i !== idx);
+  if (removed?.isMain && next.length > 0) {
+    return next.map((img, i) => (i === 0 ? { ...img, isMain: true } : img));
+  }
+  return next;
+};
+
+const renderStep1ActionButton = (productType, submitting, attributes, selectedAttributes, onGenerateCatalog) => {
+  if (productType === 'catalog') {
+    return (
+      <button
+        type="button"
+        onClick={onGenerateCatalog}
+        disabled={attributes.length === 0 || selectedAttributes.length === 0}
+        className="px-12 py-3 rounded-lg font-bold bg-[#ff6600] text-white shadow-lg shadow-orange-500/30 hover:bg-[#ff6600]/90 active:scale-95 transition-all disabled:opacity-50"
+      >
+        Generate Catalog
+      </button>
+    );
+  }
+  return (
+    <button
+      type="submit"
+      disabled={submitting}
+      className="px-12 py-3 rounded-lg font-bold bg-[#ff6600] text-white shadow-lg shadow-orange-500/30 hover:bg-[#ff6600]/90 active:scale-95 transition-all disabled:opacity-50"
+    >
+      {submitting ? (
+        <span className="flex items-center gap-2">
+          <Loader2 className="w-4 h-4 animate-spin" /> Creating&hellip;
+        </span>
+      ) : 'Create Product'}
+    </button>
+  );
+};
+
+/* ── Component ───────────────────────────────────────────── */
+
 export default function CreateProductPage() {
   const router = useRouter();
 
   const [categories,          setCategories]          = useState([]);
   const [attributes,          setAttributes]          = useState([]);
-  const [selectedAttributes,  setSelectedAttributes]  = useState([]);
+  const [selectedAttributes,  setSelectedAttributes, clearSelAttrDraft]  = useFormDraft('product-create-selattr', []);
   const [loading,             setLoading]             = useState(true);
   const [submitting,          setSubmitting]          = useState(false);
   const [images,              setImages]              = useState([]);
@@ -31,13 +185,12 @@ export default function CreateProductPage() {
   const fileInputRef = useRef(null);
 
   // Step 2: catalog variant builder
-  const [step, setStep]                       = useState(1);
-  const [singleMode, setSingleMode]           = useState(true); // ON=radio(single), OFF=checkbox(multi)
-  const [catalogCombos, setCatalogCombos]     = useState([]);
-  // Single mode: {attrId: valueId}   Multi mode: {attrId: [valueId, ...]}
-  const [comboSelections, setComboSelections] = useState({});
+  const [step, setStep, clearStepDraft]                       = useFormDraft('product-create-step', 1);
+  const [singleMode, setSingleMode]           = useState(true);
+  const [catalogCombos, setCatalogCombos, clearCombosDraft]     = useFormDraft('product-create-combos', []);
+  const [comboSelections, setComboSelections, clearComboSelDraft] = useFormDraft('product-create-combosel', {});
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData, clearFormDraft] = useFormDraft('product-create', {
     name:             '',
     sku:              '',
     price:            '',
@@ -83,80 +236,30 @@ export default function CreateProductPage() {
   };
 
   /* ── image handling ── */
-  // Keep ref in sync with state so handleSubmit always has the latest images
   useEffect(() => { imagesRef.current = images; }, [images]);
 
   const [selectedUploadAttr, setSelectedUploadAttr] = useState('');
 
-  // Auto-detect attribute value from filename (mirrors backend logic: longest match wins)
-  const detectAttrFromFilename = (filename, selAttrs, attrs) => {
-    if (!selAttrs || selAttrs.length === 0 || !attrs || attrs.length === 0) return null;
-    // Normalize: remove extension, lowercase, replace all separators with underscore
-    const base = filename
-      .replace(/\.[^/.]+$/, '')
-      .toLowerCase()
-      .replace(/[-\s().+,]/g, '_');
-    let bestMatch = null;
-    let bestLen = 0;
-    attrs
-      .filter((a) => selAttrs.includes(a.id))
-      .forEach((a) => {
-        (a.values || []).forEach((v) => {
-          const valLower = v.value.toLowerCase();
-          const valNorm = valLower.replace(/[-\s().+,]/g, '_');
-          // Try normalized match first, then raw lowercase
-          if ((base.includes(valNorm) || base.includes(valLower)) && valNorm.length > bestLen) {
-            bestMatch = v.id;
-            bestLen = valNorm.length;
-          }
-        });
-      });
-    return bestMatch;
-  };
-
   // Re-classify existing images when attributes are selected/changed
   useEffect(() => {
     if (formData.product_type !== 'catalog' || selectedAttributes.length === 0 || attributes.length === 0) return;
-    setImages((prev) => {
-      if (prev.length === 0) return prev;
-      let changed = false;
-      let reclassified = 0;
-      const updated = prev.map((img) => {
-        if (img.manualAttr) return img;
-        const detected = detectAttrFromFilename(img.file?.name || '', selectedAttributes, attributes);
-        if (detected !== img.attribute_value_id) {
-          changed = true;
-          if (detected) reclassified++;
-          return { ...img, attribute_value_id: detected };
-        }
-        return img;
-      });
-      if (!changed) return prev;
-      if (reclassified > 0) {
-        setTimeout(() => toast.success(`${reclassified} image(s) auto-classified by filename`), 0);
-      }
-      return updated;
-    });
+    setImages((prev) => reclassifyImages(prev, selectedAttributes, attributes));
   }, [selectedAttributes, attributes, formData.product_type]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const addImageEntry = (result, file) => {
+    const manual = selectedUploadAttr || null;
+    const attrId = manual || detectAttrFromFilename(file.name, selectedAttributes, attributes) || null;
+    setImages((prev) => [
+      ...prev,
+      { preview: result, file, isMain: prev.length === 0, attribute_value_id: attrId, manualAttr: !!manual },
+    ]);
+  };
 
   const addFiles = (files) => {
     const valid = Array.from(files).filter((f) => f.type.startsWith('image/'));
     valid.forEach((file) => {
       const reader = new FileReader();
-      reader.onload = (e) => {
-        const manual = selectedUploadAttr || null;
-        const attrId = manual || detectAttrFromFilename(file.name, selectedAttributes, attributes) || null;
-        setImages((prev) => [
-          ...prev,
-          {
-            preview: e.target.result,
-            file,
-            isMain: prev.length === 0,
-            attribute_value_id: attrId,
-            manualAttr: !!manual,
-          },
-        ]);
-      };
+      reader.onload = (e) => addImageEntry(e.target.result, file);
       reader.readAsDataURL(file);
     });
   };
@@ -168,15 +271,7 @@ export default function CreateProductPage() {
   };
 
   const removeImage = (idx) => {
-    setImages((prev) => {
-      const removed = prev[idx];
-      const next = prev.filter((_, i) => i !== idx);
-      // Auto-promote next image as thumbnail if the deleted one was the main
-      if (removed?.isMain && next.length > 0) {
-        return next.map((img, i) => (i === 0 ? { ...img, isMain: true } : img));
-      }
-      return next;
-    });
+    setImages((prev) => removeImageAtIndex(prev, idx));
   };
 
   const setMain = (idx) => {
@@ -185,24 +280,12 @@ export default function CreateProductPage() {
 
   /* ── Step 1 → Step 2 (Generate Catalog clicked) ── */
   const handleGenerateCatalog = async () => {
-    if (!formData.name.trim() || !formData.sku.trim() || !formData.price) {
-      toast.error('Please fill in Product Name, SKU and Price first');
-      return;
-    }
-    if (!formData.category) {
-      toast.error('Please select a category for catalog products');
-      return;
-    }
-    if (selectedAttributes.length === 0) {
-      if (attributes.length === 0) {
-        toast.error('This category has no attributes. Create attributes first.');
-      } else {
-        toast.error('Please select at least one attribute');
-      }
+    const validationError = validateCatalogFields(formData, selectedAttributes, attributes);
+    if (validationError) {
+      toast.error(validationError);
       return;
     }
 
-    // Check SKU before proceeding to step 2
     try {
       const res = await productAPI.checkSku(formData.sku.trim());
       if (res.data?.exists) {
@@ -211,7 +294,7 @@ export default function CreateProductPage() {
         return;
       }
     } catch {
-      // If check fails, let it proceed — final submit will catch it
+      /* SKU check failed, will be validated on submit */
     }
 
     setSkuError('');
@@ -220,7 +303,6 @@ export default function CreateProductPage() {
     setStep(2);
   };
 
-  /* ── Reset value selections based on current mode ── */
   const resetSelections = () => {
     const initial = {};
     selectedAttributes.forEach((id) => {
@@ -229,7 +311,6 @@ export default function CreateProductPage() {
     setComboSelections(initial);
   };
 
-  /* ── Toggle single/multi mode ── */
   const handleToggleMode = () => {
     const newMode = !singleMode;
     setSingleMode(newMode);
@@ -240,85 +321,90 @@ export default function CreateProductPage() {
     setComboSelections(initial);
   };
 
-  /* ── cartesian product helper ── */
-  const cartesian = (...arrays) => {
-    return arrays.reduce((acc, arr) =>
-      acc.flatMap((combo) => arr.map((val) => [...combo, val])),
-      [[]]
-    );
+  /* ── Combo builders (extracted to reduce cognitive complexity) ── */
+
+  const buildSingleCombo = (selectedAttrs) => {
+    for (const attr of selectedAttrs) {
+      if (!comboSelections[attr.id]) {
+        toast.error(`Please select a value for "${attr.name}"`);
+        return null;
+      }
+    }
+
+    const values = selectedAttrs.map((attr) => {
+      const val = attr.values.find((v) => String(v.id) === String(comboSelections[attr.id]));
+      return { attrId: attr.id, attrName: attr.name, valId: val.id, valName: val.value };
+    });
+
+    const key = comboKey(values);
+    if (catalogCombos.some((c) => comboKey(c.values) === key)) {
+      toast.error('This combination already exists');
+      return null;
+    }
+
+    return { values, stock: '', price: '' };
   };
 
-  /* ── Add combination(s) in Step 2 ── */
+  const buildMultiCombos = (selectedAttrs) => {
+    for (const attr of selectedAttrs) {
+      const sel = comboSelections[attr.id] || [];
+      if (sel.length === 0) {
+        toast.error(`Please select at least one value for "${attr.name}"`);
+        return null;
+      }
+    }
+
+    const perAttr = selectedAttrs.map((attr) =>
+      mapValuesToEntries(attr, comboSelections[attr.id] || [])
+    );
+    return cartesian(...perAttr);
+  };
+
+  const addMultiCombinations = (allCombinations) => {
+    let added = 0;
+    let skipped = 0;
+
+    setCatalogCombos((prev) => {
+      const next = [...prev];
+      for (const combo of allCombinations) {
+        const key = comboKey(combo);
+        if (next.some((c) => comboKey(c.values) === key)) {
+          skipped++;
+        } else {
+          next.push({ values: combo, stock: '', price: '' });
+          added++;
+        }
+      }
+      return next;
+    });
+
+    if (skipped > 0) toast.info(`${added} added, ${skipped} duplicates skipped`);
+    else if (added > 0) toast.success(`${added} combination${added > 1 ? 's' : ''} added`);
+  };
+
   const handleAddCombo = () => {
     const selectedAttrs = attributes.filter((a) => selectedAttributes.includes(a.id));
 
     if (singleMode) {
-      // Radio mode: one value per attribute → one combo
-      for (const attr of selectedAttrs) {
-        if (!comboSelections[attr.id]) {
-          toast.error(`Please select a value for "${attr.name}"`);
-          return;
-        }
-      }
-
-      const values = selectedAttrs.map((attr) => {
-        const val = attr.values.find((v) => String(v.id) === String(comboSelections[attr.id]));
-        return { attrId: attr.id, attrName: attr.name, valId: val.id, valName: val.value };
-      });
-
-      const key = values.map((v) => v.valId).sort().join('-');
-      if (catalogCombos.some((c) => c.values.map((v) => v.valId).sort().join('-') === key)) {
-        toast.error('This combination already exists');
-        return;
-      }
-
-      setCatalogCombos((prev) => [...prev, { values, stock: '', price: '' }]);
+      const combo = buildSingleCombo(selectedAttrs);
+      if (!combo) return;
+      setCatalogCombos((prev) => [...prev, combo]);
     } else {
-      // Checkbox mode: multiple values per attribute → generate all combinations
-      for (const attr of selectedAttrs) {
-        const sel = comboSelections[attr.id] || [];
-        if (sel.length === 0) {
-          toast.error(`Please select at least one value for "${attr.name}"`);
-          return;
-        }
-      }
-
-      // Build arrays of {attrId, attrName, valId, valName} for each attribute
-      const perAttr = selectedAttrs.map((attr) => {
-        const selIds = comboSelections[attr.id] || [];
-        return selIds.map((vid) => {
-          const val = attr.values.find((v) => String(v.id) === String(vid));
-          return { attrId: attr.id, attrName: attr.name, valId: val.id, valName: val.value };
-        });
-      });
-
-      const allCombinations = cartesian(...perAttr);
-      let added = 0;
-      let skipped = 0;
-
-      setCatalogCombos((prev) => {
-        const next = [...prev];
-        for (const combo of allCombinations) {
-          const key = combo.map((v) => v.valId).sort().join('-');
-          const exists = next.some((c) => c.values.map((v) => v.valId).sort().join('-') === key);
-          if (!exists) {
-            next.push({ values: combo, stock: '', price: '' });
-            added++;
-          } else {
-            skipped++;
-          }
-        }
-        return next;
-      });
-
-      if (skipped > 0) toast.info(`${added} added, ${skipped} duplicates skipped`);
-      else if (added > 0) toast.success(`${added} combination${added > 1 ? 's' : ''} added`);
+      const allCombinations = buildMultiCombos(selectedAttrs);
+      if (!allCombinations) return;
+      addMultiCombinations(allCombinations);
     }
 
-    // Reset selections
     const reset = {};
     selectedAttributes.forEach((id) => { reset[id] = singleMode ? '' : []; });
     setComboSelections(reset);
+  };
+
+  const handleCheckboxToggle = (attrId, valIdStr, currentSel, isChecked) => {
+    const updated = isChecked
+      ? currentSel.filter((x) => x !== valIdStr)
+      : [...currentSel, valIdStr];
+    setComboSelections({ ...comboSelections, [attrId]: updated });
   };
 
   const removeCombo = (idx) => {
@@ -331,60 +417,128 @@ export default function CreateProductPage() {
     );
   };
 
-  /* ── Final submit (Create Product) ── */
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  /* ── Submit helpers (extracted to reduce cognitive complexity) ── */
 
+  const validateForm = async () => {
     if (formData.product_type === 'catalog') {
-      if (step === 1) { handleGenerateCatalog(); return; }
+      if (step === 1) { handleGenerateCatalog(); return false; }
       if (catalogCombos.length === 0) {
         toast.error('Please add at least one catalog combination');
-        return;
+        return false;
       }
     }
 
-    // Check SKU for single products before submit
     if (formData.product_type === 'single') {
       try {
         const res = await productAPI.checkSku(formData.sku.trim());
         if (res.data?.exists) {
           setSkuError('A product with this SKU already exists.');
           toast.error('A product with this SKU already exists.');
-          return;
+          return false;
         }
       } catch {
-        // proceed — final create will catch it
+        /* variant duplicate check failed, will be validated on submit */
       }
       setSkuError('');
     }
 
-    setSubmitting(true);
-    let productId = null;
+    return true;
+  };
+
+  const prepareProductData = () => ({
+    name:             formData.name.trim(),
+    sku:              formData.sku.trim().toUpperCase(),
+    price:            Number.parseFloat(formData.price).toFixed(2),
+    compare_at_price: formData.compare_at_price ? Number.parseFloat(formData.compare_at_price).toFixed(2) : null,
+    category:         formData.category || null,
+    product_type:     formData.product_type,
+    stock:            formData.product_type === 'single' ? Number.parseInt(formData.stock, 10) || 0 : 0,
+    description:      formData.description.trim() || '',
+    is_active:        formData.is_active,
+    is_featured:      false,
+  });
+
+  const resolveProductId = async (data) => {
+    const response = await productAPI.create(data);
+    let productId = response.data?.id;
+
+    if (!productId) {
+      const allProducts = await productAPI.list();
+      const created = (allProducts.data?.results || allProducts.data || []).find(
+        (p) => p.sku === data.sku
+      );
+      productId = created?.id;
+    }
+
+    return productId;
+  };
+
+  const uploadMediaFiles = async (productId) => {
+    const currentImages = imagesRef.current.length > 0 ? imagesRef.current : images;
+    if (currentImages.length === 0) return;
+
+    let failedCount = 0;
+    let thumbnailMediaId = null;
+    let firstUploadedId = null;
+
+    for (let i = 0; i < currentImages.length; i++) {
+      const img = currentImages[i];
+      if (!img.file) { failedCount++; continue; }
+      try {
+        const fd = buildMediaFormData(img, i);
+        const uploadRes = await productAPI.uploadMedia(productId, fd);
+        const mediaId = uploadRes.data?.id;
+        if (!firstUploadedId && mediaId) firstUploadedId = mediaId;
+        if (img.isMain && mediaId) thumbnailMediaId = mediaId;
+      } catch {
+        failedCount++;
+      }
+    }
+
+    await selectThumbnail(productId, thumbnailMediaId, firstUploadedId);
+    if (failedCount > 0) {
+      toast.error(`${failedCount} image(s) failed to upload. You can add them from the edit page.`);
+    }
+  };
+
+  const createVariants = async (productId) => {
+    try {
+      await productAPI.selectAttributes(productId, selectedAttributes);
+    } catch {
+      toast.error('Product created but failed to attach attributes.');
+      return false;
+    }
 
     try {
-      const data = {
-        name:             formData.name.trim(),
-        sku:              formData.sku.trim().toUpperCase(),
-        price:            parseFloat(formData.price).toFixed(2),
-        compare_at_price: formData.compare_at_price ? parseFloat(formData.compare_at_price).toFixed(2) : null,
-        category:         formData.category || null,
-        product_type:     formData.product_type,
-        stock:            formData.product_type === 'single' ? parseInt(formData.stock) || 0 : 0,
-        description:      formData.description.trim() || '',
-        is_active:        formData.is_active,
-        is_featured:      false,
-      };
+      const combinations = catalogCombos.map((c) => ({
+        attribute_values: c.values.map((v) => v.valId),
+        price: c.price ? Number.parseFloat(c.price).toFixed(2) : null,
+        stock: Number.parseInt(c.stock, 10) || 0,
+      }));
+      await productAPI.generateCatalog(productId, {
+        single_catalog_mode: false,
+        selected_combinations: combinations,
+      });
+      toast.success('Product & catalog variants created!');
+    } catch {
+      toast.error('Product created but catalog generation failed.');
+    }
 
-      const response = await productAPI.create(data);
-      productId = response.data?.id;
+    return true;
+  };
 
-      if (!productId) {
-        const allProducts = await productAPI.list();
-        const created = (allProducts.data?.results || allProducts.data || []).find(
-          (p) => p.sku === data.sku
-        );
-        productId = created?.id;
-      }
+  /* ── Final submit (Create Product) ── */
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    const isValid = await validateForm();
+    if (!isValid) return;
+
+    setSubmitting(true);
+
+    try {
+      const data = prepareProductData();
+      const productId = await resolveProductId(data);
 
       if (!productId) {
         toast.error('Product created but ID not found. Check the products list.');
@@ -393,58 +547,21 @@ export default function CreateProductPage() {
         return;
       }
 
-      // Upload images that were selected during creation
-      const currentImages = imagesRef.current.length > 0 ? imagesRef.current : images;
-      if (currentImages.length > 0) {
-        let uploadedCount = 0;
-        let failedCount = 0;
-        let thumbnailMediaId = null;
-        let firstUploadedId = null;
+      await uploadMediaFiles(productId);
 
-        for (let i = 0; i < currentImages.length; i++) {
-          const img = currentImages[i];
-          if (!img.file) { failedCount++; continue; }
-          try {
-            const fd = new FormData();
-            fd.append('file', img.file);
-            fd.append('media_type', 'image');
-            fd.append('alt_text', img.file.name || '');
-            fd.append('order', String(img.isMain ? 0 : i + 1));
-            if (img.isMain) {
-              fd.append('is_thumbnail', 'true');
-            }
-            if (img.attribute_value_id) {
-              fd.append('attribute_value_id', img.attribute_value_id);
-            }
-            const uploadRes = await productAPI.uploadMedia(productId, fd);
-            const mediaId = uploadRes.data?.id;
-            uploadedCount++;
-            if (!firstUploadedId && mediaId) {
-              firstUploadedId = mediaId;
-            }
-            if (img.isMain && mediaId) {
-              thumbnailMediaId = mediaId;
-            }
-          } catch (uploadErr) {
-            failedCount++;
-            console.error('Image upload failed:', uploadErr?.response?.data || uploadErr);
-          }
+      if (formData.product_type === 'catalog') {
+        const success = await createVariants(productId);
+        if (!success) {
+          router.push('/products');
+          setSubmitting(false);
+          return;
         }
-
-        // Always explicitly set thumbnail via the dedicated endpoint.
-        // Use the user-selected thumbnail, or fall back to the first uploaded image.
-        const thumbId = thumbnailMediaId || firstUploadedId;
-        if (thumbId) {
-          try {
-            await productAPI.setThumbnail(productId, thumbId);
-          } catch {
-            // best-effort — is_thumbnail was also sent during upload
-          }
-        }
-        if (failedCount > 0) {
-          toast.error(`${failedCount} image(s) failed to upload. You can add them from the edit page.`);
-        }
+      } else {
+        toast.success('Product created!');
       }
+
+      clearFormDraft(); clearSelAttrDraft(); clearStepDraft(); clearCombosDraft(); clearComboSelDraft();
+      router.push('/products');
     } catch (error) {
       const errData = error.response?.data;
       if (errData && typeof errData === 'object') {
@@ -453,43 +570,107 @@ export default function CreateProductPage() {
       } else {
         toast.error('Failed to create product');
       }
+    } finally {
       setSubmitting(false);
-      return;
     }
+  };
 
-    // For catalog products: select attributes + generate combos with price/stock
-    if (formData.product_type === 'catalog') {
-      try {
-        await productAPI.selectAttributes(productId, selectedAttributes);
-      } catch {
-        toast.error('Product created but failed to attach attributes.');
-        router.push('/products');
-        setSubmitting(false);
-        return;
-      }
+  /* ── Image gallery render helpers ── */
 
-      try {
-        const combinations = catalogCombos.map((c) => ({
-          attribute_values: c.values.map((v) => v.valId),
-          price: c.price ? parseFloat(c.price).toFixed(2) : null,
-          stock: parseInt(c.stock) || 0,
-        }));
-        await productAPI.generateCatalog(productId, {
-          single_catalog_mode: false,
-          selected_combinations: combinations,
-        });
-        toast.success('Product & catalog variants created!');
-      } catch {
-        toast.error('Product created but catalog generation failed.');
-      }
+  const getAttrValueLabel = (attrValueId) => {
+    const attr = attributes.find((a) => a.values?.some((v) => String(v.id) === String(attrValueId)));
+    const val = attr?.values?.find((v) => String(v.id) === String(attrValueId));
+    return attr && val ? `${attr.name}: ${val.value}` : `Attribute #${attrValueId}`;
+  };
 
-      router.push('/products');
-    } else {
-      toast.success('Product created!');
-      router.push('/products');
-    }
+  const renderImageCard = (img) => (
+    <div
+      key={img._idx}
+      onClick={() => setMain(img._idx)}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setMain(img._idx); } }}
+      role="button"
+      tabIndex={0}
+      className={`relative group aspect-square rounded-xl overflow-hidden border-2 cursor-pointer transition-all ${
+        img.isMain ? 'border-[#ff6600] ring-2 ring-[#ff6600]/20' : 'border-slate-200 dark:border-gray-600 hover:border-[#ff6600]/40'
+      }`}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={img.preview} alt="" className="w-full h-full object-cover" />
+      {img.isMain && (
+        <span className="absolute top-2 left-2 bg-[#ff6600] text-white text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+          <Star className="w-3 h-3 fill-white" /> THUMBNAIL
+        </span>
+      )}
+      {!img.isMain && (
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); setMain(img._idx); }}
+          className="absolute top-2 left-2 p-1.5 bg-white/90 dark:bg-gray-800/90 rounded-full text-[#ff6600] shadow-sm hover:bg-[#ff6600]/10 opacity-0 group-hover:opacity-100 transition-opacity"
+          title="Set as Thumbnail"
+        >
+          <Star className="w-4 h-4" />
+        </button>
+      )}
+      <button
+        type="button"
+        onClick={(e) => { e.stopPropagation(); removeImage(img._idx); }}
+        className="absolute top-2 right-2 p-1.5 bg-white/90 dark:bg-gray-800/90 rounded-full text-red-500 shadow-sm hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity"
+        title="Remove"
+      >
+        <Trash2 className="w-4 h-4" />
+      </button>
+      <span className="absolute bottom-1 left-1 right-1 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded truncate">
+        {img.file?.name || ''}
+      </span>
+    </div>
+  );
 
-    setSubmitting(false);
+  const renderImageGallery = () => {
+    if (images.length === 0) return null;
+
+    const { generalImages, byValue } = groupImagesByAttribute(images, getAttrValueLabel);
+
+    return (
+      <div className="mt-4 space-y-6">
+        {generalImages.length > 0 && (
+          <div>
+            <h4 className="text-sm font-bold text-slate-700 dark:text-gray-300 mb-2">General Product Images</h4>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+              {generalImages.map(renderImageCard)}
+              <button
+                type="button"
+                onClick={() => { setSelectedUploadAttr(''); fileInputRef.current?.click(); }}
+                className="aspect-square rounded-xl border-2 border-dashed border-[#ff6600]/20 bg-slate-50 dark:bg-gray-700 flex items-center justify-center cursor-pointer hover:border-[#ff6600]/40 hover:bg-[#ff6600]/5 transition-colors appearance-none p-0 m-0"
+              >
+                <Plus className="w-6 h-6 text-slate-300 dark:text-gray-500" />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {Object.entries(byValue).map(([valueId, group]) => (
+          <div key={valueId}>
+            <h4 className="text-sm font-bold text-slate-700 dark:text-gray-300 mb-2">{group.label}</h4>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+              {group.items.map(renderImageCard)}
+              <button
+                type="button"
+                onClick={() => { setSelectedUploadAttr(valueId); fileInputRef.current?.click(); }}
+                className="aspect-square rounded-xl border-2 border-dashed border-[#ff6600]/20 bg-slate-50 dark:bg-gray-700 flex items-center justify-center cursor-pointer hover:border-[#ff6600]/40 hover:bg-[#ff6600]/5 transition-colors appearance-none p-0 m-0"
+              >
+                <Plus className="w-6 h-6 text-slate-300 dark:text-gray-500" />
+              </button>
+            </div>
+          </div>
+        ))}
+
+        {generalImages.length === 0 && Object.keys(byValue).length === 0 && (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+            {images.map((img, idx) => renderImageCard({ ...img, _idx: idx }))}
+          </div>
+        )}
+      </div>
+    );
   };
 
   if (loading) return (
@@ -623,14 +804,7 @@ export default function CreateProductPage() {
                           <input
                             type="checkbox"
                             checked={isChecked}
-                            onChange={() => {
-                              const arr = [...currentSel];
-                              if (isChecked) {
-                                setComboSelections({ ...comboSelections, [attr.id]: arr.filter((x) => x !== String(v.id)) });
-                              } else {
-                                setComboSelections({ ...comboSelections, [attr.id]: [...arr, String(v.id)] });
-                              }
-                            }}
+                            onChange={() => handleCheckboxToggle(attr.id, String(v.id), currentSel, isChecked)}
                             className="sr-only"
                           />
                           <span className="text-sm text-slate-700 dark:text-gray-300">{v.value}</span>
@@ -643,7 +817,7 @@ export default function CreateProductPage() {
             ))}
           </div>
 
-          {/* Add button — right aligned, outlined */}
+          {/* Add button */}
           <div className="flex justify-end mt-6 pt-4 border-t border-slate-100 dark:border-gray-700">
             <button
               type="button"
@@ -690,7 +864,7 @@ export default function CreateProductPage() {
                 </thead>
                 <tbody>
                   {catalogCombos.map((combo, idx) => (
-                    <tr key={idx} className="border-b border-slate-50 dark:border-gray-700 hover:bg-[#ff6600]/5 transition-colors">
+                    <tr key={comboKey(combo.values)} className="border-b border-slate-50 dark:border-gray-700 hover:bg-[#ff6600]/5 transition-colors">
                       <td className="py-3 px-3 text-slate-400 dark:text-gray-500 font-mono">{idx + 1}</td>
                       {selectedAttrObjects.map((attr) => {
                         const val = combo.values.find((v) => v.attrId === attr.id);
@@ -757,7 +931,7 @@ export default function CreateProductPage() {
           >
             {submitting ? (
               <span className="flex items-center gap-2">
-                <Loader2 className="w-4 h-4 animate-spin" /> Creating…
+                <Loader2 className="w-4 h-4 animate-spin" /> Creating&hellip;
               </span>
             ) : 'Create Product'}
           </button>
@@ -805,10 +979,11 @@ export default function CreateProductPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-1.5">
-              <label className="text-sm font-semibold text-slate-700 dark:text-gray-300">
+              <label htmlFor="product-name" className="text-sm font-semibold text-slate-700 dark:text-gray-300">
                 Product Name <span className="text-[#ff6600]">*</span>
               </label>
               <input
+                id="product-name"
                 type="text" required
                 placeholder="e.g. Wireless Noise Cancelling Headphones"
                 className={INPUT_CLS}
@@ -818,10 +993,11 @@ export default function CreateProductPage() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-sm font-semibold text-slate-700 dark:text-gray-300">
+              <label htmlFor="product-sku" className="text-sm font-semibold text-slate-700 dark:text-gray-300">
                 SKU <span className="text-[#ff6600]">*</span>
               </label>
               <input
+                id="product-sku"
                 type="text" required
                 placeholder="barcode-123-xyz"
                 className={`${INPUT_CLS} ${skuError ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' : ''}`}
@@ -832,12 +1008,13 @@ export default function CreateProductPage() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-sm font-semibold text-slate-700 dark:text-gray-300">
+              <label htmlFor="product-price" className="text-sm font-semibold text-slate-700 dark:text-gray-300">
                 Price (USD) <span className="text-[#ff6600]">*</span>
               </label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-gray-500 font-medium">$</span>
                 <input
+                  id="product-price"
                   type="number" step="0.01" min="0" required
                   placeholder="0.00"
                   className={INPUT_CLS + ' pl-8'}
@@ -848,10 +1025,11 @@ export default function CreateProductPage() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-sm font-semibold text-slate-700 dark:text-gray-300">Compare at Price</label>
+              <label htmlFor="product-compare-price" className="text-sm font-semibold text-slate-700 dark:text-gray-300">Compare at Price</label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-gray-500 font-medium">$</span>
                 <input
+                  id="product-compare-price"
                   type="number" step="0.01" min="0"
                   placeholder="Original price (optional)"
                   className={INPUT_CLS + ' pl-8'}
@@ -862,11 +1040,12 @@ export default function CreateProductPage() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-sm font-semibold text-slate-700 dark:text-gray-300">
+              <label htmlFor="product-category" className="text-sm font-semibold text-slate-700 dark:text-gray-300">
                 Category {formData.product_type === 'catalog' && <span className="text-[#ff6600]">*</span>}
               </label>
               <div className="relative">
                 <select
+                  id="product-category"
                   className={SELECT_CLS}
                   value={formData.category}
                   onChange={(e) => handleCategoryChange(e.target.value)}
@@ -882,11 +1061,12 @@ export default function CreateProductPage() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-sm font-semibold text-slate-700 dark:text-gray-300">
+              <label htmlFor="product-type" className="text-sm font-semibold text-slate-700 dark:text-gray-300">
                 Product Type <span className="text-[#ff6600]">*</span>
               </label>
               <div className="relative">
                 <select
+                  id="product-type"
                   className={SELECT_CLS}
                   value={formData.product_type}
                   onChange={(e) => {
@@ -905,8 +1085,9 @@ export default function CreateProductPage() {
 
             {formData.product_type === 'single' && (
               <div className="space-y-1.5">
-                <label className="text-sm font-semibold text-slate-700 dark:text-gray-300">Stock</label>
+                <label htmlFor="product-stock" className="text-sm font-semibold text-slate-700 dark:text-gray-300">Stock</label>
                 <input
+                  id="product-stock"
                   type="number" min="0"
                   placeholder="0"
                   className={INPUT_CLS}
@@ -917,8 +1098,9 @@ export default function CreateProductPage() {
             )}
 
             <div className="md:col-span-2 space-y-1.5">
-              <label className="text-sm font-semibold text-slate-700 dark:text-gray-300">Description</label>
+              <label htmlFor="product-description" className="text-sm font-semibold text-slate-700 dark:text-gray-300">Description</label>
               <textarea
+                id="product-description"
                 rows={4}
                 placeholder="Describe your product in detail..."
                 className={INPUT_CLS + ' resize-none'}
@@ -940,11 +1122,12 @@ export default function CreateProductPage() {
             {/* Attribute Value Selector for catalog products */}
             {formData.product_type === 'catalog' && selectedAttributes.length > 0 && (
               <div>
-                <label className="text-sm font-semibold text-slate-700 dark:text-gray-300 mb-1.5 block">
+                <label htmlFor="upload-attr-select" className="text-sm font-semibold text-slate-700 dark:text-gray-300 mb-1.5 block">
                   Upload images for:
                 </label>
                 <div className="relative inline-block">
                   <select
+                    id="upload-attr-select"
                     value={selectedUploadAttr}
                     onChange={(e) => setSelectedUploadAttr(e.target.value)}
                     className="appearance-none rounded-lg border border-[#ff6600]/20 bg-[#ff6600]/5 px-4 py-2.5 pr-10 text-sm text-slate-900 dark:text-white dark:bg-gray-700 dark:border-gray-600 focus:outline-none focus:border-[#ff6600] focus:ring-2 focus:ring-[#ff6600]/20 transition-all font-medium"
@@ -964,23 +1147,18 @@ export default function CreateProductPage() {
                 </div>
                 <p className="text-xs text-slate-400 dark:text-gray-500 mt-1">
                   Selected: <span className="font-bold text-[#ff6600]">
-                    {selectedUploadAttr
-                      ? (() => {
-                          const attr = attributes.find((a) => a.values?.some((v) => String(v.id) === String(selectedUploadAttr)));
-                          const val = attr?.values?.find((v) => String(v.id) === String(selectedUploadAttr));
-                          return attr && val ? `${attr.name}: ${val.value}` : 'General';
-                        })()
-                      : 'General (Product Main)'}
+                    {selectedUploadAttr ? getAttrValueLabel(selectedUploadAttr) : 'General (Product Main)'}
                   </span>
                 </p>
               </div>
             )}
-            <div
+            <button
+              type="button"
               onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
               onDragLeave={() => setDragOver(false)}
               onDrop={handleDrop}
               onClick={() => fileInputRef.current?.click()}
-              className={`border-2 border-dashed rounded-xl p-12 flex flex-col items-center justify-center text-center cursor-pointer transition-colors ${
+              className={`w-full border-2 border-dashed rounded-xl p-12 flex flex-col items-center justify-center text-center cursor-pointer transition-colors appearance-none bg-transparent m-0 ${
                 dragOver
                   ? 'border-[#ff6600] bg-[#ff6600]/10'
                   : 'border-[#ff6600]/30 bg-[#ff6600]/5 hover:bg-[#ff6600]/10'
@@ -991,13 +1169,11 @@ export default function CreateProductPage() {
               </div>
               <p className="text-lg font-bold text-slate-800 dark:text-gray-200">Drag and drop images here</p>
               <p className="text-sm text-slate-500 dark:text-gray-400 mt-1">PNG, JPG or WEBP up to 5MB each</p>
-              <button
-                type="button"
-                onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}
-                className="mt-4 px-6 py-2 bg-[#ff6600] text-white font-bold rounded-lg shadow-lg shadow-orange-500/20 hover:bg-[#ff6600]/90 transition-all"
+              <span
+                className="mt-4 px-6 py-2 bg-[#ff6600] text-white font-bold rounded-lg shadow-lg shadow-orange-500/20 hover:bg-[#ff6600]/90 transition-all inline-block"
               >
                 Browse Files
-              </button>
+              </span>
               <input
                 ref={fileInputRef}
                 type="file"
@@ -1006,112 +1182,9 @@ export default function CreateProductPage() {
                 className="hidden"
                 onChange={(e) => addFiles(e.target.files)}
               />
-            </div>
+            </button>
 
-            {images.length > 0 && (() => {
-              // Group images: general (no attribute) + per-attribute-value
-              const generalImages = images.map((img, idx) => ({ ...img, _idx: idx })).filter((img) => !img.attribute_value_id);
-              const byValue = {};
-              images.forEach((img, idx) => {
-                if (img.attribute_value_id) {
-                  if (!byValue[img.attribute_value_id]) {
-                    const attr = attributes.find((a) => a.values?.some((v) => String(v.id) === String(img.attribute_value_id)));
-                    const val = attr?.values?.find((v) => String(v.id) === String(img.attribute_value_id));
-                    byValue[img.attribute_value_id] = {
-                      label: attr && val ? `${attr.name}: ${val.value}` : `Attribute #${img.attribute_value_id}`,
-                      items: [],
-                    };
-                  }
-                  byValue[img.attribute_value_id].items.push({ ...img, _idx: idx });
-                }
-              });
-
-              const renderImageCard = (img) => (
-                <div
-                  key={img._idx}
-                  onClick={() => setMain(img._idx)}
-                  className={`relative group aspect-square rounded-xl overflow-hidden border-2 cursor-pointer transition-all ${
-                    img.isMain ? 'border-[#ff6600] ring-2 ring-[#ff6600]/20' : 'border-slate-200 dark:border-gray-600 hover:border-[#ff6600]/40'
-                  }`}
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={img.preview} alt="" className="w-full h-full object-cover" />
-                  {/* Thumbnail badge */}
-                  {img.isMain && (
-                    <span className="absolute top-2 left-2 bg-[#ff6600] text-white text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
-                      <Star className="w-3 h-3 fill-white" /> THUMBNAIL
-                    </span>
-                  )}
-                  {/* Set thumbnail button (only show on non-thumbnail images) */}
-                  {!img.isMain && (
-                    <button
-                      type="button"
-                      onClick={(e) => { e.stopPropagation(); setMain(img._idx); }}
-                      className="absolute top-2 left-2 p-1.5 bg-white/90 dark:bg-gray-800/90 rounded-full text-[#ff6600] shadow-sm hover:bg-[#ff6600]/10 opacity-0 group-hover:opacity-100 transition-opacity"
-                      title="Set as Thumbnail"
-                    >
-                      <Star className="w-4 h-4" />
-                    </button>
-                  )}
-                  {/* Delete button */}
-                  <button
-                    type="button"
-                    onClick={(e) => { e.stopPropagation(); removeImage(img._idx); }}
-                    className="absolute top-2 right-2 p-1.5 bg-white/90 dark:bg-gray-800/90 rounded-full text-red-500 shadow-sm hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity"
-                    title="Remove"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                  {/* Filename */}
-                  <span className="absolute bottom-1 left-1 right-1 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded truncate">
-                    {img.file?.name || ''}
-                  </span>
-                </div>
-              );
-
-              return (
-                <div className="mt-4 space-y-6">
-                  {/* General Product Images */}
-                  {generalImages.length > 0 && (
-                    <div>
-                      <h4 className="text-sm font-bold text-slate-700 dark:text-gray-300 mb-2">General Product Images</h4>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                        {generalImages.map(renderImageCard)}
-                        <div
-                          onClick={() => { setSelectedUploadAttr(''); fileInputRef.current?.click(); }}
-                          className="aspect-square rounded-xl border-2 border-dashed border-[#ff6600]/20 bg-slate-50 dark:bg-gray-700 flex items-center justify-center cursor-pointer hover:border-[#ff6600]/40 hover:bg-[#ff6600]/5 transition-colors"
-                        >
-                          <Plus className="w-6 h-6 text-slate-300 dark:text-gray-500" />
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Per-attribute-value groups */}
-                  {Object.entries(byValue).map(([valueId, group]) => (
-                    <div key={valueId}>
-                      <h4 className="text-sm font-bold text-slate-700 dark:text-gray-300 mb-2">{group.label}</h4>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                        {group.items.map(renderImageCard)}
-                        <div
-                          onClick={() => { setSelectedUploadAttr(valueId); fileInputRef.current?.click(); }}
-                          className="aspect-square rounded-xl border-2 border-dashed border-[#ff6600]/20 bg-slate-50 dark:bg-gray-700 flex items-center justify-center cursor-pointer hover:border-[#ff6600]/40 hover:bg-[#ff6600]/5 transition-colors"
-                        >
-                          <Plus className="w-6 h-6 text-slate-300 dark:text-gray-500" />
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-
-                  {/* If no groups yet (single product or no images with attributes) */}
-                  {generalImages.length === 0 && Object.keys(byValue).length === 0 && (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                      {images.map((img, idx) => renderImageCard({ ...img, _idx: idx }))}
-                    </div>
-                  )}
-                </div>
-              );
-            })()}
+            {renderImageGallery()}
 
             {images.length > 0 && (
               <p className="text-xs text-slate-400 dark:text-gray-500 flex items-center gap-1">
@@ -1152,6 +1225,7 @@ export default function CreateProductPage() {
                   {attributes.map((attr) => (
                     <label
                       key={attr.id}
+                      htmlFor={`attr-select-${attr.id}`}
                       className={`flex items-center gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all ${
                         selectedAttributes.includes(attr.id)
                           ? 'border-[#ff6600]/30 bg-[#ff6600]/5'
@@ -1159,7 +1233,9 @@ export default function CreateProductPage() {
                       }`}
                     >
                       <input
+                        id={`attr-select-${attr.id}`}
                         type="checkbox"
+                        aria-label={`Select ${attr.name} attribute`}
                         checked={selectedAttributes.includes(attr.id)}
                         onChange={(e) => {
                           if (e.target.checked) setSelectedAttributes([...selectedAttributes, attr.id]);
@@ -1170,8 +1246,8 @@ export default function CreateProductPage() {
                       <div className="flex-1 min-w-0">
                         <p className="font-semibold text-slate-900 dark:text-white">{attr.name}</p>
                         <div className="flex flex-wrap gap-1 mt-1.5">
-                          {attr.values?.slice(0, 5).map((val, i) => (
-                            <span key={i} className="px-2 py-0.5 bg-slate-100 dark:bg-gray-700 text-slate-600 dark:text-gray-300 rounded text-xs">{val.value}</span>
+                          {attr.values?.slice(0, 5).map((val) => (
+                            <span key={val.id ?? val.value} className="px-2 py-0.5 bg-slate-100 dark:bg-gray-700 text-slate-600 dark:text-gray-300 rounded text-xs">{val.value}</span>
                           ))}
                           {attr.values?.length > 5 && (
                             <span className="px-2 py-0.5 bg-slate-100 dark:bg-gray-700 text-slate-500 dark:text-gray-400 rounded text-xs">+{attr.values.length - 5} more</span>
@@ -1196,28 +1272,7 @@ export default function CreateProductPage() {
             Cancel
           </button>
 
-          {formData.product_type === 'catalog' ? (
-            <button
-              type="button"
-              onClick={handleGenerateCatalog}
-              disabled={attributes.length === 0 || selectedAttributes.length === 0}
-              className="px-12 py-3 rounded-lg font-bold bg-[#ff6600] text-white shadow-lg shadow-orange-500/30 hover:bg-[#ff6600]/90 active:scale-95 transition-all disabled:opacity-50"
-            >
-              Generate Catalog
-            </button>
-          ) : (
-            <button
-              type="submit"
-              disabled={submitting}
-              className="px-12 py-3 rounded-lg font-bold bg-[#ff6600] text-white shadow-lg shadow-orange-500/30 hover:bg-[#ff6600]/90 active:scale-95 transition-all disabled:opacity-50"
-            >
-              {submitting ? (
-                <span className="flex items-center gap-2">
-                  <Loader2 className="w-4 h-4 animate-spin" /> Creating…
-                </span>
-              ) : 'Create Product'}
-            </button>
-          )}
+          {renderStep1ActionButton(formData.product_type, submitting, attributes, selectedAttributes, handleGenerateCatalog)}
         </div>
 
       </form>

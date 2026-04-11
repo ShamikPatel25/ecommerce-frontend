@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation';
 import { storeAPI } from '@/lib/api';
 import { toast } from 'sonner';
 import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
-import { Plus, Search, Filter, ChevronLeft, ChevronRight, MoreHorizontal, Trash2, Eye, EyeOff } from 'lucide-react';
+import { Plus, Search, MoreHorizontal, Trash2, Eye, EyeOff } from 'lucide-react';
+import Pagination from '@/components/dashboard/Pagination';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -66,9 +67,10 @@ export default function StoresPage() {
     }
   };
 
+  const lowerQuery = searchQuery.toLowerCase().trim();
   const filteredStores = stores.filter(s =>
-    s.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    s.subdomain?.toLowerCase().includes(searchQuery.toLowerCase())
+    s.name?.toLowerCase().includes(lowerQuery) ||
+    s.subdomain?.toLowerCase().includes(lowerQuery)
   );
 
   // Pagination
@@ -113,9 +115,6 @@ export default function StoresPage() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
-            <button className="px-4 text-slate-400 dark:text-gray-500 hover:text-slate-600 dark:text-gray-300 border-l border-slate-100 dark:border-gray-700">
-              <Filter size={20} />
-            </button>
           </div>
         </div>
 
@@ -153,7 +152,7 @@ export default function StoresPage() {
                       paginatedStores.map((store) => (
                         <tr
                           key={store.id}
-                          className={`hover:bg-slate-50 dark:hover:bg-gray-700/50 transition-colors group cursor-pointer ${!store.is_active ? 'opacity-60' : ''}`}
+                          className="hover:bg-slate-50 dark:hover:bg-gray-700/50 transition-colors group cursor-pointer"
                           onClick={() => router.push(`/stores/${store.id}/edit`)}
                         >
                           {/* Store Name */}
@@ -179,7 +178,7 @@ export default function StoresPage() {
 
                           {/* Status */}
                           <td className="px-6 py-4">
-                            <span className={`px-3 py-1 rounded-full text-xs font-semibold ${store.is_active ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'}`}>
+                            <span className={`inline-block w-[72px] text-center px-3 py-1 rounded-full text-xs font-semibold ${store.is_active ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'}`}>
                               {store.is_active ? 'Active' : 'Inactive'}
                             </span>
                           </td>
@@ -187,13 +186,11 @@ export default function StoresPage() {
                           {/* Actions */}
                           <td className="px-6 py-4 text-right">
                             <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <button
-                                  onClick={(e) => e.stopPropagation()}
-                                  className="inline-flex items-center justify-center size-8 rounded-lg text-slate-400 dark:text-gray-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-gray-700 transition-all opacity-40 group-hover:opacity-100"
-                                >
-                                  <MoreHorizontal size={18} />
-                                </button>
+                              <DropdownMenuTrigger
+                                onClick={(e) => e.stopPropagation()}
+                                className="inline-flex items-center justify-center size-8 rounded-lg text-slate-400 dark:text-gray-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-gray-700 transition-all opacity-40 group-hover:opacity-100"
+                              >
+                                <MoreHorizontal size={18} />
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end" sideOffset={8} className="w-44 rounded-xl shadow-lg border border-slate-200 dark:border-gray-700 p-1.5 bg-white dark:bg-gray-800 z-[100]">
                                 <DropdownMenuItem
@@ -228,52 +225,14 @@ export default function StoresPage() {
 
               {/* Pagination */}
               {filteredStores.length > 0 && (
-                <div className="px-6 py-4 border-t border-slate-100 dark:border-gray-700 bg-slate-50/30 dark:bg-gray-800/50 flex items-center justify-between">
-                  <p className="text-xs text-slate-500 dark:text-gray-400">
-                    Showing {(safeCurrentPage - 1) * itemsPerPage + 1} to{' '}
-                    {Math.min(safeCurrentPage * itemsPerPage, filteredStores.length)} of{' '}
-                    {filteredStores.length} stores
-                  </p>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                      disabled={safeCurrentPage === 1}
-                      className="p-1 rounded border border-slate-200 dark:border-gray-700 hover:bg-white dark:hover:bg-gray-700 text-slate-400 dark:text-gray-500 disabled:opacity-40 disabled:cursor-not-allowed"
-                    >
-                      <ChevronLeft size={18} />
-                    </button>
-                    {Array.from({ length: totalPages }, (_, i) => i + 1)
-                      .filter(page => {
-                        if (totalPages <= 5) return true;
-                        if (page === 1 || page === totalPages) return true;
-                        return Math.abs(page - safeCurrentPage) <= 1;
-                      })
-                      .map((page, idx, arr) => (
-                        <span key={page} className="flex items-center gap-1">
-                          {idx > 0 && arr[idx - 1] !== page - 1 && (
-                            <span className="text-slate-400 dark:text-gray-500 text-xs px-1">...</span>
-                          )}
-                          <button
-                            onClick={() => setCurrentPage(page)}
-                            className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
-                              page === safeCurrentPage
-                                ? 'bg-orange-500 text-white font-bold'
-                                : 'hover:bg-white dark:hover:bg-gray-700 text-slate-600 dark:text-gray-300'
-                            }`}
-                          >
-                            {page}
-                          </button>
-                        </span>
-                      ))}
-                    <button
-                      onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                      disabled={safeCurrentPage === totalPages}
-                      className="p-1 rounded border border-slate-200 dark:border-gray-700 hover:bg-white dark:hover:bg-gray-700 text-slate-400 dark:text-gray-500 disabled:opacity-40 disabled:cursor-not-allowed"
-                    >
-                      <ChevronRight size={18} />
-                    </button>
-                  </div>
-                </div>
+                <Pagination
+                  currentPage={safeCurrentPage}
+                  totalPages={totalPages}
+                  onPageChange={setCurrentPage}
+                  totalItems={filteredStores.length}
+                  perPage={itemsPerPage}
+                  itemLabel="stores"
+                />
               )}
             </>
           )}

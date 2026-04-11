@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { categoryAPI } from '@/lib/api';
+import { useFormDraft } from '@/hooks/useFormDraft';
 import { toast } from 'sonner';
 import {
   ArrowLeft, ChevronRight, ChevronDown, Info, Loader2, FolderTree,
@@ -19,7 +20,7 @@ export default function CreateCategoryPage() {
   const router = useRouter();
   const [categories, setCategories] = useState([]);
   const [submitting, setSubmitting] = useState(false);
-  const [formData, setFormData] = useState({ name: '', slug: '', parent: '' });
+  const [formData, setFormData, clearDraft] = useFormDraft('category-create', { name: '', slug: '', parent: '' });
 
   const fetchCategories = useCallback(async () => {
     try {
@@ -44,6 +45,7 @@ export default function CreateCategoryPage() {
     try {
       await categoryAPI.create({ ...formData, parent: formData.parent || null });
       toast.success('Category created!');
+      clearDraft();
       router.push('/categories');
     } catch (error) {
       const d = error.response?.data;

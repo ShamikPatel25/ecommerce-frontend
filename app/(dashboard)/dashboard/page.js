@@ -4,16 +4,17 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
 import { storeAPI, categoryAPI, productAPI, orderAPI } from '@/lib/api';
+import { toast } from 'sonner';
 import Link from 'next/link';
 import TopBar from '@/components/TopBar';
 import {
   DollarSign, ShoppingBag, Package, Users,
-  MoreHorizontal, AlertTriangle, Plus, FolderPlus,
+  AlertTriangle, Plus, FolderPlus,
   Tags, ShoppingCart,
 } from 'lucide-react';
 import {
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, Legend,
+  ComposedChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
+  ResponsiveContainer, PieChart, Pie, BarChart, Bar, Legend,
 } from 'recharts';
 
 const STATUS_STYLES = {
@@ -66,7 +67,7 @@ export default function DashboardPage() {
 
       const totalRevenue = orders
         .filter(o => o.status !== 'cancelled')
-        .reduce((sum, o) => sum + parseFloat(o.total_amount || 0), 0);
+        .reduce((sum, o) => sum + Number.parseFloat(o.total_amount || 0), 0);
 
       const pendingCount = orders.filter(o => o.status === 'pending').length;
 
@@ -90,6 +91,7 @@ export default function DashboardPage() {
       setRecentOrders(orders.slice(0, 5));
       setLowStockProducts(lowStock.slice(0, 5));
     } catch {
+      toast.error('Failed to load dashboard data');
     } finally {
       setLoading(false);
     }
@@ -113,18 +115,22 @@ export default function DashboardPage() {
       const dayOrders = allOrders.filter(o => o.created_at?.startsWith(key) && o.status !== 'cancelled');
       days.push({
         date: label,
-        revenue: dayOrders.reduce((s, o) => s + parseFloat(o.total_amount || 0), 0),
+        revenue: dayOrders.reduce((s, o) => s + Number.parseFloat(o.total_amount || 0), 0),
         orders: dayOrders.length,
       });
     }
     return days;
   }, [allOrders]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Status distribution for pie
+  // Status distribution for pie (with fill colors embedded to avoid deprecated Cell)
   const statusData = useMemo(() => {
     const counts = {};
     allOrders.forEach(o => { counts[o.status] = (counts[o.status] || 0) + 1; });
-    return Object.entries(counts).map(([name, value]) => ({ name, value }));
+    return Object.entries(counts).map(([name, value], index) => ({
+      name,
+      value,
+      fill: PIE_COLORS[index % PIE_COLORS.length],
+    }));
   }, [allOrders]);
 
   // Top products by revenue (from order items)
@@ -133,7 +139,7 @@ export default function DashboardPage() {
     allOrders.forEach(o => {
       (o.items || []).forEach(item => {
         const name = item.product_name || item.product?.name || `Product #${item.product}`;
-        map[name] = (map[name] || 0) + parseFloat(item.unit_price || 0) * (item.quantity || 1);
+        map[name] = (map[name] || 0) + Number.parseFloat(item.unit_price || 0) * (item.quantity || 1);
       });
     });
     return Object.entries(map)
@@ -145,7 +151,7 @@ export default function DashboardPage() {
   const statCards = [
     {
       label: 'Total Sales',
-      value: loading ? '\u2014' : `$${parseFloat(stats.revenue || 0).toLocaleString(undefined, { minimumFractionDigits: 0 })}`,
+      value: loading ? '\u2014' : `$${Number.parseFloat(stats.revenue || 0).toLocaleString(undefined, { minimumFractionDigits: 0 })}`,
       icon: <DollarSign size={22} />,
       sub: 'Excluding cancelled orders',
       href: '/orders',
@@ -172,6 +178,118 @@ export default function DashboardPage() {
       href: '/stores',
     },
   ];
+
+  /* ── Extracted render helpers to eliminate nested ternaries (S3358) ── */
+
+  const renderOrdersContent = () => {
+    if (loading) {
+      return (
+        <div className="p-6 space-y-4">
+          {[1, 2, 3].map(i => (
+            <div key={i} className="animate-pulse flex gap-4">
+              <div className="h-4 bg-gray-200 rounded flex-1" />
+              <div className="h-4 bg-gray-100 rounded w-20" />
+            </div>
+          ))}
+        </div>
+      );
+    }
+    if (recentOrders.length === 0) {
+      return (
+        <div className="p-12 text-center">
+          <ShoppingBag size={40} className="mx-auto text-slate-300 mb-3" />
+          <p className="text-slate-400 dark:text-gray-500 text-sm">No orders yet</p>
+        </div>
+      );
+    }
+    return (
+      <div className="overflow-x-auto">
+        <table className="w-full text-left border-collapse">
+          <thead>
+            <tr className="bg-slate-50 dark:bg-gray-700/50 text-slate-500 dark:text-gray-400 text-xs uppercase tracking-wider">
+              <th className="px-6 py-4 font-semibold">Order ID</th>
+              <th className="px-6 py-4 font-semibold">Customer</th>
+              <th className="px-6 py-4 font-semibold">Items</th>
+              <th className="px-6 py-4 font-semibold">Total</th>
+              <th className="px-6 py-4 font-semibold">Status</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {recentOrders.map(order => (
+              <tr
+                key={order.id}
+                onClick={() => router.push(`/orders/${order.id}`)}
+                className="hover:bg-slate-50 dark:hover:bg-gray-700 transition-colors cursor-pointer"
+              >
+                <td className="px-6 py-4 text-sm font-medium text-slate-900 dark:text-white">
+                  #ORD-{String(order.id).padStart(4, '0')}
+                </td>
+                <td className="px-6 py-4">
+                  <div className="flex items-center gap-3">
+                    <div className="size-8 rounded-full bg-slate-200 flex items-center justify-center text-xs font-bold text-slate-600 dark:text-gray-300">
+                      {getInitials(order.customer_name)}
+                    </div>
+                    <span className="text-sm text-slate-600 dark:text-gray-300">{order.customer_name || 'Unknown'}</span>
+                  </div>
+                </td>
+                <td className="px-6 py-4 text-sm text-slate-600 dark:text-gray-300">
+                  {order.items?.length || 0} {(order.items?.length || 0) === 1 ? 'Item' : 'Items'}
+                </td>
+                <td className="px-6 py-4 text-sm font-bold text-slate-900 dark:text-white">
+                  ${Number.parseFloat(order.total_amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </td>
+                <td className="px-6 py-4">
+                  <span className={`px-2.5 py-1 rounded-full text-xs font-bold uppercase ${STATUS_STYLES[order.status] || 'bg-gray-100 text-gray-600'}`}>
+                    {order.status}
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+  };
+
+  const renderLowStockContent = () => {
+    if (loading) {
+      return (
+        <div className="space-y-3 animate-pulse">
+          {[1, 2, 3].map(i => <div key={i} className="h-4 bg-gray-200 rounded" />)}
+        </div>
+      );
+    }
+    if (lowStockProducts.length === 0) {
+      return (
+        <p className="text-slate-400 dark:text-gray-500 text-sm text-center py-4">All products well-stocked</p>
+      );
+    }
+    return (
+      <div className="space-y-3">
+        {lowStockProducts.map(p => {
+          const stock = p.product_type === 'catalog'
+            ? (p.variants || []).reduce((s, v) => s + (v.stock ?? 0), 0)
+            : (p.stock ?? 0);
+          return (
+            <button
+              type="button"
+              key={p.id}
+              onClick={() => router.push(`/products/${p.id}/edit`)}
+              className="flex items-center justify-between cursor-pointer hover:bg-slate-50 dark:hover:bg-gray-700 rounded-lg p-2.5 -mx-2 transition-colors appearance-none bg-transparent border-none w-full text-left"
+            >
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-slate-800 dark:text-white truncate">{p.name}</p>
+                <p className="text-xs text-slate-500 dark:text-gray-400 font-mono">{p.sku}</p>
+              </div>
+              <span className={`text-xs font-bold px-2.5 py-1 rounded-full shrink-0 ml-3 ${stock === 0 ? 'bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400' : 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400'}`}>
+                {stock === 0 ? 'Out of stock' : `${stock} left`}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    );
+  };
 
   return (
     <div className="p-4 md:p-8 space-y-8">
@@ -223,10 +341,8 @@ export default function DashboardPage() {
             </div>
             {/* 3D Chart */}
             <div className="p-6">
-              <div style={{ perspective: '900px' }}>
-                <div style={{ transform: 'rotateX(4deg)', transformOrigin: 'center bottom' }}>
                   <ResponsiveContainer width="100%" height={320}>
-                    <AreaChart data={revenueByDay} margin={{ top: 10, right: 30, left: 20, bottom: 5 }}>
+                    <ComposedChart data={revenueByDay} margin={{ top: 10, right: 30, left: 20, bottom: 5 }}>
                       <defs>
                         <linearGradient id="revGrad3d" x1="0" y1="0" x2="0" y2="1">
                           <stop offset="0%" stopColor="#ff6600" stopOpacity={0.4} />
@@ -238,31 +354,28 @@ export default function DashboardPage() {
                           <stop offset="50%" stopColor="#3b82f6" stopOpacity={0.1} />
                           <stop offset="100%" stopColor="#3b82f6" stopOpacity={0.02} />
                         </linearGradient>
-                        <filter id="shadow3d">
-                          <feDropShadow dx="0" dy="4" stdDeviation="3" floodColor="#ff6600" floodOpacity="0.15" />
-                        </filter>
-                        <filter id="shadow3dBlue">
-                          <feDropShadow dx="0" dy="3" stdDeviation="2" floodColor="#3b82f6" floodOpacity="0.12" />
-                        </filter>
                       </defs>
                       <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
                       <XAxis
                         dataKey="date"
-                        tick={{ fontSize: 11, fill: '#94a3b8' }}
+                        tick={{ fontSize: 13, fill: '#334155', fontWeight: 500 }}
                         axisLine={{ stroke: '#e2e8f0' }}
                         tickLine={false}
                       />
                       <YAxis
                         yAxisId="revenue"
-                        tick={{ fontSize: 11, fill: '#94a3b8' }}
-                        tickFormatter={(v) => `$${v >= 1000 ? `${(v / 1000).toFixed(1)}k` : v}`}
+                        tick={{ fontSize: 13, fill: '#334155', fontWeight: 500 }}
+                        tickFormatter={(v) => {
+                          const label = v >= 1000 ? `${(v / 1000).toFixed(1)}k` : v;
+                          return `$${label}`;
+                        }}
                         axisLine={false}
                         tickLine={false}
                       />
                       <YAxis
                         yAxisId="orders"
                         orientation="right"
-                        tick={{ fontSize: 11, fill: '#94a3b8' }}
+                        tick={{ fontSize: 13, fill: '#334155', fontWeight: 500 }}
                         allowDecimals={false}
                         axisLine={false}
                         tickLine={false}
@@ -278,7 +391,7 @@ export default function DashboardPage() {
                         }}
                         formatter={(value, name) =>
                           name === 'Revenue'
-                            ? [`$${parseFloat(value).toLocaleString(undefined, { minimumFractionDigits: 2 })}`, 'Revenue']
+                            ? [`$${Number.parseFloat(value).toLocaleString(undefined, { minimumFractionDigits: 2 })}`, 'Revenue']
                             : [value, 'Orders']
                         }
                         cursor={{ stroke: '#ff6600', strokeWidth: 1, strokeDasharray: '4 4' }}
@@ -297,7 +410,6 @@ export default function DashboardPage() {
                         name="Revenue"
                         dot={{ r: 3, fill: '#ff6600', stroke: '#fff', strokeWidth: 2 }}
                         activeDot={{ r: 5, fill: '#ff6600', stroke: '#fff', strokeWidth: 2 }}
-                        filter="url(#shadow3d)"
                       />
                       <Area
                         yAxisId="orders"
@@ -309,12 +421,9 @@ export default function DashboardPage() {
                         name="Orders"
                         dot={{ r: 2.5, fill: '#3b82f6', stroke: '#fff', strokeWidth: 2 }}
                         activeDot={{ r: 4.5, fill: '#3b82f6', stroke: '#fff', strokeWidth: 2 }}
-                        filter="url(#shadow3dBlue)"
                       />
-                    </AreaChart>
+                    </ComposedChart>
                   </ResponsiveContainer>
-                </div>
-              </div>
             </div>
           </div>
 
@@ -323,23 +432,47 @@ export default function DashboardPage() {
             <div className="p-6 border-b border-gray-200 dark:border-gray-700">
               <h3 className="text-lg font-bold text-slate-900 dark:text-white">Order Status Distribution</h3>
             </div>
-            <div className="p-6">
+            <div className="px-2 py-3">
               <ResponsiveContainer width="100%" height={300}>
                 <PieChart>
                   <Pie
                     data={statusData}
                     cx="50%"
                     cy="50%"
-                    innerRadius={60}
-                    outerRadius={100}
+                    innerRadius={55}
+                    outerRadius={90}
                     paddingAngle={4}
                     dataKey="value"
-                    label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
-                  >
-                    {statusData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
-                    ))}
-                  </Pie>
+                    label={({ cx, cy, midAngle, outerRadius: oR, name, percent, fill: sliceColor }) => {
+                      const RADIAN = Math.PI / 180;
+                      const radius = oR + 25;
+                      const x = cx + radius * Math.cos(-midAngle * RADIAN);
+                      const y = cy + radius * Math.sin(-midAngle * RADIAN);
+                      return (
+                        <text
+                          x={x}
+                          y={y}
+                          textAnchor={x > cx ? 'start' : 'end'}
+                          dominantBaseline="central"
+                          fontSize={12}
+                          fontWeight={600}
+                          fill={sliceColor}
+                        >
+                          {`${name} (${(percent * 100).toFixed(0)}%)`}
+                        </text>
+                      );
+                    }}
+                    labelLine={({ cx, cy, midAngle, outerRadius: oR, stroke }) => {
+                      const RADIAN = Math.PI / 180;
+                      const startX = cx + oR * Math.cos(-midAngle * RADIAN);
+                      const startY = cy + oR * Math.sin(-midAngle * RADIAN);
+                      const endX = cx + (oR + 20) * Math.cos(-midAngle * RADIAN);
+                      const endY = cy + (oR + 20) * Math.sin(-midAngle * RADIAN);
+                      return (
+                        <line x1={startX} y1={startY} x2={endX} y2={endY} stroke={stroke} strokeWidth={1.5} />
+                      );
+                    }}
+                  />
                   <Tooltip
                     contentStyle={{
                       backgroundColor: '#fff',
@@ -349,7 +482,6 @@ export default function DashboardPage() {
                     }}
                     formatter={(value, name) => [value, name]}
                   />
-                  <Legend />
                 </PieChart>
               </ResponsiveContainer>
             </div>
@@ -369,20 +501,19 @@ export default function DashboardPage() {
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart
                     data={topProducts}
-                    layout="vertical"
-                    margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                    margin={{ top: 5, right: 20, left: 10, bottom: 40 }}
                   >
                     <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                     <XAxis
-                      type="number"
-                      tick={{ fontSize: 12, fill: '#64748b' }}
-                      tickFormatter={(v) => `$${v.toLocaleString()}`}
+                      dataKey="name"
+                      tick={{ fontSize: 13, fill: '#334155', fontWeight: 500 }}
+                      angle={-30}
+                      textAnchor="end"
+                      interval={0}
                     />
                     <YAxis
-                      type="category"
-                      dataKey="name"
-                      width={130}
-                      tick={{ fontSize: 12, fill: '#64748b' }}
+                      tick={{ fontSize: 13, fill: '#334155', fontWeight: 500 }}
+                      tickFormatter={(v) => `$${v.toLocaleString()}`}
                     />
                     <Tooltip
                       contentStyle={{
@@ -391,9 +522,9 @@ export default function DashboardPage() {
                         borderRadius: '8px',
                         fontSize: '13px',
                       }}
-                      formatter={(value) => [`$${parseFloat(value).toLocaleString(undefined, { minimumFractionDigits: 2 })}`, 'Revenue']}
+                      formatter={(value) => [`$${Number.parseFloat(value).toLocaleString(undefined, { minimumFractionDigits: 2 })}`, 'Revenue']}
                     />
-                    <Bar dataKey="revenue" fill="#ff6600" radius={[0, 4, 4, 0]} barSize={24} />
+                    <Bar dataKey="revenue" fill="#ff6600" radius={[4, 4, 0, 0]} barSize={36} />
                   </BarChart>
                 </ResponsiveContainer>
               )}
@@ -411,79 +542,7 @@ export default function DashboardPage() {
               View All Orders
             </Link>
           </div>
-          {loading ? (
-            <div className="p-6 space-y-4">
-              {[1, 2, 3].map(i => (
-                <div key={i} className="animate-pulse flex gap-4">
-                  <div className="h-4 bg-gray-200 rounded flex-1" />
-                  <div className="h-4 bg-gray-100 rounded w-20" />
-                </div>
-              ))}
-            </div>
-          ) : recentOrders.length === 0 ? (
-            <div className="p-12 text-center">
-              <ShoppingBag size={40} className="mx-auto text-slate-300 mb-3" />
-              <p className="text-slate-400 dark:text-gray-500 text-sm">No orders yet</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-slate-50 dark:bg-gray-700/50 text-slate-500 dark:text-gray-400 text-xs uppercase tracking-wider">
-                    <th className="px-6 py-4 font-semibold">Order ID</th>
-                    <th className="px-6 py-4 font-semibold">Customer</th>
-                    <th className="px-6 py-4 font-semibold">Items</th>
-                    <th className="px-6 py-4 font-semibold">Total</th>
-                    <th className="px-6 py-4 font-semibold">Status</th>
-                    <th className="px-6 py-4 font-semibold text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {recentOrders.map(order => (
-                    <tr
-                      key={order.id}
-                      onClick={() => router.push(`/orders/${order.id}`)}
-                      className="hover:bg-slate-50 dark:hover:bg-gray-700 transition-colors cursor-pointer"
-                    >
-                      <td className="px-6 py-4 text-sm font-medium text-slate-900 dark:text-white">
-                        #ORD-{String(order.id).padStart(4, '0')}
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="size-8 rounded-full bg-slate-200 flex items-center justify-center text-xs font-bold text-slate-600 dark:text-gray-300">
-                            {getInitials(order.customer_name)}
-                          </div>
-                          <span className="text-sm text-slate-600 dark:text-gray-300">{order.customer_name || 'Unknown'}</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-slate-600 dark:text-gray-300">
-                        {order.items?.length || 0} {(order.items?.length || 0) === 1 ? 'Item' : 'Items'}
-                      </td>
-                      <td className="px-6 py-4 text-sm font-bold text-slate-900 dark:text-white">
-                        ${parseFloat(order.total_amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className={`px-2.5 py-1 rounded-full text-xs font-bold uppercase ${STATUS_STYLES[order.status] || 'bg-gray-100 text-gray-600'}`}>
-                          {order.status}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            router.push(`/orders/${order.id}`);
-                          }}
-                          className="text-slate-400 dark:text-gray-500 hover:text-orange-500 transition-colors"
-                        >
-                          <MoreHorizontal size={20} />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+          {renderOrdersContent()}
         </div>
 
         {/* Right Column */}
@@ -494,36 +553,7 @@ export default function DashboardPage() {
               <h3 className="text-lg font-bold text-slate-900 dark:text-white">Low Stock Alert</h3>
               <AlertTriangle size={20} className="text-orange-500" />
             </div>
-            {loading ? (
-              <div className="space-y-3 animate-pulse">
-                {[1, 2, 3].map(i => <div key={i} className="h-4 bg-gray-200 rounded" />)}
-              </div>
-            ) : lowStockProducts.length === 0 ? (
-              <p className="text-slate-400 dark:text-gray-500 text-sm text-center py-4">All products well-stocked</p>
-            ) : (
-              <div className="space-y-3">
-                {lowStockProducts.map(p => {
-                  const stock = p.product_type === 'catalog'
-                    ? (p.variants || []).reduce((s, v) => s + (v.stock ?? 0), 0)
-                    : (p.stock ?? 0);
-                  return (
-                    <div
-                      key={p.id}
-                      onClick={() => router.push(`/products/${p.id}/edit`)}
-                      className="flex items-center justify-between cursor-pointer hover:bg-slate-50 dark:hover:bg-gray-700 rounded-lg p-2.5 -mx-2 transition-colors"
-                    >
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold text-slate-800 dark:text-white truncate">{p.name}</p>
-                        <p className="text-xs text-slate-500 dark:text-gray-400 font-mono">{p.sku}</p>
-                      </div>
-                      <span className={`text-xs font-bold px-2.5 py-1 rounded-full shrink-0 ml-3 ${stock === 0 ? 'bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400' : 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400'}`}>
-                        {stock === 0 ? 'Out of stock' : `${stock} left`}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+            {renderLowStockContent()}
           </div>
 
           {/* Quick Actions */}

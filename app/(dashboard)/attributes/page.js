@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation';
 import { attributeAPI, categoryAPI } from '@/lib/api';
 import { toast } from 'sonner';
 import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
-import { Plus, Search, Filter, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
+import { Plus, Search, Trash2 } from 'lucide-react';
+import Pagination from '@/components/dashboard/Pagination';
 
 const PER_PAGE = 10;
 
@@ -52,9 +53,10 @@ export default function AttributesPage() {
   const getCategoryName = (catId) =>
     categories.find((c) => c.id === catId)?.name || 'Uncategorized';
 
+  const lowerQuery = searchQuery.toLowerCase().trim();
   const filteredAttributes = attributes.filter(a =>
-    a.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    getCategoryName(a.category)?.toLowerCase().includes(searchQuery.toLowerCase())
+    a.name?.toLowerCase().includes(lowerQuery) ||
+    getCategoryName(a.category)?.toLowerCase().includes(lowerQuery)
   );
 
   // Pagination
@@ -99,9 +101,6 @@ export default function AttributesPage() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
-            <button className="px-4 text-slate-400 dark:text-gray-500 hover:text-slate-600 dark:text-gray-300 border-l border-slate-100 dark:border-gray-700">
-              <Filter size={20} />
-            </button>
           </div>
         </div>
 
@@ -207,52 +206,14 @@ export default function AttributesPage() {
 
               {/* Pagination */}
               {filteredAttributes.length > 0 && (
-                <div className="px-6 py-4 border-t border-slate-100 dark:border-gray-700 bg-slate-50/30 dark:bg-gray-800/50 flex items-center justify-between">
-                  <p className="text-xs text-slate-500 dark:text-gray-400">
-                    Showing {(safeCurrentPage - 1) * PER_PAGE + 1} to{' '}
-                    {Math.min(safeCurrentPage * PER_PAGE, filteredAttributes.length)} of{' '}
-                    {filteredAttributes.length} attributes
-                  </p>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                      disabled={safeCurrentPage === 1}
-                      className="p-1 rounded border border-slate-200 dark:border-gray-700 hover:bg-white dark:hover:bg-gray-700 text-slate-400 dark:text-gray-500 disabled:opacity-40 disabled:cursor-not-allowed"
-                    >
-                      <ChevronLeft size={18} />
-                    </button>
-                    {Array.from({ length: totalPages }, (_, i) => i + 1)
-                      .filter(page => {
-                        if (totalPages <= 5) return true;
-                        if (page === 1 || page === totalPages) return true;
-                        return Math.abs(page - safeCurrentPage) <= 1;
-                      })
-                      .map((page, idx, arr) => (
-                        <span key={page} className="flex items-center gap-1">
-                          {idx > 0 && arr[idx - 1] !== page - 1 && (
-                            <span className="text-slate-400 dark:text-gray-500 text-xs px-1">...</span>
-                          )}
-                          <button
-                            onClick={() => setCurrentPage(page)}
-                            className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
-                              page === safeCurrentPage
-                                ? 'bg-orange-500 text-white font-bold'
-                                : 'hover:bg-white dark:hover:bg-gray-700 text-slate-600 dark:text-gray-300'
-                            }`}
-                          >
-                            {page}
-                          </button>
-                        </span>
-                      ))}
-                    <button
-                      onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                      disabled={safeCurrentPage === totalPages}
-                      className="p-1 rounded border border-slate-200 dark:border-gray-700 hover:bg-white dark:hover:bg-gray-700 text-slate-400 dark:text-gray-500 disabled:opacity-40 disabled:cursor-not-allowed"
-                    >
-                      <ChevronRight size={18} />
-                    </button>
-                  </div>
-                </div>
+                <Pagination
+                  currentPage={safeCurrentPage}
+                  totalPages={totalPages}
+                  onPageChange={setCurrentPage}
+                  totalItems={filteredAttributes.length}
+                  perPage={PER_PAGE}
+                  itemLabel="attributes"
+                />
               )}
             </>
           )}

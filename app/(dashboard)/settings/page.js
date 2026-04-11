@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { authAPI } from '@/lib/api';
+import { useFormDraft } from '@/hooks/useFormDraft';
 import { useAuthStore } from '@/store/authStore';
 import { toast } from 'sonner';
 import { User, Loader2, Save, ArrowLeft, ChevronRight } from 'lucide-react';
@@ -18,7 +19,7 @@ export default function SettingsPage() {
 
   const [loading, setLoading] = useState(true);
   const [savingProfile, setSavingProfile] = useState(false);
-  const [profileData, setProfileData] = useState({
+  const [profileData, setProfileData, clearProfileDraft] = useFormDraft('settings-profile', {
     first_name: '',
     last_name: '',
     username: '',
@@ -72,6 +73,7 @@ export default function SettingsPage() {
       }
 
       toast.success('Profile updated successfully');
+      clearProfileDraft();
     } catch (error) {
       const errData = error.response?.data;
       if (errData && typeof errData === 'object') {

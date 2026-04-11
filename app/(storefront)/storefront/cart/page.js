@@ -6,14 +6,16 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useCartStore } from '@/store/cartStore';
 import { Minus, Plus, Trash2, ArrowRight, ShoppingBag } from 'lucide-react';
 import { PageTransition, MagneticButton } from '@/components/storefront/animations';
+import { useStorefrontPath } from '@/lib/useStorefrontPath';
 
 export default function CartPage() {
   const [hydrated, setHydrated] = useState(false);
   const { items, removeItem, updateQuantity } = useCartStore();
+  const { href } = useStorefrontPath();
 
   useEffect(() => { setHydrated(true); }, []);
 
-  const subtotal = items.reduce((sum, item) => sum + parseFloat(item.unitPrice) * item.quantity, 0);
+  const subtotal = items.reduce((sum, item) => sum + Number.parseFloat(item.unitPrice || item.price || 0) * item.quantity, 0);
 
   if (!hydrated) {
     return (
@@ -61,7 +63,7 @@ export default function CartPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4 }}
           >
-            <Link href="/products">
+            <Link href={href('/products')}>
               <MagneticButton
                 as="div"
                 className="inline-flex items-center gap-2 bg-gradient-to-r from-orange-500 to-pink-500 text-white px-8 py-4 rounded-2xl font-bold text-lg shadow-2xl shadow-orange-500/25"
@@ -96,7 +98,7 @@ export default function CartPage() {
             <AnimatePresence>
               {items.map((item, idx) => (
                 <motion.div
-                  key={`${item.product}-${item.variant}-${idx}`}
+                  key={`${item.product || item.id}-${item.variant || 'base'}-${idx}`}
                   layout
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -105,7 +107,7 @@ export default function CartPage() {
                   className="flex gap-5 bg-white rounded-3xl border border-gray-100 p-5 hover:shadow-[0_10px_40px_rgba(0,0,0,0.04)] transition-shadow duration-500"
                 >
                   {/* Thumbnail */}
-                  <Link href={`/products/${item.slug}`} className="flex-shrink-0">
+                  <Link href={href(`/products/${item.slug}`)} className="flex-shrink-0">
                     <motion.div
                       className="w-24 h-24 md:w-28 md:h-28 bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl overflow-hidden"
                       whileHover={{ scale: 1.05 }}
@@ -122,20 +124,20 @@ export default function CartPage() {
 
                   {/* Details */}
                   <div className="flex-1 min-w-0">
-                    <Link href={`/products/${item.slug}`} className="font-bold text-gray-900 hover:text-orange-600 transition-colors truncate block text-lg">
+                    <Link href={href(`/products/${item.slug}`)} className="font-bold text-gray-900 hover:text-orange-600 transition-colors truncate block text-lg">
                       {item.name}
                     </Link>
                     {item.variantLabel && (
                       <p className="text-sm text-gray-400 mt-1 font-medium">{item.variantLabel}</p>
                     )}
                     <p className="text-lg font-black bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent mt-2">
-                      ${parseFloat(item.unitPrice).toFixed(2)}
+                      ${Number.parseFloat(item.unitPrice || item.price || 0).toFixed(2)}
                     </p>
 
                     <div className="flex items-center justify-between mt-4">
                       <div className="inline-flex items-center border-2 border-gray-200 rounded-2xl overflow-hidden">
                         <motion.button
-                          onClick={() => updateQuantity(item.product, item.variant, item.quantity - 1)}
+                          onClick={() => updateQuantity(item.product || item.id, item.variant, item.quantity - 1)}
                           className="p-2.5 text-gray-500 hover:text-gray-700 hover:bg-gray-50 transition-colors"
                           whileTap={{ scale: 0.9 }}
                         >
@@ -143,7 +145,7 @@ export default function CartPage() {
                         </motion.button>
                         <span className="w-10 text-center text-sm font-bold">{item.quantity}</span>
                         <motion.button
-                          onClick={() => updateQuantity(item.product, item.variant, item.quantity + 1)}
+                          onClick={() => updateQuantity(item.product || item.id, item.variant, item.quantity + 1)}
                           className="p-2.5 text-gray-500 hover:text-gray-700 hover:bg-gray-50 transition-colors"
                           whileTap={{ scale: 0.9 }}
                         >
@@ -152,10 +154,10 @@ export default function CartPage() {
                       </div>
                       <div className="flex items-center gap-4">
                         <span className="font-black text-gray-900 text-lg">
-                          ${(parseFloat(item.unitPrice) * item.quantity).toFixed(2)}
+                          ${(Number.parseFloat(item.unitPrice || item.price || 0) * item.quantity).toFixed(2)}
                         </span>
                         <motion.button
-                          onClick={() => removeItem(item.product, item.variant)}
+                          onClick={() => removeItem(item.product || item.id, item.variant)}
                           className="p-2.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
                           whileHover={{ scale: 1.1 }}
                           whileTap={{ scale: 0.9 }}
@@ -193,7 +195,7 @@ export default function CartPage() {
                   <span className="font-black text-gray-900 text-2xl">${subtotal.toFixed(2)}</span>
                 </div>
               </div>
-              <Link href="/checkout">
+              <Link href={href('/checkout')}>
                 <MagneticButton
                   as="div"
                   className="mt-7 w-full flex items-center justify-center gap-2 bg-gradient-to-r from-orange-500 to-pink-500 text-white py-4 rounded-2xl font-bold text-lg shadow-2xl shadow-orange-500/25 cursor-pointer"
@@ -202,7 +204,7 @@ export default function CartPage() {
                 </MagneticButton>
               </Link>
               <Link
-                href="/products"
+                href={href('/products')}
                 className="mt-4 w-full flex items-center justify-center text-sm text-gray-500 hover:text-orange-600 font-semibold py-3 rounded-2xl hover:bg-white transition-all"
               >
                 Continue Shopping

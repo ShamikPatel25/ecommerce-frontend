@@ -6,7 +6,7 @@ import { productAPI } from '@/lib/api';
 import Link from 'next/link';
 import {
   ArrowLeft, ChevronRight, Edit, Package, Tag, Layers,
-  ImageIcon, Loader2, CheckCircle2, XCircle, ShoppingBag,
+  ImageIcon, Loader2, CheckCircle2, XCircle,
 } from 'lucide-react';
 
 const STATUS_STYLES = {
@@ -310,7 +310,7 @@ export default function ProductDetailPage() {
               <div className="flex flex-col md:flex-row">
                 <div className="md:w-64 md:h-64 h-48 bg-slate-100 dark:bg-gray-700 flex items-center justify-center shrink-0">
                   {(() => {
-                    const firstImage = (product.media || []).find(m => m.media_type === 'image');
+                    const firstImage = (product.media || []).find(m => m.is_thumbnail && m.media_type === 'image') || (product.media || []).find(m => m.media_type === 'image');
                     return firstImage ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img

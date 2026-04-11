@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { categoryAPI } from '@/lib/api';
+import { useFormDraft } from '@/hooks/useFormDraft';
 import { toast } from 'sonner';
 import {
   ArrowLeft, ChevronRight, ChevronDown, Info, Loader2, FolderTree,
@@ -23,7 +24,7 @@ export default function EditCategoryPage() {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [formData, setFormData] = useState({ name: '', slug: '', parent: '' });
+  const [formData, setFormData, clearDraft] = useFormDraft(`category-edit-${categoryId}`, { name: '', slug: '', parent: '' });
 
   const fetchData = useCallback(async () => {
     try {
@@ -60,6 +61,7 @@ export default function EditCategoryPage() {
     try {
       await categoryAPI.update(categoryId, { ...formData, parent: formData.parent || null });
       toast.success('Category updated!');
+      clearDraft();
       router.push('/categories');
     } catch (error) {
       const d = error.response?.data;

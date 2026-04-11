@@ -5,9 +5,10 @@ import { useRouter } from 'next/navigation';
 import { orderAPI } from '@/lib/api';
 import { toast } from 'sonner';
 import {
-  Download, Search, ChevronLeft, ChevronRight,
+  Download, Search,
   Loader2, ShoppingBag,
 } from 'lucide-react';
+import Pagination from '@/components/dashboard/Pagination';
 
 const PER_PAGE = 15;
 
@@ -70,9 +71,12 @@ export default function OrdersPage() {
   }, [activeStatus, fetchOrders]);
 
   /* ── search filter ── */
+  const lowerQuery = searchQuery.toLowerCase().trim();
+  const idQuery = lowerQuery.replace(/^#/, ''); // Allow searching both "#123" and "123"
+  
   const filtered = orders.filter((o) =>
-    o.customer_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    String(o.id).includes(searchQuery)
+    o.customer_name?.toLowerCase().includes(lowerQuery) ||
+    String(o.id).includes(idQuery)
   );
 
   /* ── pagination ── */
@@ -94,11 +98,11 @@ export default function OrdersPage() {
     const headers = ['Order #', 'Customer', 'Email', 'Phone', 'Items', 'Total', 'Status', 'Date'];
     const rows = filtered.map((o) => [
       o.id,
-      `"${(o.customer_name || '').replace(/"/g, '""')}"`,
-      `"${(o.customer_email || '').replace(/"/g, '""')}"`,
-      `"${(o.customer_phone || '').replace(/"/g, '""')}"`,
+      `"${(o.customer_name || '').replaceAll('"', '""')}"`,
+      `"${(o.customer_email || '').replaceAll('"', '""')}"`,
+      `"${(o.customer_phone || '').replaceAll('"', '""')}"`,
       o.items_count ?? o.items?.length ?? 0,
-      parseFloat(o.total_amount || 0).toFixed(2),
+      Number.parseFloat(o.total_amount || 0).toFixed(2),
       o.status,
       o.created_at ? new Date(o.created_at).toLocaleDateString() : '',
     ]);
@@ -170,16 +174,18 @@ export default function OrdersPage() {
         </div>
 
         {/* Table body */}
-        {loading ? (
+        {loading && (
           <div className="flex items-center justify-center py-20">
             <Loader2 className="w-8 h-8 text-[#ff6600] animate-spin" />
           </div>
-        ) : paginated.length === 0 ? (
+        )}
+        {!loading && paginated.length === 0 && (
           <div className="flex flex-col items-center justify-center py-20 text-slate-400 dark:text-gray-500">
             <ShoppingBag className="w-10 h-10 mb-3 opacity-40" />
             <p className="text-sm font-medium">No orders found.</p>
           </div>
-        ) : (
+        )}
+        {!loading && paginated.length > 0 && (
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse min-w-[640px]">
               <thead>
@@ -195,6 +201,12 @@ export default function OrdersPage() {
               <tbody className="divide-y divide-slate-100 dark:divide-gray-700">
                 {paginated.map((order) => {
                   const badge = STATUS_BADGE[order.status] || { dot: 'bg-slate-400', pill: 'bg-slate-100 dark:bg-gray-700 text-slate-600 dark:text-gray-300' };
+
+                  let statusText;
+                  if (order.status === 'return_requested') statusText = 'Return Requested';
+                  else if (order.status === 'returned') statusText = 'Returned';
+                  else statusText = order.status.charAt(0).toUpperCase() + order.status.slice(1);
+
                   return (
                     <tr
                       key={order.id}
@@ -216,19 +228,19 @@ export default function OrdersPage() {
 
                       {/* Items */}
                       <td className="px-6 py-4 text-sm text-slate-500 dark:text-gray-400 whitespace-nowrap">
-                        {order.items_count ?? 0} item{(order.items_count ?? 0) !== 1 ? 's' : ''}
+                        {order.items_count ?? 0} item{(order.items_count ?? 0) === 1 ? '' : 's'}
                       </td>
 
                       {/* Total */}
                       <td className="px-6 py-4 text-sm font-semibold text-slate-900 dark:text-white whitespace-nowrap">
-                        ${parseFloat(order.total_amount || 0).toLocaleString()}
+                        ${Number.parseFloat(order.total_amount || 0).toLocaleString()}
                       </td>
 
                       {/* Status */}
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${badge.pill}`}>
                           <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${badge.dot}`} />
-                          {order.status === 'return_requested' ? 'Return Requested' : order.status === 'returned' ? 'Returned' : order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                          {statusText}
                         </span>
                       </td>
 
@@ -245,60 +257,14 @@ export default function OrdersPage() {
         )}
 
         {/* Pagination */}
-        <div className="px-6 py-4 flex items-center justify-between border-t border-slate-200 dark:border-gray-700 bg-slate-50/30 dark:bg-gray-700/30">
-          <p className="text-sm text-slate-500 dark:text-gray-400">
-            {filtered.length === 0
-              ? 'No orders'
-              : `Showing ${(page - 1) * PER_PAGE + 1}–${Math.min(page * PER_PAGE, filtered.length)} of ${filtered.length} orders`
-            }
-          </p>
-          <div className="flex gap-2">
-            {/* Previous */}
-            <button
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page === 1}
-              className="h-8 px-3 rounded-lg border border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-slate-600 dark:text-gray-300 text-xs font-bold hover:bg-slate-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-40"
-            >
-              <ChevronLeft className="w-3.5 h-3.5" />
-            </button>
-
-            {/* Page numbers (max 5 visible) */}
-            {Array.from({ length: totalPages }, (_, i) => i + 1)
-              .filter((p) => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
-              .reduce((acc, p, i, arr) => {
-                if (i > 0 && p - arr[i - 1] > 1) acc.push('…');
-                acc.push(p);
-                return acc;
-              }, [])
-              .map((item, i) =>
-                item === '…' ? (
-                  <span key={`ellipsis-${i}`} className="h-8 px-2 flex items-center text-slate-400 dark:text-gray-500 text-xs">…</span>
-                ) : (
-                  <button
-                    key={item}
-                    onClick={() => setPage(item)}
-                    className={`h-8 px-3 rounded-lg border text-xs font-bold transition-colors ${
-                      page === item
-                        ? 'border-[#ff6600] bg-[#ff6600]/10 text-[#ff6600]'
-                        : 'border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-slate-600 dark:text-gray-300 hover:bg-slate-50 dark:hover:bg-gray-700'
-                    }`}
-                  >
-                    {item}
-                  </button>
-                )
-              )
-            }
-
-            {/* Next */}
-            <button
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              disabled={page === totalPages}
-              className="h-8 px-3 rounded-lg border border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-slate-600 dark:text-gray-300 text-xs font-bold hover:bg-slate-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-40"
-            >
-              <ChevronRight className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        </div>
+        <Pagination
+          currentPage={page}
+          totalPages={totalPages}
+          onPageChange={setPage}
+          totalItems={filtered.length}
+          perPage={PER_PAGE}
+          itemLabel="orders"
+        />
       </div>
     </div>
   );

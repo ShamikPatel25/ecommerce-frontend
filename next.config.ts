@@ -7,6 +7,8 @@ const BACKEND_INTERNAL_URL = process.env.BACKEND_INTERNAL_URL || 'http://backend
 const nextConfig: NextConfig = {
   output: 'standalone',
 
+  turbopack: {},
+
   // Proxy /media/** to Django so images work correctly inside Docker.
   // The browser requests /media/..., Next.js server rewrites it to backend:8000/media/...
   async rewrites() {

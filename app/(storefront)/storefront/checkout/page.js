@@ -5,16 +5,73 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCartStore } from '@/store/cartStore';
+import { useStorefrontAuthStore } from '@/store/storefrontAuthStore';
 import { storefrontAPI } from '@/lib/storefrontApi';
 import { toast } from 'sonner';
-import { ArrowLeft, Loader2, ShoppingBag, Shield, Lock, CreditCard } from 'lucide-react';
-import { PageTransition, MagneticButton } from '@/components/storefront/animations';
+import { ArrowLeft, Loader2, ShoppingBag, Shield, Lock, CreditCard, AlertTriangle } from 'lucide-react';
+import { PageTransition } from '@/components/storefront/animations';
+import { useStorefrontPath } from '@/lib/useStorefrontPath';
+import { Button, buttonVariants } from '@/components/ui/button';
+
+function validateCheckoutForm(form) {
+  const errs = {};
+  if (!form.customer_name.trim()) errs.customer_name = 'Full name is required';
+  if (!form.customer_email.trim()) {
+    errs.customer_email = 'Email is required';
+  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.customer_email)) {
+    errs.customer_email = 'Enter a valid email address';
+  }
+  if (!form.customer_phone.trim()) {
+    errs.customer_phone = 'Phone number is required';
+  } else if (!/^\d{10}$/.test(form.customer_phone)) {
+    errs.customer_phone = 'Enter a valid 10-digit phone number';
+  }
+  return errs;
+}
+
+function extractItemsError(items) {
+  const firstItem = Array.isArray(items) ? items[0] : items;
+  return typeof firstItem === 'string' ? firstItem : JSON.stringify(firstItem);
+}
+
+function extractCustomerFieldError(data) {
+  const fieldErrors = data.customer_name || data.customer_email || data.customer_phone;
+  if (!fieldErrors) return null;
+  return Array.isArray(fieldErrors) ? fieldErrors[0] : fieldErrors;
+}
+
+function parseOrderError(data) {
+  if (!data) return 'Failed to place order. Please try again.';
+
+  if (typeof data.error === 'string') return data.error;
+  if (typeof data.detail === 'string') return data.detail;
+
+  if (data.items) return extractItemsError(data.items);
+
+  const customerError = extractCustomerFieldError(data);
+  if (customerError) return customerError;
+
+  if (typeof data === 'string') return data;
+
+  const values = Object.values(data);
+  if (values.length > 0) {
+    const first = values[0];
+    const extracted = Array.isArray(first) ? first[0] : first;
+    return typeof extracted === 'string' ? extracted : JSON.stringify(data);
+  }
+
+  return 'Failed to place order. Please try again.';
+}
 
 export default function CheckoutPage() {
   const router = useRouter();
   const { items, clearCart } = useCartStore();
+  const updateItemStock = useCartStore((s) => s.updateItemStock);
+  const { href } = useStorefrontPath();
+  const customer = useStorefrontAuthStore((s) => s.customer);
   const [hydrated, setHydrated] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [stockValidated, setStockValidated] = useState(false);
   const [errors, setErrors] = useState({});
   const [form, setForm] = useState({
     customer_name: '',
@@ -23,15 +80,62 @@ export default function CheckoutPage() {
     notes: '',
   });
 
-  const subtotal = items.reduce((sum, item) => sum + parseFloat(item.unitPrice) * item.quantity, 0);
+  // Compute after stock is validated
+  const inStockItems = items.filter((i) => (i.maxStock ?? 1) > 0);
+  const hasOutOfStockItems = stockValidated && items.some((i) => (i.maxStock ?? 1) <= 0);
+  const subtotal = inStockItems.reduce((sum, item) => sum + Number.parseFloat(item.unitPrice || item.price || 0) * item.quantity, 0);
 
   useEffect(() => { setHydrated(true); }, []);
+
+  // Live stock validation on mount — ensures maxStock is current before any order
+  useEffect(() => {
+    if (!hydrated || items.length === 0) {
+      setStockValidated(true); // nothing to validate
+      return;
+    }
+    const uniqueSlugs = [...new Set(items.filter((i) => i.slug).map((i) => i.slug))];
+    if (uniqueSlugs.length === 0) {
+      setStockValidated(true);
+      return;
+    }
+    Promise.allSettled(uniqueSlugs.map((slug) => storefrontAPI.getProduct(slug)))
+      .then((results) => {
+        results.forEach((result, idx) => {
+          if (result.status !== 'fulfilled') return;
+          const product = result.value.data;
+          const slug = uniqueSlugs[idx];
+          items.forEach((cartItem) => {
+            if (cartItem.slug !== slug) return;
+            let liveStock;
+            if (cartItem.variant && product.variants?.length > 0) {
+              const v = product.variants.find((pv) => pv.id === cartItem.variant);
+              liveStock = v ? (v.stock ?? 0) : 0;
+            } else {
+              liveStock = product.stock ?? 0;
+            }
+            updateItemStock(cartItem.product, cartItem.variant, liveStock);
+          });
+        });
+      })
+      .finally(() => setStockValidated(true));
+  }, [hydrated]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto-fill form from customer profile
+  useEffect(() => {
+    if (customer) {
+      setForm((prev) => ({
+        ...prev,
+        customer_name: prev.customer_name || [customer.first_name, customer.last_name].filter(Boolean).join(' '),
+        customer_email: prev.customer_email || customer.email || '',
+      }));
+    }
+  }, [customer]);
 
   if (!hydrated) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center pt-24">
         <motion.div
-          className="w-12 h-12 rounded-full border-2 border-orange-500/30 border-t-orange-500"
+          className="w-12 h-12 rounded-full border-2 border-primary/30 border-t-primary"
           animate={{ rotate: 360 }}
           transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
         />
@@ -48,12 +152,12 @@ export default function CheckoutPage() {
             animate={{ scale: 1 }}
             transition={{ type: 'spring', stiffness: 200 }}
           >
-            <div className="w-28 h-28 mx-auto rounded-[2rem] bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center mb-6">
-              <ShoppingBag className="w-12 h-12 text-gray-300" />
+            <div className="w-28 h-28 mx-auto rounded-[2rem] bg-card border border-border flex items-center justify-center mb-6 shadow-2xl">
+              <ShoppingBag className="w-12 h-12 text-muted-foreground opacity-50" />
             </div>
           </motion.div>
-          <h2 className="text-2xl font-black text-gray-900 mb-2">No items to checkout</h2>
-          <Link href="/products" className="text-orange-600 font-bold hover:underline">
+          <h2 className="text-3xl font-black text-foreground mb-4">No items to checkout</h2>
+          <Link href={href('/products')} className={`${buttonVariants({ size: 'lg' })} rounded-full font-bold px-8 shadow-[0_0_15px_rgba(212,175,55,0.2)]`}>
             Browse Products
           </Link>
         </div>
@@ -61,43 +165,44 @@ export default function CheckoutPage() {
     );
   }
 
-  const validate = () => {
-    const errs = {};
-    if (!form.customer_name.trim()) errs.customer_name = 'Full name is required';
-    if (!form.customer_email.trim()) {
-      errs.customer_email = 'Email is required';
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.customer_email)) {
-      errs.customer_email = 'Enter a valid email address';
-    }
-    if (!form.customer_phone.trim()) {
-      errs.customer_phone = 'Phone number is required';
-    } else if (!/^\d{10}$/.test(form.customer_phone)) {
-      errs.customer_phone = 'Enter a valid 10-digit phone number';
-    }
-    return errs;
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const errs = validate();
+    const errs = validateCheckoutForm(form);
     setErrors(errs);
     if (Object.keys(errs).length > 0) {
       const first = Object.values(errs)[0];
       toast.error(first);
       return;
     }
+    if (!stockValidated) {
+      toast.error('Validating stock, please wait a moment...');
+      return;
+    }
     setSubmitting(true);
+
+    // Only send items that are confirmed in-stock
+    const validItems = items.filter((i) => (i.maxStock ?? 0) > 0);
+    if (validItems.length === 0) {
+      toast.error('All items in your cart are out of stock.');
+      setSubmitting(false);
+      return;
+    }
+    if (hasOutOfStockItems) {
+      toast.error('Remove out-of-stock items from your cart before placing an order.');
+      setSubmitting(false);
+      return;
+    }
 
     const orderData = {
       customer_name: form.customer_name,
       customer_email: form.customer_email,
       customer_phone: form.customer_phone,
       notes: form.notes || undefined,
-      items: items.map((item) => ({
-        product: item.product,
+      items: validItems.map((item) => ({
+        product: item.product || item.id,
         variant: item.variant || null,
         quantity: item.quantity,
-        unit_price: item.unitPrice,
+        unit_price: item.unitPrice || item.price,
       })),
     };
 
@@ -105,34 +210,9 @@ export default function CheckoutPage() {
       const res = await storefrontAPI.createOrder(orderData);
       clearCart();
       toast.success('Order placed successfully!');
-      router.push(`/order-confirmation?order=${res.data.id}`);
+      router.push(href(`/order-confirmation?order=${res.data.id}`));
     } catch (err) {
-      const data = err.response?.data;
-      let msg = 'Failed to place order. Please try again.';
-      if (data) {
-        if (typeof data.error === 'string') {
-          msg = data.error;
-        } else if (typeof data.detail === 'string') {
-          msg = data.detail;
-        } else if (data.items) {
-          // DRF nested serializer errors: { items: [{ product: [...] }] }
-          const firstItem = Array.isArray(data.items) ? data.items[0] : data.items;
-          msg = typeof firstItem === 'string' ? firstItem : JSON.stringify(firstItem);
-        } else if (data.customer_name || data.customer_email || data.customer_phone) {
-          // Field-level validation errors
-          const fieldErrors = data.customer_name || data.customer_email || data.customer_phone;
-          msg = Array.isArray(fieldErrors) ? fieldErrors[0] : fieldErrors;
-        } else if (typeof data === 'string') {
-          msg = data;
-        } else {
-          // Fallback: try to extract any string from the response
-          const values = Object.values(data);
-          if (values.length > 0) {
-            const first = values[0];
-            msg = Array.isArray(first) ? first[0] : (typeof first === 'string' ? first : JSON.stringify(data));
-          }
-        }
-      }
+      const msg = parseOrderError(err.response?.data);
       toast.error(msg);
     } finally {
       setSubmitting(false);
@@ -141,12 +221,12 @@ export default function CheckoutPage() {
 
   return (
     <PageTransition>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pt-24 md:pt-28">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pt-24 md:pt-28">
         <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
         >
-          <Link href="/cart" className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-orange-600 mb-8 font-semibold transition-colors">
+          <Link href={href('/cart')} className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-primary mb-8 font-semibold transition-colors">
             <ArrowLeft className="w-4 h-4" /> Back to Cart
           </Link>
         </motion.div>
@@ -154,100 +234,105 @@ export default function CheckoutPage() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-10"
+          className="mb-10 text-center md:text-left"
         >
-          <span className="text-orange-500 font-bold text-xs uppercase tracking-[0.2em] mb-2 block">Secure</span>
-          <h1 className="text-3xl md:text-5xl font-black text-gray-900 tracking-tight">
-            <span className="bg-gradient-to-r from-orange-500 to-pink-500 bg-clip-text text-transparent">Checkout</span>
+          <span className="text-primary font-bold text-xs uppercase tracking-[0.2em] mb-2 block">Secure</span>
+          <h1 className="text-4xl md:text-5xl font-black text-foreground tracking-tight">
+            Checkout
           </h1>
         </motion.div>
 
         <form onSubmit={handleSubmit}>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
             {/* Customer Information */}
             <motion.div
-              className="lg:col-span-2"
+              className="lg:col-span-7"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
             >
-              <div className="bg-white rounded-3xl border border-gray-100 p-7 md:p-8">
-                <div className="flex items-center gap-3 mb-8">
-                  <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-orange-500 to-pink-500 flex items-center justify-center">
-                    <CreditCard className="w-5 h-5 text-white" />
+              <div className="bg-card rounded-3xl border border-border p-7 md:p-10 shadow-xl">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-10">
+                  <div className="w-12 h-12 rounded-2xl bg-background border border-border flex items-center justify-center text-primary shadow-[0_0_15px_rgba(212,175,55,0.1)] shrink-0">
+                    <CreditCard className="w-6 h-6" />
                   </div>
-                  <h2 className="font-black text-gray-900 text-xl">Customer Information</h2>
+                  <h2 className="font-black text-card-foreground text-2xl tracking-tight">Customer Information</h2>
                 </div>
                 <div className="space-y-6">
-                  <div>
-                    <label className="block text-sm font-bold text-gray-900 mb-2 uppercase tracking-wider">
+                  <div className="space-y-2">
+                    <label htmlFor="customer-name" className="block text-xs font-bold text-muted-foreground uppercase tracking-wider">
                       Full Name <span className="text-red-500">*</span>
                     </label>
                     <input
+                      id="customer-name"
                       type="text"
                       required
                       value={form.customer_name}
                       onChange={(e) => { setForm({ ...form, customer_name: e.target.value }); setErrors({ ...errors, customer_name: '' }); }}
                       placeholder="John Doe"
-                      className={`w-full px-5 py-4 rounded-2xl border-2 focus:outline-none focus:ring-0 text-sm font-medium transition-colors placeholder:text-gray-300 ${errors.customer_name ? 'border-red-400 focus:border-red-500' : 'border-gray-200 focus:border-orange-500 hover:border-gray-300'}`}
+                      className={`w-full px-5 py-4 rounded-xl bg-background border ${errors.customer_name ? 'border-red-500 focus:ring-1 focus:ring-red-500' : 'border-border focus:border-primary focus:ring-1 focus:ring-primary'} focus:outline-none text-sm font-medium transition-all placeholder:text-muted-foreground/50 text-foreground`}
                     />
-                    {errors.customer_name && <p className="text-red-500 text-xs font-medium mt-1.5">{errors.customer_name}</p>}
+                    {errors.customer_name && <p className="text-red-500 text-xs font-bold mt-1.5">{errors.customer_name}</p>}
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <label className="block text-sm font-bold text-gray-900 mb-2 uppercase tracking-wider">
+                    <div className="space-y-2">
+                      <label htmlFor="customer-email" className="block text-xs font-bold text-muted-foreground uppercase tracking-wider">
                         Email <span className="text-red-500">*</span>
                       </label>
                       <input
+                        id="customer-email"
                         type="email"
                         required
+                        readOnly={!!customer?.email}
                         value={form.customer_email}
-                        onChange={(e) => { setForm({ ...form, customer_email: e.target.value }); setErrors({ ...errors, customer_email: '' }); }}
+                        onChange={(e) => { if (!customer?.email) { setForm({ ...form, customer_email: e.target.value }); setErrors({ ...errors, customer_email: '' }); } }}
                         placeholder="john@example.com"
-                        className={`w-full px-5 py-4 rounded-2xl border-2 focus:outline-none focus:ring-0 text-sm font-medium transition-colors placeholder:text-gray-300 ${errors.customer_email ? 'border-red-400 focus:border-red-500' : 'border-gray-200 focus:border-orange-500 hover:border-gray-300'}`}
+                        className={`w-full px-5 py-4 rounded-xl bg-background border ${customer?.email ? 'opacity-60 cursor-not-allowed' : ''} ${errors.customer_email ? 'border-red-500 focus:ring-1 focus:ring-red-500' : 'border-border focus:border-primary focus:ring-1 focus:ring-primary'} focus:outline-none text-sm font-medium transition-all placeholder:text-muted-foreground/50 text-foreground`}
                       />
-                      {errors.customer_email && <p className="text-red-500 text-xs font-medium mt-1.5">{errors.customer_email}</p>}
+                      {errors.customer_email && <p className="text-red-500 text-xs font-bold mt-1.5">{errors.customer_email}</p>}
                     </div>
-                    <div>
-                      <label className="block text-sm font-bold text-gray-900 mb-2 uppercase tracking-wider">
+                    <div className="space-y-2">
+                      <label htmlFor="customer-phone" className="block text-xs font-bold text-muted-foreground uppercase tracking-wider">
                         Phone <span className="text-red-500">*</span>
                       </label>
                       <input
+                        id="customer-phone"
                         type="tel"
                         required
                         inputMode="numeric"
                         maxLength={10}
                         value={form.customer_phone}
                         onChange={(e) => {
-                          const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                          const val = e.target.value.replaceAll(/\D/g, '').slice(0, 10);
                           setForm({ ...form, customer_phone: val });
                           setErrors({ ...errors, customer_phone: '' });
                         }}
                         placeholder="9876543210"
-                        className={`w-full px-5 py-4 rounded-2xl border-2 focus:outline-none focus:ring-0 text-sm font-medium transition-colors placeholder:text-gray-300 ${errors.customer_phone ? 'border-red-400 focus:border-red-500' : 'border-gray-200 focus:border-orange-500 hover:border-gray-300'}`}
+                        className={`w-full px-5 py-4 rounded-xl bg-background border ${errors.customer_phone ? 'border-red-500 focus:ring-1 focus:ring-red-500' : 'border-border focus:border-primary focus:ring-1 focus:ring-primary'} focus:outline-none text-sm font-medium transition-all placeholder:text-muted-foreground/50 text-foreground`}
                       />
-                      {errors.customer_phone && <p className="text-red-500 text-xs font-medium mt-1.5">{errors.customer_phone}</p>}
+                      {errors.customer_phone && <p className="text-red-500 text-xs font-bold mt-1.5">{errors.customer_phone}</p>}
                     </div>
                   </div>
-                  <div>
-                    <label className="block text-sm font-bold text-gray-900 mb-2 uppercase tracking-wider">Order Notes</label>
+                  <div className="space-y-2">
+                    <label htmlFor="order-notes" className="block text-xs font-bold text-muted-foreground uppercase tracking-wider">Order Notes</label>
                     <textarea
+                      id="order-notes"
                       value={form.notes}
                       onChange={(e) => setForm({ ...form, notes: e.target.value })}
                       placeholder="Any special instructions..."
-                      rows={3}
-                      className="w-full px-5 py-4 rounded-2xl border-2 border-gray-200 focus:outline-none focus:ring-0 focus:border-orange-500 text-sm font-medium resize-none transition-colors hover:border-gray-300 placeholder:text-gray-300"
+                      rows={4}
+                      className="w-full px-5 py-4 rounded-xl bg-background border border-border focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none text-sm font-medium resize-none transition-all placeholder:text-muted-foreground/50 text-foreground leading-relaxed"
                     />
                   </div>
                 </div>
 
                 {/* Security badges */}
-                <div className="mt-8 flex items-center gap-6 pt-6 border-t border-gray-100">
-                  <div className="flex items-center gap-2 text-gray-400 text-xs font-medium">
-                    <Lock className="w-3.5 h-3.5" /> SSL Encrypted
+                <div className="mt-10 flex flex-wrap items-center gap-6 pt-6 border-t border-border/50">
+                  <div className="flex items-center gap-2 text-muted-foreground text-xs font-bold uppercase tracking-wider">
+                    <Lock className="w-4 h-4 text-primary" /> SSL Encrypted
                   </div>
-                  <div className="flex items-center gap-2 text-gray-400 text-xs font-medium">
-                    <Shield className="w-3.5 h-3.5" /> Secure Checkout
+                  <div className="flex items-center gap-2 text-muted-foreground text-xs font-bold uppercase tracking-wider">
+                    <Shield className="w-4 h-4 text-primary" /> Secure Checkout
                   </div>
                 </div>
               </div>
@@ -255,73 +340,92 @@ export default function CheckoutPage() {
 
             {/* Order Summary */}
             <motion.div
-              className="lg:col-span-1"
+              className="lg:col-span-5"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
             >
-              <div className="bg-gradient-to-br from-gray-50 to-gray-100/50 rounded-3xl p-7 sticky top-28 border border-gray-100">
-                <h2 className="font-black text-gray-900 text-xl mb-6">Order Summary</h2>
-                <div className="space-y-4 mb-6">
-                  {items.map((item, idx) => (
+              <div className="bg-muted/30 rounded-3xl p-7 sticky top-32 border border-border">
+                <h2 className="font-black text-foreground text-xl mb-6 pb-4 border-b border-border/50 tracking-tight">Order Summary</h2>
+                <div className="space-y-5 mb-8">
+                  {/* Out-of-stock warning in summary */}
+                {hasOutOfStockItems && (
+                  <div className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/30">
+                    <p className="text-xs font-semibold text-red-500 flex items-center gap-1.5">
+                      <span>⚠️</span> Some items are out of stock — go back to cart to remove them.
+                    </p>
+                  </div>
+                )}
+                {items.map((item, idx) => (
                     <motion.div
-                      key={idx}
-                      className="flex gap-3"
+                      key={`${item.product || item.id}-${item.variant || 'base'}`}
+                      className="flex gap-4"
                       initial={{ opacity: 0, x: 20 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: idx * 0.05 }}
                     >
-                      <div className="w-14 h-14 bg-white rounded-xl overflow-hidden flex-shrink-0 border border-gray-100">
+                      <div className="w-16 h-16 bg-card rounded-xl overflow-hidden flex-shrink-0 border border-border flex items-center justify-center relative">
                         {item.thumbnail ? (
                           <img src={item.thumbnail} alt={item.name} className="w-full h-full object-cover" />
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center text-gray-300">
-                            <ShoppingBag className="w-5 h-5" />
-                          </div>
+                          <ShoppingBag className="w-5 h-5 text-muted-foreground opacity-30" />
                         )}
+                        <span className="absolute -top-1 -right-1 w-5 h-5 flex items-center justify-center bg-primary text-primary-foreground text-[10px] font-bold rounded-full shadow-md z-10">
+                          {item.quantity}
+                        </span>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-bold text-gray-900 truncate">{item.name}</p>
-                        {item.variantLabel && <p className="text-[10px] text-gray-400 font-medium">{item.variantLabel}</p>}
-                        <p className="text-[10px] text-gray-400 font-medium">Qty: {item.quantity}</p>
+                      <div className="flex-1 min-w-0 flex flex-col justify-center">
+                        <p className="text-sm font-bold text-card-foreground line-clamp-1">{item.name}</p>
+                        {item.variantLabel && <p className="text-xs text-muted-foreground font-medium mt-0.5">{item.variantLabel}</p>}
                       </div>
-                      <p className="text-sm font-black text-gray-900 flex-shrink-0">
-                        ${(parseFloat(item.unitPrice) * item.quantity).toFixed(2)}
-                      </p>
+                      <div className="flex items-center">
+                        <p className="text-sm font-black text-foreground flex-shrink-0">
+                          ${((Number.parseFloat(item.unitPrice || item.price || 0)) * item.quantity).toFixed(2)}
+                        </p>
+                      </div>
                     </motion.div>
                   ))}
                 </div>
-                <div className="border-t-2 border-gray-200/50 pt-4 space-y-3 text-sm">
-                  <div className="flex justify-between text-gray-500">
-                    <span className="font-medium">Subtotal</span>
-                    <span className="font-bold text-gray-900">${subtotal.toFixed(2)}</span>
+                <div className="border-t border-border pt-6 space-y-4 text-sm">
+                  <div className="flex justify-between text-muted-foreground">
+                    <span className="font-bold">Subtotal</span>
+                    <span className="font-black text-foreground">${subtotal.toFixed(2)}</span>
                   </div>
-                  <div className="flex justify-between text-gray-500">
-                    <span className="font-medium">Shipping</span>
-                    <span className="text-green-600 font-bold">Free</span>
+                  <div className="flex justify-between text-muted-foreground">
+                    <span className="font-bold">Shipping</span>
+                    <span className="text-primary font-black">Free</span>
                   </div>
-                  <div className="border-t-2 border-gray-200/50 pt-3 flex justify-between">
-                    <span className="font-black text-gray-900 text-lg">Total</span>
-                    <span className="font-black text-gray-900 text-2xl">${subtotal.toFixed(2)}</span>
+                  <div className="border-t border-border/50 pt-4 flex justify-between items-center">
+                    <span className="font-bold uppercase tracking-wider text-muted-foreground">Total</span>
+                    <span className="font-black text-foreground text-3xl">${subtotal.toFixed(2)}</span>
                   </div>
                 </div>
-                <button
+                <Button
                   type="submit"
-                  disabled={submitting}
-                  className="mt-7 w-full flex items-center justify-center gap-2 bg-gradient-to-r from-orange-500 to-pink-500 text-white py-4 rounded-2xl font-bold text-lg shadow-2xl shadow-orange-500/25 hover:shadow-orange-500/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  size="lg"
+                  disabled={submitting || hasOutOfStockItems || !stockValidated}
+                  className={`mt-8 w-full h-14 font-bold text-lg rounded-xl shadow-[0_0_20px_rgba(212,175,55,0.2)] hover:shadow-[0_0_30px_rgba(212,175,55,0.4)] transition-all ${hasOutOfStockItems ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
                   <AnimatePresence mode="wait">
-                    {submitting ? (
-                      <motion.span key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-2">
-                        <Loader2 className="w-5 h-5 animate-spin" /> Placing Order...
+                    {!stockValidated ? (
+                      <motion.span key="validating" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center justify-center gap-2">
+                        <Loader2 className="w-5 h-5 animate-spin" /> Checking stock...
+                      </motion.span>
+                    ) : submitting ? (
+                      <motion.span key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center justify-center gap-2">
+                        <Loader2 className="w-5 h-5 animate-spin" /> Processing...
+                      </motion.span>
+                    ) : hasOutOfStockItems ? (
+                      <motion.span key="oos" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center justify-center gap-2">
+                        <AlertTriangle className="w-5 h-5" /> Remove Out-of-Stock Items
                       </motion.span>
                     ) : (
-                      <motion.span key="place" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                      <motion.span key="place" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center justify-center">
                         Place Order
                       </motion.span>
                     )}
                   </AnimatePresence>
-                </button>
+                </Button>
               </div>
             </motion.div>
           </div>

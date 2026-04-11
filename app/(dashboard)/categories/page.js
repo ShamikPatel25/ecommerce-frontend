@@ -6,10 +6,11 @@ import { categoryAPI } from '@/lib/api';
 import { toast } from 'sonner';
 import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
 import {
-  Plus, Search, ChevronLeft, ChevronRight,
+  Plus, Search,
   CornerDownRight, Trash2, MoreHorizontal,
   Tag, Eye, EyeOff,
 } from 'lucide-react';
+import Pagination from '@/components/dashboard/Pagination';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -285,13 +286,11 @@ export default function CategoriesPage() {
                       {/* Actions */}
                       <td className="px-6 py-4 whitespace-nowrap text-right">
                         <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <button
-                              onClick={(e) => e.stopPropagation()}
-                              className="inline-flex items-center justify-center size-8 rounded-lg text-slate-400 dark:text-gray-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-gray-700 transition-all opacity-40 group-hover:opacity-100"
-                            >
-                              <MoreHorizontal size={18} />
-                            </button>
+                          <DropdownMenuTrigger
+                            onClick={(e) => e.stopPropagation()}
+                            className="inline-flex items-center justify-center size-8 rounded-lg text-slate-400 dark:text-gray-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-gray-700 transition-all opacity-40 group-hover:opacity-100"
+                          >
+                            <MoreHorizontal size={18} />
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" sideOffset={8} className="w-44 rounded-xl shadow-lg border border-slate-200 dark:border-gray-700 p-1.5 bg-white dark:bg-gray-800 z-[100]">
                             <DropdownMenuItem
@@ -327,40 +326,14 @@ export default function CategoriesPage() {
 
         {/* Pagination */}
         {!loading && filtered.length > PER_PAGE && (
-          <div className="px-6 py-4 bg-slate-50 dark:bg-gray-700/50 border-t border-slate-200 dark:border-gray-700 flex items-center justify-between">
-            <p className="text-sm text-slate-500 dark:text-gray-400 font-medium">
-              Showing {(page - 1) * PER_PAGE + 1}–{Math.min(page * PER_PAGE, filtered.length)} of {filtered.length} categories
-            </p>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page === 1}
-                className="p-2 rounded-lg border border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-slate-500 dark:text-gray-400 disabled:opacity-40 hover:bg-slate-50 dark:bg-gray-700/50 dark:hover:bg-gray-700 transition-colors"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-                <button
-                  key={p}
-                  onClick={() => setPage(p)}
-                  className={`px-3 py-1 rounded-lg text-sm transition-colors ${
-                    p === page
-                      ? 'bg-[#ff6600] text-white font-bold'
-                      : 'text-slate-600 dark:text-gray-300 font-medium hover:bg-slate-100 dark:hover:bg-gray-700'
-                  }`}
-                >
-                  {p}
-                </button>
-              ))}
-              <button
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={page === totalPages}
-                className="p-2 rounded-lg border border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-slate-500 dark:text-gray-400 disabled:opacity-40 hover:bg-slate-50 dark:bg-gray-700/50 dark:hover:bg-gray-700 transition-colors"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
+          <Pagination
+            currentPage={page}
+            totalPages={totalPages}
+            onPageChange={setPage}
+            totalItems={filtered.length}
+            perPage={PER_PAGE}
+            itemLabel="categories"
+          />
         )}
       </div>
       </div>

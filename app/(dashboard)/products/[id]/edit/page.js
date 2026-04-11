@@ -3,11 +3,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { productAPI, categoryAPI } from '@/lib/api';
+import { useFormDraft } from '@/hooks/useFormDraft';
 import MediaUploader from '@/components/MediaUploader';
 import { toast } from 'sonner';
 import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
 import {
-  ArrowLeft, ChevronRight, ChevronDown, Info, Sliders, Package,
+  ArrowLeft, ChevronRight, Info, Sliders, Package,
   Loader2, Undo2, Trash2,
 } from 'lucide-react';
 
@@ -18,6 +19,12 @@ const INPUT_CLS =
   'dark:bg-gray-700 dark:border-gray-600 dark:placeholder:text-gray-500';
 
 const SELECT_CLS = INPUT_CLS + ' appearance-none pr-10';
+
+const appendToCombo = (combo, arr) =>
+  arr.map((c) => [...combo, c]);
+
+const cartesian = (...arrays) =>
+  arrays.reduce((acc, curr) => acc.flatMap((combo) => appendToCombo(combo, curr)), [[]]);
 
 export default function EditProductPage() {
   const router = useRouter();
@@ -31,7 +38,7 @@ export default function EditProductPage() {
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData, clearDraft] = useFormDraft(`product-edit-${productId}`, {
     name: '', sku: '', price: '', compare_at_price: '',
     stock: '', description: '', category: '', product_type: 'single',
     is_active: true, is_featured: false,
@@ -92,9 +99,9 @@ export default function EditProductPage() {
     try {
       const data = {
         name: formData.name.trim(), sku: formData.sku.trim().toUpperCase(),
-        price: parseFloat(formData.price).toFixed(2),
-        compare_at_price: formData.compare_at_price ? parseFloat(formData.compare_at_price).toFixed(2) : null,
-        stock: formData.product_type === 'single' ? parseInt(formData.stock) || 0 : undefined,
+        price: Number.parseFloat(formData.price).toFixed(2),
+        compare_at_price: formData.compare_at_price ? Number.parseFloat(formData.compare_at_price).toFixed(2) : null,
+        stock: formData.product_type === 'single' ? Number.parseInt(formData.stock) || 0 : undefined,
         description: formData.description?.trim() || '',
         category: formData.category || null, product_type: formData.product_type,
         is_active: formData.is_active, is_featured: formData.is_featured,
@@ -112,6 +119,7 @@ export default function EditProductPage() {
       }
 
       toast.success('Product saved!');
+      clearDraft();
       router.push('/products');
     } catch (error) {
       const errMsg = error.response?.data;
@@ -131,19 +139,17 @@ export default function EditProductPage() {
       const current = prev[attributeId] || [];
       if (singleCatalogMode) {
         return { ...prev, [attributeId]: [valueId] };
-      } else {
-        if (current.includes(valueId)) {
+      } else if (current.includes(valueId)) {
           return { ...prev, [attributeId]: current.filter(id => id !== valueId) };
         } else {
           return { ...prev, [attributeId]: [...current, valueId] };
         }
-      }
     });
   };
 
   const generateCombinations = () => {
     const attributeValues = Object.entries(selections)
-      .map(([attrId, valueIds]) => ({ attributeId: parseInt(attrId), values: valueIds }))
+      .map(([attrId, valueIds]) => ({ attributeId: Number.parseInt(attrId), values: valueIds }))
       .filter(item => item.values.length > 0);
     if (attributeValues.length === 0) return [];
     const missingAttributes = attributes.filter(attr =>
@@ -158,8 +164,6 @@ export default function EditProductPage() {
       return [{ attribute_values: combination }];
     } else {
       const valueSets = attributeValues.map(item => item.values);
-      const cartesian = (...arrays) =>
-        arrays.reduce((acc, curr) => acc.flatMap(a => curr.map(c => [...a, c])), [[]]);
       const combinations = cartesian(...valueSets);
       return combinations.map(combo => ({ attribute_values: combo }));
     }
@@ -191,8 +195,8 @@ export default function EditProductPage() {
     try {
       const selectedCombinations = newCatalogs.map(c => ({
         attribute_values: c.attribute_values,
-        price: parseFloat(c.price) || parseFloat(product.price),
-        stock: parseInt(c.stock) || 0,
+        price: Number.parseFloat(c.price) || Number.parseFloat(product.price),
+        stock: Number.parseInt(c.stock) || 0,
       }));
       await productAPI.generateCatalog(productId, {
         single_catalog_mode: singleCatalogMode,
@@ -214,8 +218,8 @@ export default function EditProductPage() {
   const handleSaveVariant = async (catalog) => {
     try {
       await productAPI.updateVariant(productId, catalog.id, {
-        stock: parseInt(catalog.stock) || 0,
-        price: catalog.price ? parseFloat(catalog.price) : null,
+        stock: Number.parseInt(catalog.stock) || 0,
+        price: catalog.price ? Number.parseFloat(catalog.price) : null,
       });
       toast.success('Variant updated!');
       setCatalogs(prev => prev.map(c => c.id === catalog.id ? { ...c, isDirty: false } : c));
@@ -255,6 +259,11 @@ export default function EditProductPage() {
 
   if (!product) return null;
 
+  const variantPlural = pendingVariantDeletes.size > 1 ? 's' : '';
+  const saveButtonLabel = pendingVariantDeletes.size > 0
+    ? `Save & Delete ${pendingVariantDeletes.size} Variant${variantPlural}`
+    : 'Save Changes';
+
   return (
     <div className="p-4 md:p-8 max-w-5xl">
 
@@ -291,10 +300,10 @@ export default function EditProductPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Name */}
             <div className="space-y-1.5">
-              <label className="text-sm font-semibold text-slate-700 dark:text-gray-300">
+              <label htmlFor="product-name" className="text-sm font-semibold text-slate-700 dark:text-gray-300">
                 Product Name <span className="text-[#ff6600]">*</span>
               </label>
-              <input type="text" required className={INPUT_CLS}
+              <input id="product-name" type="text" required className={INPUT_CLS}
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               />
@@ -302,10 +311,10 @@ export default function EditProductPage() {
 
             {/* SKU */}
             <div className="space-y-1.5">
-              <label className="text-sm font-semibold text-slate-700 dark:text-gray-300">
+              <label htmlFor="product-sku" className="text-sm font-semibold text-slate-700 dark:text-gray-300">
                 SKU <span className="text-[#ff6600]">*</span>
               </label>
-              <input type="text" required className={INPUT_CLS}
+              <input id="product-sku" type="text" required className={INPUT_CLS}
                 value={formData.sku}
                 onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
               />
@@ -313,12 +322,12 @@ export default function EditProductPage() {
 
             {/* Price */}
             <div className="space-y-1.5">
-              <label className="text-sm font-semibold text-slate-700 dark:text-gray-300">
+              <label htmlFor="product-price" className="text-sm font-semibold text-slate-700 dark:text-gray-300">
                 Price <span className="text-[#ff6600]">*</span>
               </label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-gray-500 font-medium">$</span>
-                <input type="number" step="0.01" min="0" required
+                <input id="product-price" type="number" step="0.01" min="0" required
                   className={INPUT_CLS + ' pl-8'}
                   value={formData.price}
                   onChange={(e) => setFormData({ ...formData, price: e.target.value })}
@@ -328,10 +337,10 @@ export default function EditProductPage() {
 
             {/* Compare at Price */}
             <div className="space-y-1.5">
-              <label className="text-sm font-semibold text-slate-700 dark:text-gray-300">Compare at Price</label>
+              <label htmlFor="compare-at-price" className="text-sm font-semibold text-slate-700 dark:text-gray-300">Compare at Price</label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-gray-500 font-medium">$</span>
-                <input type="number" step="0.01" min="0"
+                <input id="compare-at-price" type="number" step="0.01" min="0"
                   placeholder="Original price (optional)"
                   className={INPUT_CLS + ' pl-8'}
                   value={formData.compare_at_price}
@@ -342,26 +351,25 @@ export default function EditProductPage() {
 
             {/* Category */}
             <div className="space-y-1.5">
-              <label className="text-sm font-semibold text-slate-700 dark:text-gray-300">Category</label>
+              <label htmlFor="product-category" className="text-sm font-semibold text-slate-700 dark:text-gray-300">Category</label>
               <div className="relative">
-                <select className={SELECT_CLS}
+                <select id="product-category" className={SELECT_CLS + ' opacity-60 cursor-not-allowed'}
                   value={formData.category}
-                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                  disabled
                 >
                   <option value="">No category</option>
                   {categories.map((c) => (
                     <option key={c.id} value={c.id}>{c.full_path || c.name}</option>
                   ))}
                 </select>
-                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-gray-500 pointer-events-none" />
               </div>
             </div>
 
             {/* Stock — single only */}
             {formData.product_type === 'single' && (
               <div className="space-y-1.5">
-                <label className="text-sm font-semibold text-slate-700 dark:text-gray-300">Stock</label>
-                <input type="number" min="0" className={INPUT_CLS}
+                <label htmlFor="product-stock" className="text-sm font-semibold text-slate-700 dark:text-gray-300">Stock</label>
+                <input id="product-stock" type="number" min="0" className={INPUT_CLS}
                   value={formData.stock}
                   onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
                 />
@@ -373,8 +381,9 @@ export default function EditProductPage() {
 
             {/* Description */}
             <div className="md:col-span-2 space-y-1.5">
-              <label className="text-sm font-semibold text-slate-700 dark:text-gray-300">Description</label>
+              <label htmlFor="product-description" className="text-sm font-semibold text-slate-700 dark:text-gray-300">Description</label>
               <textarea
+                id="product-description"
                 rows={4}
                 placeholder="Describe your product in detail..."
                 className={INPUT_CLS + ' resize-none'}
@@ -517,22 +526,21 @@ export default function EditProductPage() {
                       const isPendingDelete = !isNew && pendingVariantDeletes.has(catalog.id);
                       const isOutOfStock = !isNew && !isPendingDelete && (catalog.stock ?? 0) === 0;
                       const variantLabel = catalog.variant_name || catalog.sku || 'this variant';
+
+                      let rowBg = '';
+                      if (isPendingDelete) rowBg = 'bg-red-50 opacity-60';
+                      else if (isNew) rowBg = 'bg-[#ff6600]/5';
+                      else if (isOutOfStock) rowBg = 'bg-red-50';
+
                       return (
                         <tr
                           key={catalog.id}
-                          className={`transition-all ${isPendingDelete
-                            ? 'bg-red-50 opacity-60'
-                            : isNew
-                              ? 'bg-[#ff6600]/5'
-                              : isOutOfStock
-                                ? 'bg-red-50'
-                                : ''
-                          }`}
+                          className={`transition-all ${rowBg}`}
                         >
                           <td className="px-4 py-3">
                             <div className={`flex flex-wrap gap-1 ${isPendingDelete ? 'line-through' : ''}`}>
-                              {catalog.attribute_values?.map((val, idx) => (
-                                <span key={idx} className="px-2 py-1 bg-slate-100 dark:bg-gray-700 text-slate-600 dark:text-gray-300 rounded text-xs">
+                              {catalog.attribute_values?.map((val) => (
+                                <span key={typeof val === 'object' ? val.id : val} className="px-2 py-1 bg-slate-100 dark:bg-gray-700 text-slate-600 dark:text-gray-300 rounded text-xs">
                                   {typeof val === 'object'
                                     ? `${val.attribute_name}: ${val.value}`
                                     : getAttributeValueName(val)}
@@ -572,7 +580,7 @@ export default function EditProductPage() {
                             <input
                               type="number" min="0" step="0.01"
                               value={catalog.price ?? ''}
-                              disabled={isPendingDelete}
+                              disabled={isPendingDelete} 
                               onChange={(e) => {
                                 updateCatalogField(catalog.id, 'price', e.target.value);
                                 if (!isNew) updateCatalogField(catalog.id, 'isDirty', true);
@@ -584,14 +592,15 @@ export default function EditProductPage() {
 
                           <td className="px-4 py-3">
                             <div className="flex gap-2 items-center">
-                              {isNew ? (
+                              {isNew && (
                                 <button
                                   onClick={() => removeCatalog(catalog.id)}
                                   className="px-3 py-1 text-red-500 hover:text-red-700 dark:text-red-400 text-sm font-medium border border-red-200 rounded-lg hover:bg-red-50"
                                 >
                                   Remove
                                 </button>
-                              ) : isPendingDelete ? (
+                              )}
+                              {!isNew && isPendingDelete && (
                                 <button
                                   onClick={() => undoPendingVariantDelete(catalog.id)}
                                   title="Restore this variant"
@@ -599,7 +608,8 @@ export default function EditProductPage() {
                                 >
                                   <Undo2 className="w-3.5 h-3.5" /> Restore
                                 </button>
-                              ) : (
+                              )}
+                              {!isNew && !isPendingDelete && (
                                 <>
                                   {catalog.isDirty && (
                                     <button
@@ -627,7 +637,7 @@ export default function EditProductPage() {
               </div>
             )}
 
-            {catalogs.filter(c => c.is_new).length > 0 && (
+            {catalogs.some(c => c.is_new) && (
               <div className="mt-6 flex justify-end">
                 <button
                   onClick={handleGenerateCatalog}
@@ -690,9 +700,7 @@ export default function EditProductPage() {
             <span className="flex items-center gap-2">
               <Loader2 className="w-4 h-4 animate-spin" /> Saving...
             </span>
-          ) : pendingVariantDeletes.size > 0
-            ? `Save & Delete ${pendingVariantDeletes.size} Variant${pendingVariantDeletes.size > 1 ? 's' : ''}`
-            : 'Save Changes'}
+          ) : saveButtonLabel}
         </button>
       </div>
 

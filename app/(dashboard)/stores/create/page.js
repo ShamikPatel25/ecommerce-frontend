@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { storeAPI } from '@/lib/api';
+import { useFormDraft } from '@/hooks/useFormDraft';
 import { useStoreStore } from '@/store/storeStore';
 import { toast } from 'sonner';
 import {
@@ -22,7 +23,7 @@ export default function CreateStorePage() {
   const router = useRouter();
   const { setActiveStore, setStores } = useStoreStore();
   const [submitting, setSubmitting] = useState(false);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData, clearDraft] = useFormDraft('store-create', {
     name: '',
     subdomain: '',
     description: '',
@@ -36,6 +37,7 @@ export default function CreateStorePage() {
       const res = await storeAPI.create(formData);
       const newStore = res.data?.store || res.data;
       toast.success('Store created!');
+      clearDraft();
       // Set as active store and refresh stores list
       if (newStore?.id) {
         const storesRes = await storeAPI.myStores();

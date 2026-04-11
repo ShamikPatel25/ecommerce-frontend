@@ -5,26 +5,42 @@ import { NextResponse } from 'next/server';
  * 1. Subdomain detection → sets x-tenant cookie
  * 2. Routing split: subdomain = storefront, no subdomain = admin
  */
-export function proxy(request) {
+export function middleware(request) {
   const host = request.headers.get('host') || '';
   const hostname = host.split(':')[0];
   const { pathname } = request.nextUrl;
 
+  const isIPAddress = /^(?:\d{1,3}\.){3}\d{1,3}$/.test(hostname);
   let subdomain = '';
+  let baseHostname = hostname;
 
+  // 1. Determine subdomain and base hostname
   if (hostname.endsWith('.localhost')) {
     subdomain = hostname.replace('.localhost', '');
-  } else if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
+    baseHostname = 'localhost';
+  } else if (hostname.endsWith('.nip.io')) {
+    const withoutNip = hostname.replace('.nip.io', '');
+    const parts = withoutNip.split('.');
+    if (parts.length > 4) {
+      subdomain = parts.slice(0, parts.length - 4).join('.');
+    }
+    const ipString = parts.slice(-4).join('.');
+    baseHostname = `${ipString}.nip.io`;
+  } else if (!isIPAddress && hostname !== 'localhost' && hostname !== '127.0.0.1') {
     const parts = hostname.split('.');
     if (parts.length >= 3) {
       subdomain = parts[0];
+      baseHostname = parts.slice(1).join('.');
     }
   }
 
+  // Allow explicit query override for local IP testing
+  if (request.nextUrl.searchParams.has('tenant')) {
+    subdomain = request.nextUrl.searchParams.get('tenant');
+  } 
+
   // ─── ROUTING SPLIT ──────────────────────────────────────────────────
   if (subdomain) {
-    // On a subdomain → storefront experience
-    // Admin paths should redirect to base domain
     const adminPaths = [
       '/dashboard', '/orders', '/catalogs', '/customers',
       '/stores', '/settings', '/categories', '/attributes',
@@ -32,37 +48,37 @@ export function proxy(request) {
     ];
     const isAdminPath = adminPaths.some(p => pathname === p || pathname.startsWith(p + '/'));
 
+    // If Admin path is accessed on a Storefront subdomain, redirect to base domain
     if (isAdminPath) {
       const url = request.nextUrl.clone();
-      url.hostname = 'localhost';
+      url.hostname = baseHostname;
       url.port = request.nextUrl.port || '3000';
-      url.host = `localhost:${url.port}`;
+      url.host = `${url.hostname}${url.port ? ':' + url.port : ''}`;
       return NextResponse.redirect(url);
     }
 
-    // Storefront paths → rewrite to internal /storefront/... routes
-    const storefrontPaths = ['/', '/products', '/cart', '/checkout', '/order-confirmation'];
+    const storefrontPaths = ['/', '/products', '/cart', '/checkout', '/order-confirmation', '/account/login', '/account/orders'];
     const isStorefrontPath =
       storefrontPaths.includes(pathname) ||
       pathname.startsWith('/products/') ||
       pathname.startsWith('/cart') ||
       pathname.startsWith('/checkout') ||
-      pathname.startsWith('/order-confirmation');
+      pathname.startsWith('/order-confirmation') ||
+      pathname.startsWith('/account/');
 
+    let response;
     if (isStorefrontPath) {
       const url = request.nextUrl.clone();
       url.pathname = '/storefront' + (pathname === '/' ? '' : pathname);
-      const response = NextResponse.rewrite(url);
-      response.cookies.set('x-tenant', subdomain, {
-        path: '/',
-        httpOnly: false,
-        sameSite: 'lax',
-      });
-      return response;
+      const requestHeaders = new Headers(request.headers);
+      requestHeaders.set('x-is-subdomain', '1');
+      response = NextResponse.rewrite(url, { request: { headers: requestHeaders } });
+    } else {
+      const requestHeaders = new Headers(request.headers);
+      requestHeaders.set('x-is-subdomain', '1');
+      response = NextResponse.next({ request: { headers: requestHeaders } });
     }
 
-    // For any other path, just set the cookie and pass through
-    const response = NextResponse.next();
     response.cookies.set('x-tenant', subdomain, {
       path: '/',
       httpOnly: false,

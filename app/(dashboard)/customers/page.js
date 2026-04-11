@@ -5,7 +5,7 @@ import { orderAPI } from '@/lib/api';
 import { toast } from 'sonner';
 import {
   Search, Users, Loader2, ChevronDown, ChevronUp,
-  Mail, Phone, ShoppingBag, ExternalLink,
+  ShoppingBag, ExternalLink,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -33,7 +33,7 @@ const STATUS_BADGE = {
 };
 
 function statusLabel(s) {
-  return s?.replace(/_/g, ' ') ?? '';
+  return s?.replaceAll('_', ' ') ?? '';
 }
 
 export default function CustomersPage() {
@@ -92,7 +92,7 @@ export default function CustomersPage() {
   };
 
   /* ── summary stats ── */
-  const totalSpent = customers.reduce((s, c) => s + parseFloat(c.total_spent || 0), 0);
+  const totalSpent = customers.reduce((s, c) => s + Number.parseFloat(c.total_spent || 0), 0);
   const totalOrders = customers.reduce((s, c) => s + (c.total_orders ?? 0), 0);
 
   return (
@@ -144,16 +144,18 @@ export default function CustomersPage() {
         </div>
 
         {/* Table body */}
-        {loading ? (
+        {loading && (
           <div className="flex items-center justify-center py-20">
             <Loader2 className="w-8 h-8 text-[#ff6600] animate-spin" />
           </div>
-        ) : customers.length === 0 ? (
+        )}
+        {!loading && customers.length === 0 && (
           <div className="flex flex-col items-center justify-center py-20 text-slate-400 dark:text-gray-500">
             <Users className="w-10 h-10 mb-3 opacity-40" />
             <p className="text-sm font-medium">No customers found.</p>
           </div>
-        ) : (
+        )}
+        {!loading && customers.length > 0 && (
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse min-w-[640px]">
               <thead>
@@ -212,7 +214,7 @@ export default function CustomersPage() {
                         {/* Total Spent */}
                         <td className="px-6 py-4 text-right">
                           <span className="text-sm font-semibold text-slate-900 dark:text-white">
-                            ${parseFloat(customer.total_spent || 0).toLocaleString()}
+                            ${Number.parseFloat(customer.total_spent || 0).toLocaleString()}
                           </span>
                         </td>
 
@@ -234,16 +236,18 @@ export default function CustomersPage() {
                       {isExpanded && (
                         <tr>
                           <td colSpan={7} className="bg-slate-50/80 dark:bg-gray-900/40 px-6 py-5">
-                            {loadingOrders ? (
+                            {loadingOrders && (
                               <div className="flex items-center justify-center py-8">
                                 <Loader2 className="w-6 h-6 text-[#ff6600] animate-spin" />
                               </div>
-                            ) : customerOrders.length === 0 ? (
+                            )}
+                            {!loadingOrders && customerOrders.length === 0 && (
                               <div className="flex flex-col items-center justify-center py-8 text-slate-400 dark:text-gray-500">
                                 <ShoppingBag className="w-8 h-8 mb-2 opacity-40" />
                                 <p className="text-sm font-medium">No orders found for this customer.</p>
                               </div>
-                            ) : (
+                            )}
+                            {!loadingOrders && customerOrders.length > 0 && (
                               <div className="space-y-3">
                                 <p className="text-xs font-bold text-slate-500 dark:text-gray-400 uppercase tracking-wider">
                                   Order History ({customerOrders.length})
@@ -267,12 +271,12 @@ export default function CustomersPage() {
                                             {statusLabel(order.status)}
                                           </span>
                                           <span className="text-xs text-slate-400 dark:text-gray-500">
-                                            {order.items?.length ?? 0} item{(order.items?.length ?? 0) !== 1 ? 's' : ''}
+                                            {order.items?.length ?? 0} item{(order.items?.length ?? 0) === 1 ? '' : 's'}
                                           </span>
                                         </div>
                                         <div className="flex items-center gap-4">
                                           <span className="text-sm font-semibold text-slate-900 dark:text-white">
-                                            ${parseFloat(order.total_amount || 0).toLocaleString()}
+                                            ${Number.parseFloat(order.total_amount || 0).toLocaleString()}
                                           </span>
                                           <span className="text-xs text-slate-400 dark:text-gray-500">
                                             {formatDate(order.created_at)}

@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation';
 import { productAPI } from '@/lib/api';
 import { toast } from 'sonner';
 import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
-import { Search, Filter, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
+import { Search, Trash2 } from 'lucide-react';
+import Pagination from '@/components/dashboard/Pagination';
 
 export default function CatalogsPage() {
   const router = useRouter();
@@ -74,10 +75,11 @@ export default function CatalogsPage() {
 
   const getStockPercent = (stock) => Math.min((stock / 150) * 100, 100);
 
+  const lowerQuery = searchQuery.toLowerCase().trim();
   const filteredCatalogs = catalogs.filter(c =>
-    c.variant_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    c.sku?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    c.product_name?.toLowerCase().includes(searchQuery.toLowerCase())
+    c.variant_name?.toLowerCase().includes(lowerQuery) ||
+    c.sku?.toLowerCase().includes(lowerQuery) ||
+    c.product_name?.toLowerCase().includes(lowerQuery)
   );
 
   // Pagination
@@ -115,9 +117,6 @@ export default function CatalogsPage() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
-            <button className="px-4 text-slate-400 dark:text-gray-500 hover:text-slate-600 dark:hover:text-gray-300 border-l border-slate-100 dark:border-gray-700">
-              <Filter size={20} />
-            </button>
           </div>
         </div>
 
@@ -218,52 +217,14 @@ export default function CatalogsPage() {
 
               {/* Pagination */}
               {filteredCatalogs.length > 0 && (
-                <div className="px-6 py-4 border-t border-slate-100 dark:border-gray-700 bg-slate-50/30 dark:bg-gray-700/50 flex items-center justify-between">
-                  <p className="text-xs text-slate-500 dark:text-gray-400">
-                    Showing {(safeCurrentPage - 1) * itemsPerPage + 1} to{' '}
-                    {Math.min(safeCurrentPage * itemsPerPage, filteredCatalogs.length)} of{' '}
-                    {filteredCatalogs.length} catalogs
-                  </p>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                      disabled={safeCurrentPage === 1}
-                      className="p-1 rounded border border-slate-200 dark:border-gray-700 hover:bg-white dark:hover:bg-gray-800 text-slate-400 dark:text-gray-500 disabled:opacity-40 disabled:cursor-not-allowed"
-                    >
-                      <ChevronLeft size={18} />
-                    </button>
-                    {Array.from({ length: totalPages }, (_, i) => i + 1)
-                      .filter(page => {
-                        if (totalPages <= 5) return true;
-                        if (page === 1 || page === totalPages) return true;
-                        return Math.abs(page - safeCurrentPage) <= 1;
-                      })
-                      .map((page, idx, arr) => (
-                        <span key={page} className="flex items-center gap-1">
-                          {idx > 0 && arr[idx - 1] !== page - 1 && (
-                            <span className="text-slate-400 dark:text-gray-500 text-xs px-1">...</span>
-                          )}
-                          <button
-                            onClick={() => setCurrentPage(page)}
-                            className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
-                              page === safeCurrentPage
-                                ? 'bg-orange-500 text-white font-bold'
-                                : 'hover:bg-white dark:hover:bg-gray-800 text-slate-600 dark:text-gray-300'
-                            }`}
-                          >
-                            {page}
-                          </button>
-                        </span>
-                      ))}
-                    <button
-                      onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                      disabled={safeCurrentPage === totalPages}
-                      className="p-1 rounded border border-slate-200 dark:border-gray-700 hover:bg-white dark:hover:bg-gray-800 text-slate-400 dark:text-gray-500 disabled:opacity-40 disabled:cursor-not-allowed"
-                    >
-                      <ChevronRight size={18} />
-                    </button>
-                  </div>
-                </div>
+                <Pagination
+                  currentPage={safeCurrentPage}
+                  totalPages={totalPages}
+                  onPageChange={setCurrentPage}
+                  totalItems={filteredCatalogs.length}
+                  perPage={itemsPerPage}
+                  itemLabel="catalogs"
+                />
               )}
             </>
           )}

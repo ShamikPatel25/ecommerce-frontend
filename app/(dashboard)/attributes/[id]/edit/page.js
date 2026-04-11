@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { attributeAPI, categoryAPI } from '@/lib/api';
+import { useFormDraft } from '@/hooks/useFormDraft';
 import { toast } from 'sonner';
 import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
 import {
@@ -20,10 +21,10 @@ export default function EditAttributePage() {
   const [categories,   setCategories]   = useState([]);
   const [saving,       setSaving]       = useState(false);
   const [newValue,     setNewValue]     = useState('');
-  const [formData,     setFormData]     = useState({ name: '', category: '' });
+  const [formData,     setFormData, clearDraft]     = useFormDraft(`attribute-edit-${attributeId}`, { name: '', category: '' });
   const [pendingDeletes, setPendingDeletes] = useState(new Set());
-  const [pendingAdds,    setPendingAdds]    = useState([]); // { tempId, value }
-  const [confirmDialog,  setConfirmDialog]  = useState(null); // { id, name, isNew }
+  const [pendingAdds,    setPendingAdds]    = useState([]);
+  const [confirmDialog,  setConfirmDialog]  = useState(null);  
 
   /* ── fetch ── */
   const fetchData = useCallback(async () => {
@@ -36,7 +37,9 @@ export default function EditAttributePage() {
       setAttribute(a);
       setFormData({ name: a.name || '', category: String(a.category || '') });
       const catData = catRes.data;
-      setCategories(Array.isArray(catData) ? catData : (catData?.results || []));
+      const all = Array.isArray(catData) ? catData : (catData?.results || []);
+      // Only show root categories — attributes belong to root categories
+      setCategories(all.filter((c) => !c.parent));
     } catch {
       toast.error('Failed to load attribute');
       router.push('/attributes');
@@ -95,6 +98,7 @@ export default function EditAttributePage() {
         setPendingAdds([]);
       }
       toast.success('Attribute saved!');
+      clearDraft();
       const res = await attributeAPI.get(attributeId);
       setAttribute(res.data);
     } catch (error) {

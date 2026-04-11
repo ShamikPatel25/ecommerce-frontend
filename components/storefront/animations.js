@@ -1,7 +1,8 @@
 'use client';
 
-import { motion, useMotionValue, useSpring, useTransform, useInView, useScroll, AnimatePresence } from 'framer-motion';
+import { motion, useMotionValue, useSpring, useTransform, useInView, useScroll } from 'framer-motion';
 import { useRef, useState, useEffect } from 'react';
+import PropTypes from 'prop-types';
 
 /* ─── Scroll Reveal (SSR-safe: uses initial={false} to prevent hydration mismatch) ─── */
 export function ScrollReveal({ children, className = '', delay = 0, direction = 'up' }) {
@@ -35,6 +36,13 @@ export function ScrollReveal({ children, className = '', delay = 0, direction = 
   );
 }
 
+ScrollReveal.propTypes = {
+  children: PropTypes.node,
+  className: PropTypes.string,
+  delay: PropTypes.number,
+  direction: PropTypes.string,
+};
+
 /* ─── Stagger Children ─── */
 export function StaggerContainer({ children, className = '', staggerDelay = 0.1 }) {
   const ref = useRef(null);
@@ -63,6 +71,12 @@ export function StaggerContainer({ children, className = '', staggerDelay = 0.1 
   );
 }
 
+StaggerContainer.propTypes = {
+  children: PropTypes.node,
+  className: PropTypes.string,
+  staggerDelay: PropTypes.number,
+};
+
 export function StaggerItem({ children, className = '' }) {
   return (
     <motion.div
@@ -79,6 +93,11 @@ export function StaggerItem({ children, className = '' }) {
     </motion.div>
   );
 }
+
+StaggerItem.propTypes = {
+  children: PropTypes.node,
+  className: PropTypes.string,
+};
 
 /* ─── 3D Tilt Card ─── */
 export function TiltCard({ children, className = '', intensity = 15 }) {
@@ -117,6 +136,12 @@ export function TiltCard({ children, className = '', intensity = 15 }) {
   );
 }
 
+TiltCard.propTypes = {
+  children: PropTypes.node,
+  className: PropTypes.string,
+  intensity: PropTypes.number,
+};
+
 /* ─── Magnetic Button ─── */
 export function MagneticButton({ children, className = '', as = 'button', onClick, ...props }) {
   const ref = useRef(null);
@@ -131,9 +156,12 @@ export function MagneticButton({ children, className = '', as = 'button', onClic
     y.set((e.clientY - rect.top - rect.height / 2) * 0.3);
   }
 
+  const MotionTag = as === 'button' ? motion.button : motion[as] || motion.button;
+
   return (
-    <motion.div
+    <MotionTag
       ref={ref}
+      type={as === 'button' ? 'button' : undefined}
       className={className}
       style={{ x: springX, y: springY }}
       onMouseMove={handleMouse}
@@ -144,9 +172,16 @@ export function MagneticButton({ children, className = '', as = 'button', onClic
       {...props}
     >
       {children}
-    </motion.div>
+    </MotionTag>
   );
 }
+
+MagneticButton.propTypes = {
+  as: PropTypes.string,
+  children: PropTypes.node,
+  className: PropTypes.string,
+  onClick: PropTypes.func,
+};
 
 /* ─── Floating Element ─── */
 export function FloatingElement({ children, className = '', duration = 6, distance = 20 }) {
@@ -161,23 +196,12 @@ export function FloatingElement({ children, className = '', duration = 6, distan
   );
 }
 
-/* ─── Parallax Section ─── */
-export function ParallaxSection({ children, className = '', speed = 0.3 }) {
-  const ref = useRef(null);
-  const { scrollYProgress } = useScroll({
-    target: ref,
-    offset: ['start end', 'end start'],
-  });
-  const y = useTransform(scrollYProgress, [0, 1], [100 * speed, -100 * speed]);
-
-  return (
-    <div ref={ref} className={`overflow-hidden ${className}`}>
-      <motion.div style={{ y }}>
-        {children}
-      </motion.div>
-    </div>
-  );
-}
+FloatingElement.propTypes = {
+  children: PropTypes.node,
+  className: PropTypes.string,
+  distance: PropTypes.number,
+  duration: PropTypes.number,
+};
 
 /* ─── Glow Effect ─── */
 export function GlowCard({ children, className = '', glowColor = 'rgba(249,115,22,0.15)' }) {
@@ -185,19 +209,27 @@ export function GlowCard({ children, className = '', glowColor = 'rgba(249,115,2
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isHovered, setIsHovered] = useState(false);
 
-  function handleMouse(e) {
-    const rect = ref.current.getBoundingClientRect();
-    setPosition({ x: e.clientX - rect.left, y: e.clientY - rect.top });
-  }
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const onMove = (e) => {
+      const rect = el.getBoundingClientRect();
+      setPosition({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+    };
+    const onEnter = () => setIsHovered(true);
+    const onLeave = () => setIsHovered(false);
+    el.addEventListener('mousemove', onMove);
+    el.addEventListener('mouseenter', onEnter);
+    el.addEventListener('mouseleave', onLeave);
+    return () => {
+      el.removeEventListener('mousemove', onMove);
+      el.removeEventListener('mouseenter', onEnter);
+      el.removeEventListener('mouseleave', onLeave);
+    };
+  }, []);
 
   return (
-    <div
-      ref={ref}
-      className={`relative overflow-hidden ${className}`}
-      onMouseMove={handleMouse}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-    >
+    <div ref={ref} className={`relative overflow-hidden ${className}`}>
       {isHovered && (
         <div
           className="pointer-events-none absolute -inset-px rounded-[inherit] transition-opacity duration-300"
@@ -210,6 +242,12 @@ export function GlowCard({ children, className = '', glowColor = 'rgba(249,115,2
     </div>
   );
 }
+
+GlowCard.propTypes = {
+  children: PropTypes.node,
+  className: PropTypes.string,
+  glowColor: PropTypes.string,
+};
 
 /* ─── Page Transition Wrapper (SSR-safe) ─── */
 export function PageTransition({ children, className = '' }) {
@@ -231,6 +269,11 @@ export function PageTransition({ children, className = '' }) {
     </motion.div>
   );
 }
+
+PageTransition.propTypes = {
+  children: PropTypes.node,
+  className: PropTypes.string,
+};
 
 /* ─── Text Reveal Animation (SSR-safe) ─── */
 export function TextReveal({ children, className = '', delay = 0 }) {
@@ -257,6 +300,12 @@ export function TextReveal({ children, className = '', delay = 0 }) {
   );
 }
 
+TextReveal.propTypes = {
+  children: PropTypes.node,
+  className: PropTypes.string,
+  delay: PropTypes.number,
+};
+
 /* ─── Horizontal Scroll Marquee (SSR-safe) ─── */
 export function Marquee({ children, className = '', speed = 30, direction = 'left' }) {
   const [hasMounted, setHasMounted] = useState(false);
@@ -280,23 +329,40 @@ export function Marquee({ children, className = '', speed = 30, direction = 'lef
   );
 }
 
+Marquee.propTypes = {
+  children: PropTypes.node,
+  className: PropTypes.string,
+  direction: PropTypes.string,
+  speed: PropTypes.number,
+};
+
 /* ─── Spotlight Card ─── */
 export function SpotlightCard({ children, className = '' }) {
   const ref = useRef(null);
   const [pos, setPos] = useState({ x: 0, y: 0 });
   const [hovered, setHovered] = useState(false);
 
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const onMove = (e) => {
+      const rect = el.getBoundingClientRect();
+      setPos({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+    };
+    const onEnter = () => setHovered(true);
+    const onLeave = () => setHovered(false);
+    el.addEventListener('mousemove', onMove);
+    el.addEventListener('mouseenter', onEnter);
+    el.addEventListener('mouseleave', onLeave);
+    return () => {
+      el.removeEventListener('mousemove', onMove);
+      el.removeEventListener('mouseenter', onEnter);
+      el.removeEventListener('mouseleave', onLeave);
+    };
+  }, []);
+
   return (
-    <div
-      ref={ref}
-      className={`relative overflow-hidden ${className}`}
-      onMouseMove={(e) => {
-        const rect = ref.current.getBoundingClientRect();
-        setPos({ x: e.clientX - rect.left, y: e.clientY - rect.top });
-      }}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-    >
+    <div ref={ref} className={`relative overflow-hidden ${className}`}>
       {hovered && (
         <div
           className="pointer-events-none absolute -inset-px rounded-[inherit] transition-opacity duration-300"
@@ -310,6 +376,11 @@ export function SpotlightCard({ children, className = '' }) {
   );
 }
 
+SpotlightCard.propTypes = {
+  children: PropTypes.node,
+  className: PropTypes.string,
+};
+
 /* ─── Number Ticker ─── */
 export function NumberTicker({ value, prefix = '', suffix = '', className = '' }) {
   const ref = useRef(null);
@@ -318,7 +389,7 @@ export function NumberTicker({ value, prefix = '', suffix = '', className = '' }
 
   useEffect(() => {
     if (!isInView) return;
-    const end = parseInt(value);
+    const end = Number.parseInt(value);
     const dur = 2000;
     const startTime = Date.now();
 
@@ -338,3 +409,10 @@ export function NumberTicker({ value, prefix = '', suffix = '', className = '' }
     </span>
   );
 }
+
+NumberTicker.propTypes = {
+  prefix: PropTypes.string,
+  suffix: PropTypes.string,
+  value: PropTypes.number,
+  className: PropTypes.string,
+};

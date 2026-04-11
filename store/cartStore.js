@@ -5,18 +5,19 @@ export const useCartStore = create(
   persist(
     (set, get) => ({
       items: [],
-      // Each item: { product, variant, quantity, unitPrice, name, variantLabel, thumbnail, slug }
+      // Each item: { product, variant, quantity, unitPrice, name, variantLabel, thumbnail, slug, maxStock }
 
       addItem: (item) => {
         const items = get().items;
         const existingIndex = items.findIndex(
-          (i) => i.product === item.product && i.variant === item.variant
+          (i) => (i.product || i.id) === (item.product || item.id) && i.variant === item.variant
         );
         if (existingIndex >= 0) {
           const updated = [...items];
           updated[existingIndex] = {
             ...updated[existingIndex],
             quantity: updated[existingIndex].quantity + item.quantity,
+            maxStock: item.maxStock ?? updated[existingIndex].maxStock,
           };
           set({ items: updated });
         } else {
@@ -24,10 +25,25 @@ export const useCartStore = create(
         }
       },
 
+      removeOutOfStock: () => {
+        set({ items: get().items.filter((i) => (i.maxStock ?? 1) > 0) });
+      },
+
+      // Update live stock for a single item (called after API validation)
+      updateItemStock: (product, variant, maxStock) => {
+        set({
+          items: get().items.map((i) =>
+            (i.product || i.id) === product && i.variant === variant
+              ? { ...i, maxStock }
+              : i
+          ),
+        });
+      },
+
       removeItem: (product, variant) => {
         set({
           items: get().items.filter(
-            (i) => !(i.product === product && i.variant === variant)
+            (i) => !((i.product || i.id) === product && i.variant === variant)
           ),
         });
       },
@@ -39,7 +55,7 @@ export const useCartStore = create(
         }
         set({
           items: get().items.map((i) =>
-            i.product === product && i.variant === variant
+            (i.product || i.id) === product && i.variant === variant
               ? { ...i, quantity }
               : i
           ),

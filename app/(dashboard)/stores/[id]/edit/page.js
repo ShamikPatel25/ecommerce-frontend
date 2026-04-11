@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { storeAPI } from '@/lib/api';
+import { useFormDraft } from '@/hooks/useFormDraft';
 import { toast } from 'sonner';
 import {
   ArrowLeft, ChevronRight, ChevronDown, Loader2, Store,
@@ -24,7 +25,7 @@ export default function EditStorePage() {
 
   const [loading, setLoading] = useState(true);
   const [saving,  setSaving]  = useState(false);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData, clearDraft] = useFormDraft(`store-edit-${storeId}`, {
     name:        '',
     subdomain:   '',
     description: '',
@@ -62,6 +63,7 @@ export default function EditStorePage() {
     try {
       await storeAPI.update(storeId, formData);
       toast.success('Store settings saved!');
+      clearDraft();
     } catch (err) {
       toast.error(err.response?.data?.subdomain?.[0] || 'Something went wrong');
     } finally {

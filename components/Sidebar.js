@@ -9,11 +9,11 @@ import { useState, useEffect, useRef } from 'react';
 import { useThemeStore } from '@/store/themeStore';
 import { Sun, Moon } from 'lucide-react';
 import NotificationBell from '@/components/NotificationBell';
-import { getStoreUrl } from '@/lib/subdomain';
+
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const { user, logout } = useAuthStore();
+  const { logout } = useAuthStore();
   const { activeStore, stores, setActiveStore, setStores } = useStoreStore();
   const { theme, toggleTheme } = useThemeStore();
   const [open, setOpen] = useState(false);
@@ -70,13 +70,12 @@ export default function Sidebar() {
       }
     };
     fetchStores();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleStoreSwitch = (store) => {
     setActiveStore(store);
     setStoreDropdownOpen(false);
-    // Navigate to the store's subdomain URL
-    window.location.href = getStoreUrl(store.subdomain) + '/dashboard';
+    globalThis.location.reload();
   };
 
   const menuItems = [

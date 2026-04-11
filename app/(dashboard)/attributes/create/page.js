@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { attributeAPI, categoryAPI } from '@/lib/api';
+import { useFormDraft } from '@/hooks/useFormDraft';
 import { toast } from 'sonner';
 import {
   ArrowLeft, ChevronRight, ChevronDown, Info, List, PlusCircle, X, Loader2,
@@ -20,15 +21,17 @@ export default function CreateAttributePage() {
   const router = useRouter();
   const [categories, setCategories] = useState([]);
   const [submitting, setSubmitting] = useState(false);
-  const [formData, setFormData] = useState({ category: '', name: '' });
-  const [values, setValues] = useState([]);
+  const [formData, setFormData, clearDraft] = useFormDraft('attribute-create', { category: '', name: '' });
+  const [values, setValues, clearValuesDraft] = useFormDraft('attribute-create-values', []);
   const [newValue, setNewValue] = useState('');
 
   const fetchCategories = useCallback(async () => {
     try {
       const res = await categoryAPI.list();
       const data = res.data;
-      setCategories(Array.isArray(data) ? data : (data?.results || []));
+      const all = Array.isArray(data) ? data : (data?.results || []);
+      // Only show root categories (no parent) — attributes belong to root categories
+      setCategories(all.filter((c) => !c.parent));
     } catch {
       toast.error('Failed to load categories');
     }
@@ -59,6 +62,8 @@ export default function CreateAttributePage() {
     try {
       await attributeAPI.create({ ...formData, values });
       toast.success('Attribute created!');
+      clearDraft();
+      clearValuesDraft();
       router.push('/attributes');
     } catch (error) {
       toast.error(error.response?.data?.name?.[0] || 'Something went wrong');

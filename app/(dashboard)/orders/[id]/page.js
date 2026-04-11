@@ -46,6 +46,14 @@ const STATUS_LABELS = {
 /* Status timeline progression */
 const STATUS_FLOW = ['pending', 'confirmed', 'processing', 'shipped', 'delivered'];
 
+const STATUS_TIMELINE_LABELS = {
+  pending: 'Order Placed',
+  confirmed: 'Order Confirmed',
+  processing: 'Payment Received',
+  shipped: 'Order Shipped',
+  delivered: 'Delivered',
+};
+
 function formatDate(iso) {
   if (!iso) return '—';
   return new Date(iso).toLocaleString('en-US', {
@@ -96,6 +104,7 @@ export default function OrderDetailPage() {
       });
       setStockMap(map);
     } catch {
+      toast.error('Failed to load stock info');
     } finally {
       setStockLoading(false);
     }
@@ -150,6 +159,69 @@ export default function OrderDetailPage() {
   const customerInit  = order.customer_name?.charAt(0).toUpperCase() || '?';
   const allowedNext   = VALID_TRANSITIONS[order.status] || [];
 
+  let timelineContent;
+  if (isCancelled) {
+    timelineContent = (
+      <div className="relative pl-8 space-y-4">
+        <div className="relative">
+          <div className="absolute left-[-24px] top-1.5 w-5 h-5 rounded-full bg-red-500 ring-4 ring-red-100" />
+          <p className="text-sm font-bold text-slate-900 dark:text-white">Order Cancelled</p>
+          <p className="text-xs text-slate-400 dark:text-gray-500">{formatDate(order.updated_at || order.created_at)}</p>
+        </div>
+        <div className="relative">
+          <div className="absolute left-[-24px] top-1.5 w-5 h-5 rounded-full bg-slate-200" />
+          <p className="text-sm font-bold text-slate-900 dark:text-white">Order Placed</p>
+          <p className="text-xs text-slate-400 dark:text-gray-500">{formatDate(order.created_at)}</p>
+        </div>
+      </div>
+    );
+  } else if (isReturnReq || isReturned) {
+    timelineContent = (
+      <div className="relative pl-8 space-y-4">
+        {isReturned && (
+          <div className="relative">
+            <div className="absolute left-[-24px] top-1.5 w-5 h-5 rounded-full bg-rose-500 ring-4 ring-rose-100" />
+            <p className="text-sm font-bold text-slate-900 dark:text-white">Returned</p>
+            <p className="text-xs text-slate-400 dark:text-gray-500">{formatDate(order.updated_at)}</p>
+          </div>
+        )}
+        <div className="relative">
+          <div className={`absolute left-[-24px] top-1.5 w-5 h-5 rounded-full ring-4 ${isReturnReq ? 'bg-orange-500 ring-orange-100' : 'bg-slate-300 ring-slate-50'}`} />
+          <p className="text-sm font-bold text-slate-900 dark:text-white">Return Requested</p>
+          <p className="text-xs text-slate-400 dark:text-gray-500">{formatDate(order.updated_at)}</p>
+        </div>
+        {STATUS_FLOW.slice().reverse().map((s) => (
+          <div key={s} className="relative">
+            <div className="absolute left-[-24px] top-1.5 w-5 h-5 rounded-full bg-slate-300 ring-4 ring-slate-50" />
+            <p className="text-sm font-bold text-slate-900 dark:text-white capitalize">
+              {STATUS_TIMELINE_LABELS[s] || s}
+            </p>
+          </div>
+        ))}
+      </div>
+    );
+  } else {
+    timelineContent = (
+      <div className="relative pl-8 space-y-4 before:absolute before:inset-0 before:ml-2.5 before:-mt-1 before:w-0.5 before:bg-slate-100">
+        {STATUS_FLOW.filter((_, i) => i <= statusIndex).reverse().map((s, i) => (
+          <div key={s} className="relative">
+            <div className={`absolute left-[-24px] top-1.5 w-5 h-5 rounded-full ring-4 ${
+              i === 0
+                ? 'bg-[#ff6600] ring-orange-100'
+                : 'bg-slate-300 ring-slate-50'
+            }`} />
+            <p className="text-sm font-bold text-slate-900 dark:text-white capitalize">
+              {STATUS_TIMELINE_LABELS[s] || s}
+            </p>
+            <p className="text-xs text-slate-400 dark:text-gray-500">
+              {i === 0 ? formatDate(order.updated_at || order.created_at) : formatDate(order.created_at)}
+            </p>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
   /* ──────────────────────────────────────────────────────────────── */
   return (
     <div className="p-4 md:p-8">
@@ -182,7 +254,7 @@ export default function OrderDetailPage() {
 
         <div className="flex gap-3">
           <button
-            onClick={() => window.print()}
+            onClick={() => globalThis.print()}
             className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-lg text-slate-700 dark:text-gray-300 text-sm font-bold hover:bg-slate-50 dark:hover:bg-gray-700 transition-all shadow-sm"
           >
             <Printer className="w-4 h-4" />
@@ -232,6 +304,22 @@ export default function OrderDetailPage() {
                   <tbody className="divide-y divide-slate-100 dark:divide-gray-700">
                     {order.items.map((item) => {
                       const currentStock = getItemCurrentStock(item);
+
+                      let stockCell;
+                      if (stockLoading) {
+                        stockCell = <div className="h-4 w-8 bg-slate-200 animate-pulse rounded mx-auto" />;
+                      } else if (currentStock === null) {
+                        stockCell = <span className="text-slate-300 text-xs">&mdash;</span>;
+                      } else if (currentStock === 0) {
+                        stockCell = <span className="px-2 py-0.5 bg-red-100 dark:bg-red-900/30 text-red-600 text-xs font-bold rounded-full">Out</span>;
+                      } else {
+                        stockCell = (
+                          <span className={`text-sm font-bold ${currentStock <= 5 ? 'text-orange-500' : 'text-green-600'}`}>
+                            {currentStock}
+                          </span>
+                        );
+                      }
+
                       return (
                         <tr key={item.id}>
                           {/* Product */}
@@ -261,27 +349,17 @@ export default function OrderDetailPage() {
 
                           {/* Unit price */}
                           <td className="px-6 py-4 text-right text-sm text-slate-500 dark:text-gray-400">
-                            ${parseFloat(item.unit_price).toLocaleString()}
+                            ${Number.parseFloat(item.unit_price).toLocaleString()}
                           </td>
 
                           {/* Line total */}
                           <td className="px-6 py-4 text-right text-sm font-semibold text-slate-900 dark:text-white">
-                            ${(parseFloat(item.unit_price) * item.quantity).toLocaleString()}
+                            ${(Number.parseFloat(item.unit_price) * item.quantity).toLocaleString()}
                           </td>
 
                           {/* Stock */}
                           <td className="px-6 py-4 text-center">
-                            {stockLoading ? (
-                              <div className="h-4 w-8 bg-slate-200 animate-pulse rounded mx-auto" />
-                            ) : currentStock === null ? (
-                              <span className="text-slate-300 text-xs">—</span>
-                            ) : currentStock === 0 ? (
-                              <span className="px-2 py-0.5 bg-red-100 dark:bg-red-900/30 text-red-600 text-xs font-bold rounded-full">Out</span>
-                            ) : (
-                              <span className={`text-sm font-bold ${currentStock <= 5 ? 'text-orange-500' : 'text-green-600'}`}>
-                                {currentStock}
-                              </span>
-                            )}
+                            {stockCell}
                           </td>
                         </tr>
                       );
@@ -294,7 +372,7 @@ export default function OrderDetailPage() {
                       <tr>
                         <td colSpan={3} className="px-6 py-3 text-right text-sm text-slate-500 dark:text-gray-400">Subtotal</td>
                         <td className="px-6 py-3 text-right text-sm font-medium text-slate-700 dark:text-gray-300" colSpan={2}>
-                          ${parseFloat(order.subtotal).toLocaleString()}
+                          ${Number.parseFloat(order.subtotal).toLocaleString()}
                         </td>
                       </tr>
                     )}
@@ -302,14 +380,14 @@ export default function OrderDetailPage() {
                       <tr>
                         <td colSpan={3} className="px-6 py-3 text-right text-sm text-slate-500 dark:text-gray-400">Shipping</td>
                         <td className="px-6 py-3 text-right text-sm font-medium text-slate-700 dark:text-gray-300" colSpan={2}>
-                          ${parseFloat(order.shipping_cost).toLocaleString()}
+                          ${Number.parseFloat(order.shipping_cost).toLocaleString()}
                         </td>
                       </tr>
                     )}
                     <tr>
                       <td colSpan={3} className="px-6 py-4 text-right text-slate-900 dark:text-white font-bold">Total</td>
                       <td className="px-6 py-4 text-right text-xl font-black text-[#ff6600]" colSpan={2}>
-                        ${parseFloat(order.total_amount).toLocaleString()}
+                        ${Number.parseFloat(order.total_amount).toLocaleString()}
                       </td>
                     </tr>
                   </tfoot>
@@ -394,11 +472,12 @@ export default function OrderDetailPage() {
             <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4">Update Status</h3>
             <div className="space-y-4">
               <div>
-                <label className="text-xs text-slate-400 dark:text-gray-500 uppercase font-bold tracking-wider block mb-2">
+                <label htmlFor="status-select" className="text-xs text-slate-400 dark:text-gray-500 uppercase font-bold tracking-wider block mb-2">
                   Current Status
                 </label>
                 <div className="relative">
                   <select
+                    id="status-select"
                     value={newStatus}
                     onChange={(e) => setNewStatus(e.target.value)}
                     disabled={allowedNext.length === 0}
@@ -414,10 +493,11 @@ export default function OrderDetailPage() {
               </div>
 
               <div>
-                <label className="text-xs text-slate-400 dark:text-gray-500 uppercase font-bold tracking-wider block mb-2">
+                <label htmlFor="internal-note" className="text-xs text-slate-400 dark:text-gray-500 uppercase font-bold tracking-wider block mb-2">
                   Internal Note (Optional)
                 </label>
                 <textarea
+                  id="internal-note"
                   rows={3}
                   placeholder="Add a note for the staff..."
                   value={internalNote}
@@ -443,69 +523,7 @@ export default function OrderDetailPage() {
           <div className="bg-white dark:bg-gray-800 rounded-xl border border-slate-200 dark:border-gray-700 p-6 shadow-sm">
             <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-5">Order History</h3>
 
-            {isCancelled ? (
-              <div className="relative pl-8 space-y-4">
-                <div className="relative">
-                  <div className="absolute left-[-24px] top-1.5 w-5 h-5 rounded-full bg-red-500 ring-4 ring-red-100" />
-                  <p className="text-sm font-bold text-slate-900 dark:text-white">Order Cancelled</p>
-                  <p className="text-xs text-slate-400 dark:text-gray-500">{formatDate(order.updated_at || order.created_at)}</p>
-                </div>
-                <div className="relative">
-                  <div className="absolute left-[-24px] top-1.5 w-5 h-5 rounded-full bg-slate-200" />
-                  <p className="text-sm font-bold text-slate-900 dark:text-white">Order Placed</p>
-                  <p className="text-xs text-slate-400 dark:text-gray-500">{formatDate(order.created_at)}</p>
-                </div>
-              </div>
-            ) : (isReturnReq || isReturned) ? (
-              <div className="relative pl-8 space-y-4">
-                {isReturned && (
-                  <div className="relative">
-                    <div className="absolute left-[-24px] top-1.5 w-5 h-5 rounded-full bg-rose-500 ring-4 ring-rose-100" />
-                    <p className="text-sm font-bold text-slate-900 dark:text-white">Returned</p>
-                    <p className="text-xs text-slate-400 dark:text-gray-500">{formatDate(order.updated_at)}</p>
-                  </div>
-                )}
-                <div className="relative">
-                  <div className={`absolute left-[-24px] top-1.5 w-5 h-5 rounded-full ring-4 ${isReturnReq ? 'bg-orange-500 ring-orange-100' : 'bg-slate-300 ring-slate-50'}`} />
-                  <p className="text-sm font-bold text-slate-900 dark:text-white">Return Requested</p>
-                  <p className="text-xs text-slate-400 dark:text-gray-500">{formatDate(order.updated_at)}</p>
-                </div>
-                {STATUS_FLOW.slice().reverse().map((s) => (
-                  <div key={s} className="relative">
-                    <div className="absolute left-[-24px] top-1.5 w-5 h-5 rounded-full bg-slate-300 ring-4 ring-slate-50" />
-                    <p className="text-sm font-bold text-slate-900 dark:text-white capitalize">
-                      {s === 'pending'   ? 'Order Placed' :
-                       s === 'confirmed' ? 'Order Confirmed' :
-                       s === 'processing'? 'Payment Received' :
-                       s === 'shipped'   ? 'Order Shipped' :
-                       'Delivered'}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="relative pl-8 space-y-4 before:absolute before:inset-0 before:ml-2.5 before:-mt-1 before:w-0.5 before:bg-slate-100">
-                {STATUS_FLOW.filter((_, i) => i <= statusIndex).reverse().map((s, i) => (
-                  <div key={s} className="relative">
-                    <div className={`absolute left-[-24px] top-1.5 w-5 h-5 rounded-full ring-4 ${
-                      i === 0
-                        ? 'bg-[#ff6600] ring-orange-100'
-                        : 'bg-slate-300 ring-slate-50'
-                    }`} />
-                    <p className="text-sm font-bold text-slate-900 dark:text-white capitalize">
-                      {s === 'pending'   ? 'Order Placed' :
-                       s === 'confirmed' ? 'Order Confirmed' :
-                       s === 'processing'? 'Payment Received' :
-                       s === 'shipped'   ? 'Order Shipped' :
-                       'Delivered'}
-                    </p>
-                    <p className="text-xs text-slate-400 dark:text-gray-500">
-                      {i === 0 ? formatDate(order.updated_at || order.created_at) : formatDate(order.created_at)}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            )}
+            {timelineContent}
           </div>
 
         </div>
