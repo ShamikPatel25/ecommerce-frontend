@@ -12,6 +12,8 @@ export const useStoreStore = create(
     }),
     {
       name: 'store-selection',
+      version: 2,
+      migrate: (state) => state,
       partialize: (state) => ({
         activeStore: state.activeStore,
       }),

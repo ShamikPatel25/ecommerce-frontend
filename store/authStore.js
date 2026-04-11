@@ -28,6 +28,8 @@ export const useAuthStore = create(
     }),
     {
       name: 'auth-storage',
+      version: 2,
+      migrate: (state) => state,
       onRehydrateStorage: () => {
         return (state) => {
           if (state) {
