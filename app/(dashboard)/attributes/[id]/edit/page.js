@@ -81,11 +81,16 @@ export default function EditAttributePage() {
       await attributeAPI.update(attributeId, formData);
       // Delete pending values
       if (pendingDeletes.size > 0) {
-        await Promise.all(
+        const deleteResults = await Promise.allSettled(
           [...pendingDeletes].map((id) =>
-            attributeAPI.deleteValue(attributeId, id).catch(() => null)
+            attributeAPI.deleteValue(attributeId, id)
           )
         );
+        const failedDeletes = deleteResults.filter(r => r.status === 'rejected');
+        if (failedDeletes.length > 0) {
+          const errorMsg = failedDeletes[0].reason?.response?.data?.detail || 'Some values could not be deleted because they are in use by products.';
+          toast.error(errorMsg);
+        }
         setPendingDeletes(new Set());
       }
       // Add pending new values

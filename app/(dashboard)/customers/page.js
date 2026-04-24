@@ -157,8 +157,8 @@ export default function CustomersPage() {
                   </div>
                 </div>
               ) : (
-                <div>
-                  <table className="w-full text-left border-collapse table-fixed">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse min-w-[800px]">
                     <thead>
                       <tr className="bg-slate-50 dark:bg-gray-700/50 text-slate-600 dark:text-gray-300">
                         <th className="px-4 py-4 text-xs font-bold uppercase tracking-wider">Customer</th>

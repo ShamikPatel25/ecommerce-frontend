@@ -85,8 +85,9 @@ export default function CategoriesPage() {
       toast.success('Category and all its products deleted!');
       setDeleteModal(null);
       fetchCategories();
-    } catch {
-      toast.error('Failed to delete category');
+    } catch (err) {
+      const detail = err.response?.data?.detail;
+      toast.error(detail || 'Failed to delete category');
     } finally {
       setDeleting(false);
     }
