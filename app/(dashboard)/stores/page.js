@@ -7,6 +7,8 @@ import { toast } from 'sonner';
 import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
 import { Plus, Search, MoreHorizontal, Trash2, Eye, EyeOff } from 'lucide-react';
 import Pagination from '@/components/dashboard/Pagination';
+import { useStoreStore } from '@/store/storeStore';
+import StoreDeactivatedModal from '@/components/StoreDeactivatedModal';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -21,6 +23,8 @@ export default function StoresPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [deleteModal, setDeleteModal] = useState({ open: false, store: null });
+  const [showDeactivatedModal, setShowDeactivatedModal] = useState(false);
+  const { activeStore, setActiveStore, setStores: setGlobalStores } = useStoreStore();
   const itemsPerPage = 10;
 
   const fetchStores = useCallback(async () => {
@@ -56,10 +60,28 @@ export default function StoresPage() {
   };
 
   const handleToggleActive = async (store) => {
+    const isDeactivating = store.is_active;
     try {
       await storeAPI.patch(store.id, { is_active: !store.is_active });
-      toast.success(store.is_active ? 'Store deactivated' : 'Store activated');
-      fetchStores();
+      toast.success(isDeactivating ? 'Store deactivated' : 'Store activated');
+
+      // Refresh stores list
+      const res = await storeAPI.list();
+      const data = res.data;
+      const updatedStores = Array.isArray(data) ? data : data?.results || [];
+      setStores(updatedStores);
+      setGlobalStores(updatedStores);
+
+      // If we deactivated the currently active store, auto-switch
+      if (isDeactivating && activeStore?.id === store.id) {
+        const otherActive = updatedStores.find(s => s.is_active && s.id !== store.id);
+        if (otherActive) {
+          setActiveStore(otherActive);
+          globalThis.location.reload();
+        } else {
+          setShowDeactivatedModal(true);
+        }
+      }
     } catch (err) {
       const detail = err.response?.data;
       const msg = typeof detail === 'string' ? detail : detail?.detail || JSON.stringify(detail) || 'Failed to update store status';
@@ -248,6 +270,11 @@ export default function StoresPage() {
         confirmLabel="Delete Store"
         onCancel={() => setDeleteModal({ open: false, store: null })}
         onConfirm={handleDelete}
+      />
+
+      <StoreDeactivatedModal
+        open={showDeactivatedModal}
+        onClose={() => setShowDeactivatedModal(false)}
       />
     </div>
   );

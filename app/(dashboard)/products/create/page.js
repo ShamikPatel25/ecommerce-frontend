@@ -918,7 +918,10 @@ export default function CreateProductPage() {
         <div className="flex items-center justify-end gap-3">
           <button
             type="button"
-            onClick={() => setStep(1)}
+            onClick={() => {
+              clearCombosDraft(); clearComboSelDraft(); clearStepDraft();
+              setStep(1);
+            }}
             className="px-8 py-3 rounded-lg font-bold border border-slate-200 dark:border-gray-600 text-slate-700 dark:text-gray-300 hover:bg-slate-100 dark:hover:bg-gray-700 transition-colors"
           >
             Cancel
@@ -1154,35 +1157,20 @@ export default function CreateProductPage() {
             )}
             <button
               type="button"
-              onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-              onDragLeave={() => setDragOver(false)}
-              onDrop={handleDrop}
               onClick={() => fileInputRef.current?.click()}
-              className={`w-full border-2 border-dashed rounded-xl p-12 flex flex-col items-center justify-center text-center cursor-pointer transition-colors appearance-none bg-transparent m-0 ${
-                dragOver
-                  ? 'border-[#ff6600] bg-[#ff6600]/10'
-                  : 'border-[#ff6600]/30 bg-[#ff6600]/5 hover:bg-[#ff6600]/10'
-              }`}
+              className="flex items-center gap-2 cursor-pointer rounded-lg h-11 px-6 bg-orange-500 text-white text-sm font-bold shadow-lg shadow-orange-500/20 hover:bg-orange-600 transition-all"
             >
-              <div className="mb-4 h-16 w-16 bg-white dark:bg-gray-700 rounded-full flex items-center justify-center shadow-sm text-[#ff6600]">
-                <CloudUpload className="w-8 h-8" />
-              </div>
-              <p className="text-lg font-bold text-slate-800 dark:text-gray-200">Drag and drop images here</p>
-              <p className="text-sm text-slate-500 dark:text-gray-400 mt-1">PNG, JPG or WEBP up to 5MB each</p>
-              <span
-                className="mt-4 px-6 py-2 bg-[#ff6600] text-white font-bold rounded-lg shadow-lg shadow-orange-500/20 hover:bg-[#ff6600]/90 transition-all inline-block"
-              >
-                Browse Files
-              </span>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                multiple
-                className="hidden"
-                onChange={(e) => addFiles(e.target.files)}
-              />
+              <CloudUpload className="w-5 h-5" />
+              <span>Upload Images</span>
             </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              className="hidden"
+              onChange={(e) => addFiles(e.target.files)}
+            />
 
             {renderImageGallery()}
 
@@ -1266,7 +1254,10 @@ export default function CreateProductPage() {
         <div className="flex items-center justify-end gap-3 pt-2">
           <button
             type="button"
-            onClick={() => router.push('/products')}
+            onClick={() => {
+              clearFormDraft(); clearSelAttrDraft(); clearStepDraft(); clearCombosDraft(); clearComboSelDraft();
+              router.push('/products');
+            }}
             className="px-8 py-3 rounded-lg font-bold border border-slate-200 dark:border-gray-600 text-slate-700 dark:text-gray-300 hover:bg-slate-100 dark:hover:bg-gray-700 transition-colors"
           >
             Cancel

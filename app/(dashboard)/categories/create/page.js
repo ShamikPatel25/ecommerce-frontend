@@ -159,7 +159,7 @@ export default function CreateCategoryPage() {
         <div className="flex items-center justify-end gap-3 pt-2">
           <button
             type="button"
-            onClick={() => router.push('/categories')}
+            onClick={() => { clearDraft(); router.push('/categories'); }}
             className="px-8 py-3 rounded-lg font-bold border border-slate-200 dark:border-gray-700 text-slate-700 dark:text-gray-300 hover:bg-slate-100 dark:hover:bg-gray-700 transition-colors"
           >
             Cancel

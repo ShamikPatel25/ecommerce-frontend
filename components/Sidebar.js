@@ -9,6 +9,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useThemeStore } from '@/store/themeStore';
 import { Sun, Moon } from 'lucide-react';
 import NotificationBell from '@/components/NotificationBell';
+import StoreDeactivatedModal from '@/components/StoreDeactivatedModal';
 
 
 export default function Sidebar() {
@@ -21,6 +22,7 @@ export default function Sidebar() {
   // Dropdowns
   const [storeDropdownOpen, setStoreDropdownOpen] = useState(false);
   const [settingsDropdownOpen, setSettingsDropdownOpen] = useState(false);
+  const [showDeactivatedModal, setShowDeactivatedModal] = useState(false);
   const storeDropdownRef = useRef(null);
   const settingsDropdownRef = useRef(null);
 
@@ -73,6 +75,11 @@ export default function Sidebar() {
   }, []);
 
   const handleStoreSwitch = (store) => {
+    if (!store.is_active) {
+      setStoreDropdownOpen(false);
+      setShowDeactivatedModal(true);
+      return;
+    }
     setActiveStore(store);
     setStoreDropdownOpen(false);
     globalThis.location.reload();
@@ -173,8 +180,13 @@ export default function Sidebar() {
                         {store.name?.charAt(0).toUpperCase()}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{store.name}</p>
-                        <p className="text-[11px] text-gray-500">{store.subdomain}</p>
+                        <p className={`text-sm font-medium truncate ${!store.is_active ? 'text-gray-500' : ''}`}>{store.name}</p>
+                        <div className="flex items-center gap-1.5">
+                          <p className="text-[11px] text-gray-500">{store.subdomain}</p>
+                          {!store.is_active && (
+                            <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-red-500/20 text-red-400">Inactive</span>
+                          )}
+                        </div>
                       </div>
                       {isActive && (
                         <svg className="w-4 h-4 text-orange-400 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
@@ -334,6 +346,11 @@ export default function Sidebar() {
       <div className="hidden md:flex w-64 bg-gray-900 dark:bg-gray-950 text-white min-h-screen flex-col fixed left-0 top-0 border-r border-gray-800">
         <NavContent />
       </div>
+
+      <StoreDeactivatedModal
+        open={showDeactivatedModal}
+        onClose={() => setShowDeactivatedModal(false)}
+      />
     </>
   );
 }

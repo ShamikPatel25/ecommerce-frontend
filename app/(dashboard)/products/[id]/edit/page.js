@@ -568,7 +568,7 @@ export default function EditProductPage() {
                               disabled={isPendingDelete}
                               onChange={(e) => updateCatalogField(catalog.id, 'stock', e.target.value)}
                               onFocus={() => !isNew && updateCatalogField(catalog.id, 'isDirty', true)}
-                              className="w-24 px-2 py-1.5 border border-[#ff6600]/20 bg-[#ff6600]/5 rounded-lg text-sm focus:outline-none focus:border-[#ff6600] focus:ring-2 focus:ring-[#ff6600]/20 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                              className="w-24 h-10 px-2 border border-[#ff6600]/20 bg-[#ff6600]/5 rounded-lg text-sm focus:outline-none focus:border-[#ff6600] focus:ring-2 focus:ring-[#ff6600]/20 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                               placeholder="0"
                             />
                             {(catalog.reserved ?? 0) > 0 && (
@@ -585,7 +585,7 @@ export default function EditProductPage() {
                                 updateCatalogField(catalog.id, 'price', e.target.value);
                                 if (!isNew) updateCatalogField(catalog.id, 'isDirty', true);
                               }}
-                              className="w-28 px-2 py-1.5 border border-[#ff6600]/20 bg-[#ff6600]/5 rounded-lg text-sm focus:outline-none focus:border-[#ff6600] focus:ring-2 focus:ring-[#ff6600]/20 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                              className="w-28 h-10 px-2 border border-[#ff6600]/20 bg-[#ff6600]/5 rounded-lg text-sm focus:outline-none focus:border-[#ff6600] focus:ring-2 focus:ring-[#ff6600]/20 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                               placeholder={product.price}
                             />
                           </td>
@@ -621,9 +621,9 @@ export default function EditProductPage() {
                                   )}
                                   <button
                                     onClick={() => requestDeleteVariant(catalog.id, variantLabel)}
-                                    className="px-3 py-1 text-red-500 hover:text-red-700 dark:text-red-400 text-sm font-medium border border-red-200 rounded-lg hover:bg-red-50"
+                                    className="h-10 px-3 text-red-500 hover:text-red-700 dark:text-red-400 text-sm font-medium border border-red-200 rounded-lg hover:bg-red-50"
                                   >
-                                    <Trash2 className="w-3.5 h-3.5" />
+                                    <Trash2 className="w-5 h-5" />
                                   </button>
                                 </>
                               )}

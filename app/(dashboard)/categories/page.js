@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
 import {
   Plus, Search,
-  CornerDownRight, Trash2, MoreHorizontal,
+  Trash2, MoreHorizontal,
   Tag, Eye, EyeOff,
 } from 'lucide-react';
 import Pagination from '@/components/dashboard/Pagination';
@@ -115,12 +115,6 @@ export default function CategoriesPage() {
     return               { cls: 'bg-orange-100 text-orange-700 dark:text-orange-400', label: 'Sub-sub' };
   };
 
-  const getIndent = (level) => {
-    if (level === 1) return 'ml-8';
-    if (level >= 2)  return 'ml-16';
-    return '';
-  };
-
   /* ── filter + paginate ── */
   const baseFiltered = categories.filter((c) => {
     const matchSearch =
@@ -222,7 +216,6 @@ export default function CategoriesPage() {
               <tbody className="divide-y divide-slate-100 dark:divide-gray-700">
                 {paginated.map((cat) => {
                   const { cls, label } = getLevelBadge(cat.level);
-                  const indent         = getIndent(cat.level);
                   return (
                     <tr
                       key={cat.id}
@@ -231,23 +224,9 @@ export default function CategoriesPage() {
                     >
                       {/* Name */}
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className={`flex items-center gap-3 ${indent}`}>
-                          {cat.level > 0 && (
-                            <CornerDownRight className="w-4 h-4 text-slate-300 shrink-0" />
-                          )}
-                          {cat.level === 0 && (
-                            <div className="w-10 h-10 rounded-lg bg-[#ff6600]/10 flex items-center justify-center text-[#ff6600] shrink-0">
-                              <Tag className="w-5 h-5" />
-                            </div>
-                          )}
-                          <span className={
-                            cat.level === 0 ? 'font-semibold text-slate-900 dark:text-white' :
-                            cat.level === 1 ? 'font-medium text-slate-700 dark:text-gray-300' :
-                            'text-slate-600 dark:text-gray-300'
-                          }>
-                            {cat.name}
-                          </span>
-                        </div>
+                        <span className="font-semibold text-sm text-slate-900 dark:text-white">
+                          {cat.name}
+                        </span>
                       </td>
 
                       {/* Slug */}

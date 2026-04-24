@@ -5,8 +5,7 @@ import { useRouter } from 'next/navigation';
 import { orderAPI } from '@/lib/api';
 import { toast } from 'sonner';
 import {
-  Download, Search,
-  Loader2, ShoppingBag,
+  Download, Search, ShoppingBag,
 } from 'lucide-react';
 import Pagination from '@/components/dashboard/Pagination';
 
@@ -72,8 +71,8 @@ export default function OrdersPage() {
 
   /* ── search filter ── */
   const lowerQuery = searchQuery.toLowerCase().trim();
-  const idQuery = lowerQuery.replace(/^#/, ''); // Allow searching both "#123" and "123"
-  
+  const idQuery = lowerQuery.replace(/^#/, '');
+
   const filtered = orders.filter((o) =>
     o.customer_name?.toLowerCase().includes(lowerQuery) ||
     String(o.id).includes(idQuery)
@@ -88,6 +87,11 @@ export default function OrdersPage() {
     setPage(1);
     setSearchQuery('');
   };
+
+  // Reset to page 1 when search changes
+  useEffect(() => {
+    setPage(1);
+  }, [searchQuery]);
 
   /* ── CSV export ── */
   const exportCSV = () => {
@@ -117,154 +121,150 @@ export default function OrdersPage() {
     toast.success(`Exported ${filtered.length} orders`);
   };
 
-  /* ──────────────────────────────────────────────────────────────── */
   return (
     <div className="p-4 md:p-8">
-
-      {/* ── Page Header ─────────────────────────────────────────── */}
-      <div className="flex flex-wrap items-end justify-between gap-4 mb-8">
-        <div>
-          <h1 className="text-3xl md:text-4xl font-black tracking-tight text-slate-900 dark:text-white">Orders</h1>
-          <p className="text-slate-500 dark:text-gray-400 mt-1 text-sm">
-            Manage and track all customer transactions and delivery status.
-          </p>
-        </div>
-        <div className="flex gap-3">
-          <button onClick={exportCSV} className="flex items-center gap-2 h-10 px-4 bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-lg text-slate-700 dark:text-gray-300 text-sm font-bold shadow-sm hover:bg-slate-50 dark:hover:bg-gray-700 transition-colors">
-            <Download className="w-4 h-4" />
-            Export CSV
+      <div className="max-w-6xl mx-auto">
+        {/* Page Header */}
+        <div className="flex flex-wrap justify-between items-end gap-4 mb-8">
+          <div>
+            <h2 className="text-slate-900 dark:text-white text-3xl font-black leading-tight tracking-tight">Orders</h2>
+            <p className="text-slate-500 dark:text-gray-400 text-sm mt-1">Manage and track all customer transactions and delivery status.</p>
+          </div>
+          <button
+            onClick={exportCSV}
+            className="flex items-center gap-2 cursor-pointer rounded-lg h-11 px-6 bg-orange-500 text-white text-sm font-bold shadow-lg shadow-orange-500/20 hover:bg-orange-600 transition-all"
+          >
+            <Download size={20} />
+            <span>Export CSV</span>
           </button>
         </div>
-      </div>
 
-      {/* ── Table Card ──────────────────────────────────────────── */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-slate-200 dark:border-gray-700 overflow-hidden">
-
-        {/* Status Tabs */}
-        <div className="border-b border-slate-200 dark:border-gray-700 px-6 overflow-x-auto">
-          <div className="flex gap-6 whitespace-nowrap">
-            {STATUS_TABS.map((tab) => (
-              <button
-                key={tab.value}
-                onClick={() => switchTab(tab.value)}
-                className={`py-4 text-sm border-b-2 transition-colors ${
-                  activeStatus === tab.value
-                    ? 'border-[#ff6600] text-[#ff6600] font-bold'
-                    : 'border-transparent text-slate-500 dark:text-gray-400 font-semibold hover:text-slate-700 dark:hover:text-gray-300'
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Search */}
-        <div className="px-6 py-4 border-b border-slate-100 dark:border-gray-700">
-          <div className="relative max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-gray-500" />
+        {/* Search Bar */}
+        <div className="mb-6">
+          <div className="flex w-full items-stretch rounded-xl h-12 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden focus-within:ring-2 focus-within:ring-orange-500/20 transition-all">
+            <div className="text-slate-400 dark:text-gray-500 flex items-center justify-center px-4">
+              <Search size={20} />
+            </div>
             <input
-              type="text"
-              placeholder="Search by customer or order #"
-              className="w-full bg-slate-100 dark:bg-gray-700 rounded-lg py-2 pl-10 pr-4 text-sm focus:ring-2 focus:ring-[#ff6600]/30 focus:bg-white dark:focus:bg-gray-800 outline-none transition-all border border-transparent focus:border-[#ff6600]/20"
+              className="flex-1 bg-transparent border-none focus:ring-0 focus:outline-none text-slate-900 dark:text-white text-base placeholder:text-slate-400 dark:placeholder:text-gray-500"
+              placeholder="Search orders by customer name or order #..."
               value={searchQuery}
-              onChange={(e) => { setSearchQuery(e.target.value); setPage(1); }}
+              onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
         </div>
 
-        {/* Table body */}
-        {loading && (
-          <div className="flex items-center justify-center py-20">
-            <Loader2 className="w-8 h-8 text-[#ff6600] animate-spin" />
+        {/* DataTable Container */}
+        <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden shadow-sm">
+          {/* Status Tabs */}
+          <div className="border-b border-slate-200 dark:border-gray-700 px-6 overflow-x-auto">
+            <div className="flex gap-6 whitespace-nowrap">
+              {STATUS_TABS.map((tab) => (
+                <button
+                  key={tab.value}
+                  onClick={() => switchTab(tab.value)}
+                  className={`py-4 text-sm border-b-2 transition-colors ${
+                    activeStatus === tab.value
+                      ? 'border-orange-500 text-orange-500 font-bold'
+                      : 'border-transparent text-slate-500 dark:text-gray-400 font-semibold hover:text-slate-700 dark:hover:text-gray-300'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
           </div>
-        )}
-        {!loading && paginated.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-20 text-slate-400 dark:text-gray-500">
-            <ShoppingBag className="w-10 h-10 mb-3 opacity-40" />
-            <p className="text-sm font-medium">No orders found.</p>
-          </div>
-        )}
-        {!loading && paginated.length > 0 && (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse min-w-[640px]">
-              <thead>
-                <tr className="bg-slate-50 dark:bg-gray-700/50 border-b border-slate-200 dark:border-gray-700">
-                  <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-gray-400 uppercase tracking-wider">Order #</th>
-                  <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-gray-400 uppercase tracking-wider">Customer</th>
-                  <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-gray-400 uppercase tracking-wider">Items</th>
-                  <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-gray-400 uppercase tracking-wider">Total Price</th>
-                  <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
-                  <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-gray-400 uppercase tracking-wider text-right">Date</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-gray-700">
-                {paginated.map((order) => {
-                  const badge = STATUS_BADGE[order.status] || { dot: 'bg-slate-400', pill: 'bg-slate-100 dark:bg-gray-700 text-slate-600 dark:text-gray-300' };
 
-                  let statusText;
-                  if (order.status === 'return_requested') statusText = 'Return Requested';
-                  else if (order.status === 'returned') statusText = 'Returned';
-                  else statusText = order.status.charAt(0).toUpperCase() + order.status.slice(1);
+          {loading ? (
+            <div className="p-12 flex items-center justify-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div>
+            </div>
+          ) : (
+            <>
+              {paginated.length === 0 ? (
+                <div className="px-6 py-16 text-center">
+                  <div className="text-slate-400 dark:text-gray-500">
+                    <ShoppingBag className="w-10 h-10 mx-auto mb-3 opacity-40" />
+                    <p className="text-sm font-medium">No orders found</p>
+                    <p className="text-xs text-slate-400 dark:text-gray-500 mt-1">Try adjusting your search or filters.</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse table-fixed">
+                    <thead>
+                      <tr className="bg-slate-50 dark:bg-gray-700/50 text-slate-600 dark:text-gray-300">
+                        <th className="px-4 py-4 text-xs font-bold uppercase tracking-wider w-[12%]">Order #</th>
+                        <th className="px-4 py-4 text-xs font-bold uppercase tracking-wider w-[25%]">Customer</th>
+                        <th className="px-4 py-4 text-xs font-bold uppercase tracking-wider w-[12%]">Items</th>
+                        <th className="px-4 py-4 text-xs font-bold uppercase tracking-wider w-[15%]">Total Price</th>
+                        <th className="px-4 py-4 text-xs font-bold uppercase tracking-wider w-[20%]">Status</th>
+                        <th className="px-4 py-4 text-xs font-bold uppercase tracking-wider w-[16%] text-right">Date</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-gray-700">
+                      {paginated.map((order) => {
+                        const badge = STATUS_BADGE[order.status] || { dot: 'bg-slate-400', pill: 'bg-slate-100 dark:bg-gray-700 text-slate-600 dark:text-gray-300' };
 
-                  return (
-                    <tr
-                      key={order.id}
-                      onClick={() => router.push(`/orders/${order.id}`)}
-                      className="hover:bg-slate-50/60 dark:hover:bg-gray-700/60 transition-colors cursor-pointer"
-                    >
-                      {/* Order # */}
-                      <td className="px-6 py-4 font-mono font-bold text-slate-900 dark:text-white text-sm whitespace-nowrap">
-                        #{order.id}
-                      </td>
+                        let statusText;
+                        if (order.status === 'return_requested') statusText = 'Return Requested';
+                        else if (order.status === 'returned') statusText = 'Returned';
+                        else statusText = order.status.charAt(0).toUpperCase() + order.status.slice(1);
 
-                      {/* Customer */}
-                      <td className="px-6 py-4">
-                        <p className="text-sm font-semibold text-slate-900 dark:text-white">{order.customer_name}</p>
-                        {order.customer_email && (
-                          <p className="text-xs text-slate-400 dark:text-gray-500">{order.customer_email}</p>
-                        )}
-                      </td>
+                        return (
+                          <tr
+                            key={order.id}
+                            onClick={() => router.push(`/orders/${order.id}`)}
+                            className="hover:bg-slate-50/50 dark:hover:bg-gray-700 transition-colors group cursor-pointer"
+                          >
+                            <td className="px-4 py-4 font-mono font-bold text-slate-900 dark:text-white text-sm whitespace-nowrap">
+                              #{order.id}
+                            </td>
+                            <td className="px-4 py-4">
+                              <p className="text-sm font-semibold text-slate-900 dark:text-white">{order.customer_name}</p>
+                              {order.customer_email && (
+                                <p className="text-xs text-slate-400 dark:text-gray-500">{order.customer_email}</p>
+                              )}
+                            </td>
+                            <td className="px-4 py-4 text-sm text-slate-500 dark:text-gray-400 whitespace-nowrap">
+                              {order.items_count ?? 0} item{(order.items_count ?? 0) === 1 ? '' : 's'}
+                            </td>
+                            <td className="px-4 py-4">
+                              <span className="text-sm font-bold text-slate-900 dark:text-white">
+                                ${Number.parseFloat(order.total_amount || 0).toLocaleString()}
+                              </span>
+                            </td>
+                            <td className="px-4 py-4 whitespace-nowrap">
+                              <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${badge.pill}`}>
+                                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${badge.dot}`} />
+                                {statusText}
+                              </span>
+                            </td>
+                            <td className="px-4 py-4 text-sm text-slate-400 dark:text-gray-500 text-right whitespace-nowrap">
+                              {formatDate(order.created_at)}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
 
-                      {/* Items */}
-                      <td className="px-6 py-4 text-sm text-slate-500 dark:text-gray-400 whitespace-nowrap">
-                        {order.items_count ?? 0} item{(order.items_count ?? 0) === 1 ? '' : 's'}
-                      </td>
-
-                      {/* Total */}
-                      <td className="px-6 py-4 text-sm font-semibold text-slate-900 dark:text-white whitespace-nowrap">
-                        ${Number.parseFloat(order.total_amount || 0).toLocaleString()}
-                      </td>
-
-                      {/* Status */}
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${badge.pill}`}>
-                          <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${badge.dot}`} />
-                          {statusText}
-                        </span>
-                      </td>
-
-                      {/* Date */}
-                      <td className="px-6 py-4 text-sm text-slate-400 dark:text-gray-500 text-right whitespace-nowrap">
-                        {formatDate(order.created_at)}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {/* Pagination */}
-        <Pagination
-          currentPage={page}
-          totalPages={totalPages}
-          onPageChange={setPage}
-          totalItems={filtered.length}
-          perPage={PER_PAGE}
-          itemLabel="orders"
-        />
+              {/* Pagination */}
+              {filtered.length > 0 && (
+                <Pagination
+                  currentPage={page}
+                  totalPages={totalPages}
+                  onPageChange={setPage}
+                  totalItems={filtered.length}
+                  perPage={PER_PAGE}
+                  itemLabel="orders"
+                />
+              )}
+            </>
+          )}
+        </div>
       </div>
     </div>
   );

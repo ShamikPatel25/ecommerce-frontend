@@ -225,75 +225,86 @@ export default function MediaUploader({ productId, initialMedia = [], onMediaCha
         <h2 className="text-xl font-bold text-slate-900 dark:text-white">Product Media</h2>
       </div>
 
-      {/* Attribute Value Selector */}
-      {attributeValues.length > 0 && (
-        <div className="mb-4">
-          <label className="text-sm font-semibold text-slate-700 dark:text-gray-300 mb-1.5 block">
-            Upload images for:
-          </label>
-          <div className="relative inline-block">
-            <select
-              value={selectedAttrValue}
-              onChange={(e) => setSelectedAttrValue(e.target.value)}
-              className="appearance-none rounded-lg border border-[#ff6600]/20 bg-[#ff6600]/5 px-4 py-2.5 pr-10 text-sm text-slate-900 dark:text-white dark:bg-gray-700 dark:border-gray-600 focus:outline-none focus:border-[#ff6600] focus:ring-2 focus:ring-[#ff6600]/20 transition-all font-medium"
-            >
-              <option value="">General (Product Main)</option>
-              {attributeValues.map(av => (
-                <option key={av.id} value={av.id}>
-                  {av.attribute_name}: {av.value}
-                </option>
-              ))}
-            </select>
-            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+      {/* Attribute Value Selector + Upload Button */}
+      {attributeValues.length > 0 ? (
+        <div className="flex items-end gap-4">
+          <div>
+            <label className="text-sm font-semibold text-slate-700 dark:text-gray-300 mb-1.5 block">
+              Upload images for:
+            </label>
+            <div className="relative inline-block">
+              <select
+                value={selectedAttrValue}
+                onChange={(e) => setSelectedAttrValue(e.target.value)}
+                className="appearance-none rounded-lg border border-[#ff6600]/20 bg-[#ff6600]/5 px-4 h-11 pr-10 text-sm text-slate-900 dark:text-white dark:bg-gray-700 dark:border-gray-600 focus:outline-none focus:border-[#ff6600] focus:ring-2 focus:ring-[#ff6600]/20 transition-all font-medium"
+              >
+                <option value="">General (Product Main)</option>
+                {attributeValues.map(av => (
+                  <option key={av.id} value={av.id}>
+                    {av.attribute_name}: {av.value}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+            </div>
           </div>
-          <p className="text-xs text-slate-400 dark:text-gray-500 mt-1">
-            Selected: <span className="font-bold text-[#ff6600]">{getSelectedLabel()}</span>
-          </p>
+          <button
+            type="button"
+            onClick={() => inputRef.current?.click()}
+            disabled={uploading}
+            className="flex items-center gap-2 cursor-pointer rounded-lg h-11 px-6 bg-orange-500 text-white text-sm font-bold shadow-lg shadow-orange-500/20 hover:bg-orange-600 transition-all disabled:opacity-60 disabled:cursor-wait"
+          >
+            {uploading ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span>Uploading...</span>
+              </>
+            ) : (
+              <>
+                <CloudUpload className="w-5 h-5" />
+                <span>Upload Images</span>
+              </>
+            )}
+          </button>
+          <input
+            ref={inputRef}
+            type="file"
+            accept="image/*,video/*"
+            multiple
+            className="hidden"
+            onChange={(e) => handleFiles(e.target.files)}
+          />
+        </div>
+      ) : (
+        <div>
+          <button
+            type="button"
+            onClick={() => inputRef.current?.click()}
+            disabled={uploading}
+            className="flex items-center gap-2 cursor-pointer rounded-lg h-11 px-6 bg-orange-500 text-white text-sm font-bold shadow-lg shadow-orange-500/20 hover:bg-orange-600 transition-all disabled:opacity-60 disabled:cursor-wait"
+          >
+            {uploading ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span>Uploading...</span>
+              </>
+            ) : (
+              <>
+                <CloudUpload className="w-5 h-5" />
+                <span>Upload Images</span>
+              </>
+            )}
+          </button>
+          <input
+            ref={inputRef}
+            type="file"
+            accept="image/*,video/*"
+            multiple
+            className="hidden"
+            onChange={(e) => handleFiles(e.target.files)}
+          />
         </div>
       )}
-
-      {/* Drop Zone */}
-      <div
-        onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
-        onDragLeave={() => setDragging(false)}
-        onDrop={handleDrop}
-        onClick={() => inputRef.current?.click()}
-        className={`border-2 border-dashed rounded-xl p-12 flex flex-col items-center justify-center text-center cursor-pointer transition-colors ${
-          dragging
-            ? 'border-[#ff6600] bg-[#ff6600]/10 dark:bg-[#ff6600]/20'
-            : 'border-[#ff6600]/30 dark:border-gray-600 bg-[#ff6600]/5 dark:bg-gray-700/50 hover:bg-[#ff6600]/10 dark:hover:bg-gray-700'
-        }`}
-      >
-        <input
-          ref={inputRef}
-          type="file"
-          accept="image/*,video/*"
-          multiple
-          className="hidden"
-          onChange={(e) => handleFiles(e.target.files)}
-        />
-        {uploading ? (
-          <div className="flex flex-col items-center gap-2">
-            <Loader2 className="w-8 h-8 text-[#ff6600] animate-spin" />
-            <p className="text-sm text-[#ff6600] font-bold">Uploading...</p>
-          </div>
-        ) : (
-          <>
-            <div className="mb-4 h-16 w-16 bg-white dark:bg-gray-700 rounded-full flex items-center justify-center shadow-sm text-[#ff6600]">
-              <CloudUpload className="w-8 h-8" />
-            </div>
-            <p className="text-lg font-bold text-slate-800 dark:text-white">Drag and drop images here</p>
-            <p className="text-sm text-slate-500 dark:text-gray-400 mt-1">
-              PNG, JPG, WEBP, MP4 — or <span className="text-[#ff6600] font-bold">browse files</span>
-            </p>
-            {selectedAttrValue && (
-              <p className="text-xs text-[#ff6600] font-bold mt-2">
-                Uploading to: {getSelectedLabel()}
-              </p>
-            )}
-          </>
-        )}
-      </div>
 
       {/* Grouped Media Gallery */}
       {media.length > 0 && (

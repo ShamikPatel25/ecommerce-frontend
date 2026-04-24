@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { storeAPI } from '@/lib/api';
 import { useFormDraft } from '@/hooks/useFormDraft';
+import { useStoreStore } from '@/store/storeStore';
+import StoreDeactivatedModal from '@/components/StoreDeactivatedModal';
 import { toast } from 'sonner';
 import {
   ArrowLeft, ChevronRight, ChevronDown, Loader2, Store,
@@ -25,6 +27,8 @@ export default function EditStorePage() {
 
   const [loading, setLoading] = useState(true);
   const [saving,  setSaving]  = useState(false);
+  const [showDeactivatedModal, setShowDeactivatedModal] = useState(false);
+  const { activeStore, setActiveStore, setStores: setGlobalStores } = useStoreStore();
   const [formData, setFormData, clearDraft] = useFormDraft(`store-edit-${storeId}`, {
     name:        '',
     subdomain:   '',
@@ -64,6 +68,22 @@ export default function EditStorePage() {
       await storeAPI.update(storeId, formData);
       toast.success('Store settings saved!');
       clearDraft();
+
+      // If we deactivated the currently active store, auto-switch
+      if (!formData.is_active && activeStore?.id === Number(storeId)) {
+        const res = await storeAPI.list();
+        const data = res.data;
+        const allStores = Array.isArray(data) ? data : data?.results || [];
+        setGlobalStores(allStores);
+
+        const otherActive = allStores.find(s => s.is_active && s.id !== Number(storeId));
+        if (otherActive) {
+          setActiveStore(otherActive);
+          globalThis.location.reload();
+        } else {
+          setShowDeactivatedModal(true);
+        }
+      }
     } catch (err) {
       toast.error(err.response?.data?.subdomain?.[0] || 'Something went wrong');
     } finally {
@@ -234,6 +254,11 @@ export default function EditStorePage() {
           </button>
         </div>
       </form>
+
+      <StoreDeactivatedModal
+        open={showDeactivatedModal}
+        onClose={() => setShowDeactivatedModal(false)}
+      />
     </div>
   );
 }
