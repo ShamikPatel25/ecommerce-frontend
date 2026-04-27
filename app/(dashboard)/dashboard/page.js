@@ -357,7 +357,7 @@ export default function DashboardPage() {
             {/* 3D Chart */}
             <div className="p-2 sm:p-6">
                   <ResponsiveContainer width="100%" height={isMobile ? 220 : 320}>
-                    <ComposedChart data={revenueByDay} margin={isMobile ? { top: 5, right: 5, left: -10, bottom: 5 } : { top: 10, right: 30, left: 20, bottom: 5 }}>
+                    <ComposedChart accessibilityLayer={false} data={revenueByDay} margin={isMobile ? { top: 5, right: 5, left: -10, bottom: 5 } : { top: 10, right: 30, left: 20, bottom: 5 }}>
                       <defs>
                         <linearGradient id="revGrad3d" x1="0" y1="0" x2="0" y2="1">
                           <stop offset="0%" stopColor="#ff6600" stopOpacity={0.4} />
@@ -453,7 +453,7 @@ export default function DashboardPage() {
             </div>
             <div className="px-1 py-2 sm:px-2 sm:py-3">
               <ResponsiveContainer width="100%" height={isMobile ? 240 : 300}>
-                <PieChart>
+                <PieChart accessibilityLayer={false}>
                   <Pie
                     data={statusData}
                     cx="50%"
@@ -462,6 +462,8 @@ export default function DashboardPage() {
                     outerRadius={isMobile ? 60 : 90}
                     paddingAngle={4}
                     dataKey="value"
+                    activeShape={false}
+                    stroke="none"
                     label={isMobile ? false : ({ cx, cy, midAngle, outerRadius: oR, name, percent, fill: sliceColor }) => {
                       const RADIAN = Math.PI / 180;
                       const radius = oR + 25;
@@ -493,6 +495,7 @@ export default function DashboardPage() {
                     }}
                   />
                   <Tooltip
+                    cursor={false}
                     contentStyle={{
                       backgroundColor: '#fff',
                       border: '1px solid #e2e8f0',
@@ -526,6 +529,7 @@ export default function DashboardPage() {
               ) : (
                 <ResponsiveContainer width="100%" height={isMobile ? 240 : 300}>
                   <BarChart
+                    accessibilityLayer={false}
                     data={topProducts}
                     margin={isMobile ? { top: 5, right: 5, left: -15, bottom: 5 } : { top: 5, right: 20, left: 10, bottom: 5 }}
                   >
@@ -537,6 +541,8 @@ export default function DashboardPage() {
                       angle={isMobile ? -45 : 0}
                       textAnchor={isMobile ? 'end' : 'middle'}
                       height={isMobile ? 50 : 30}
+                      axisLine={{ stroke: '#e2e8f0' }}
+                      tickLine={false}
                     />
                     <YAxis
                       tick={{ fontSize: isMobile ? 10 : 13, fill: '#334155', fontWeight: 500 }}
@@ -547,8 +553,11 @@ export default function DashboardPage() {
                         return `$${v.toLocaleString()}`;
                       }}
                       width={isMobile ? 40 : 60}
+                      axisLine={false}
+                      tickLine={false}
                     />
                     <Tooltip
+                      cursor={false}
                       content={({ active, payload }) => {
                         if (!active || !payload?.length) return null;
                         const { name, revenue } = payload[0].payload;
@@ -562,7 +571,7 @@ export default function DashboardPage() {
                         );
                       }}
                     />
-                    <Bar dataKey="revenue" fill="#ff6600" radius={[4, 4, 0, 0]} barSize={isMobile ? 24 : 36} />
+                    <Bar dataKey="revenue" fill="#ff6600" radius={[4, 4, 0, 0]} barSize={isMobile ? 24 : 36} stroke="none" />
                   </BarChart>
                 </ResponsiveContainer>
               )}
