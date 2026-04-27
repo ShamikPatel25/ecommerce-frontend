@@ -8,6 +8,7 @@ import {
   Download, Search, ShoppingBag,
 } from 'lucide-react';
 import Pagination from '@/components/dashboard/Pagination';
+import { formatDate } from '@/lib/utils';
 
 const PER_PAGE = 15;
 
@@ -34,13 +35,6 @@ const STATUS_BADGE = {
   return_requested: { dot: 'bg-amber-500',   pill: 'bg-amber-100 dark:bg-amber-900/30   text-amber-700 dark:text-amber-400'  },
   returned:         { dot: 'bg-rose-500',    pill: 'bg-rose-100 dark:bg-rose-900/30    text-rose-600 dark:text-rose-400'   },
 };
-
-function formatDate(iso) {
-  if (!iso) return '—';
-  return new Date(iso).toLocaleDateString('en-US', {
-    month: 'short', day: 'numeric', year: 'numeric',
-  });
-}
 
 export default function OrdersPage() {
   const router = useRouter();

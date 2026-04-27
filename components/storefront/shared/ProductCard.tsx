@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { Star, ShoppingCart, Heart } from 'lucide-react';
 import { useCartStore } from '@/store/cartStore';
 import { Button } from '@/components/ui/button';
+import { calcDiscountPercent } from '@/lib/utils';
 import { toast } from 'sonner';
 import PropTypes from 'prop-types';
 
@@ -11,9 +12,7 @@ export function ProductCard({ product, href }) {
   const addItem = useCartStore((state) => state.addItem);
 
   const hasDiscount = product.compare_at_price && Number.parseFloat(product.compare_at_price) > Number.parseFloat(product.price);
-  const discount = hasDiscount
-    ? Math.round((1 - Number.parseFloat(product.price) / Number.parseFloat(product.compare_at_price)) * 100)
-    : 0;
+  const discount = calcDiscountPercent(product.price, product.compare_at_price);
   const isOutOfStock = (product.total_stock ?? product.stock) <= 0;
 
   const handleAddToCart = (e) => {

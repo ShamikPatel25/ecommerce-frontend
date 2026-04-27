@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { productAPI } from '@/lib/api';
+import { formatDate } from '@/lib/utils';
 import Link from 'next/link';
 import {
   ArrowLeft, ChevronRight, Edit, Package, Tag, Layers,
@@ -403,13 +404,13 @@ export default function ProductDetailPage() {
                 <div className="flex justify-between">
                   <dt className="text-sm text-slate-500 dark:text-gray-400">Created</dt>
                   <dd className="text-sm font-medium text-slate-900 dark:text-white">
-                    {new Date(product.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                    {formatDate(product.created_at)}
                   </dd>
                 </div>
                 <div className="flex justify-between">
                   <dt className="text-sm text-slate-500 dark:text-gray-400">Updated</dt>
                   <dd className="text-sm font-medium text-slate-900 dark:text-white">
-                    {new Date(product.updated_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                    {formatDate(product.updated_at)}
                   </dd>
                 </div>
                 {isCatalog && (

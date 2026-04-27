@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { storefrontAPI } from '@/lib/storefrontApi';
 import { useStorefrontPath } from '@/lib/useStorefrontPath';
 import { useCartStore } from '@/store/cartStore';
+import { calcDiscountPercent } from '@/lib/utils';
 import { toast } from 'sonner';
 import PropTypes from 'prop-types';
 import { X, ChevronLeft, ChevronRight, Check, Diamond, ShieldCheck, Truck, RefreshCcw } from 'lucide-react';
@@ -282,9 +283,7 @@ export default function ProductDetailClient({ slug, initialVariantSku = null }) 
     );
   }
 
-  const discountPercent = hasDiscount
-    ? Math.round((1 - displayPrice / Number.parseFloat(product.compare_at_price)) * 100)
-    : 0;
+  const discountPercent = calcDiscountPercent(displayPrice, product.compare_at_price);
 
   return (
     <>

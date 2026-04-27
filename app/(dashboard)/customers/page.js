@@ -9,15 +9,9 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import Pagination from '@/components/dashboard/Pagination';
+import { formatDate } from '@/lib/utils';
 
 const PER_PAGE = 15;
-
-function formatDate(iso) {
-  if (!iso) return '—';
-  return new Date(iso).toLocaleDateString('en-US', {
-    month: 'short', day: 'numeric', year: 'numeric',
-  });
-}
 
 /* unique key for each aggregated customer row */
 function customerKey(c) {

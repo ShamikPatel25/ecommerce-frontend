@@ -9,6 +9,7 @@ import {
   FileText, Mail, Phone, MapPin, Save,
   ChevronDown, Loader2, Info,
 } from 'lucide-react';
+import { formatDateTime } from '@/lib/utils';
 
 const STATUS_STYLES = {
   pending:          'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 border-yellow-200',
@@ -53,14 +54,6 @@ const STATUS_TIMELINE_LABELS = {
   shipped: 'Order Shipped',
   delivered: 'Delivered',
 };
-
-function formatDate(iso) {
-  if (!iso) return '—';
-  return new Date(iso).toLocaleString('en-US', {
-    month: 'short', day: 'numeric', year: 'numeric',
-    hour: 'numeric', minute: '2-digit',
-  });
-}
 
 export default function OrderDetailPage() {
   const router = useRouter();
@@ -166,12 +159,12 @@ export default function OrderDetailPage() {
         <div className="relative">
           <div className="absolute left-[-24px] top-1.5 w-5 h-5 rounded-full bg-red-500 ring-4 ring-red-100" />
           <p className="text-sm font-bold text-slate-900 dark:text-white">Order Cancelled</p>
-          <p className="text-xs text-slate-400 dark:text-gray-500">{formatDate(order.updated_at || order.created_at)}</p>
+          <p className="text-xs text-slate-400 dark:text-gray-500">{formatDateTime(order.updated_at || order.created_at)}</p>
         </div>
         <div className="relative">
           <div className="absolute left-[-24px] top-1.5 w-5 h-5 rounded-full bg-slate-200" />
           <p className="text-sm font-bold text-slate-900 dark:text-white">Order Placed</p>
-          <p className="text-xs text-slate-400 dark:text-gray-500">{formatDate(order.created_at)}</p>
+          <p className="text-xs text-slate-400 dark:text-gray-500">{formatDateTime(order.created_at)}</p>
         </div>
       </div>
     );
@@ -182,13 +175,13 @@ export default function OrderDetailPage() {
           <div className="relative">
             <div className="absolute left-[-24px] top-1.5 w-5 h-5 rounded-full bg-rose-500 ring-4 ring-rose-100" />
             <p className="text-sm font-bold text-slate-900 dark:text-white">Returned</p>
-            <p className="text-xs text-slate-400 dark:text-gray-500">{formatDate(order.updated_at)}</p>
+            <p className="text-xs text-slate-400 dark:text-gray-500">{formatDateTime(order.updated_at)}</p>
           </div>
         )}
         <div className="relative">
           <div className={`absolute left-[-24px] top-1.5 w-5 h-5 rounded-full ring-4 ${isReturnReq ? 'bg-orange-500 ring-orange-100' : 'bg-slate-300 ring-slate-50'}`} />
           <p className="text-sm font-bold text-slate-900 dark:text-white">Return Requested</p>
-          <p className="text-xs text-slate-400 dark:text-gray-500">{formatDate(order.updated_at)}</p>
+          <p className="text-xs text-slate-400 dark:text-gray-500">{formatDateTime(order.updated_at)}</p>
         </div>
         {STATUS_FLOW.slice().reverse().map((s) => (
           <div key={s} className="relative">
@@ -214,7 +207,7 @@ export default function OrderDetailPage() {
               {STATUS_TIMELINE_LABELS[s] || s}
             </p>
             <p className="text-xs text-slate-400 dark:text-gray-500">
-              {i === 0 ? formatDate(order.updated_at || order.created_at) : formatDate(order.created_at)}
+              {i === 0 ? formatDateTime(order.updated_at || order.created_at) : formatDateTime(order.created_at)}
             </p>
           </div>
         ))}
@@ -271,7 +264,7 @@ export default function OrderDetailPage() {
       </div>
 
       <p className="text-slate-500 dark:text-gray-400 text-sm mb-8">
-        Placed on {formatDate(order.created_at)}
+        Placed on {formatDateTime(order.created_at)}
       </p>
 
       {/* ── 3-column grid ───────────────────────────────────────── */}
