@@ -17,6 +17,16 @@ import {
   ResponsiveContainer, PieChart, Pie, BarChart, Bar, Legend,
 } from 'recharts';
 
+function useWindowWidth() {
+  const [width, setWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1024);
+  useEffect(() => {
+    const onResize = () => setWidth(window.innerWidth);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+  return width;
+}
+
 const STATUS_STYLES = {
   pending: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400',
   confirmed: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400',
@@ -41,6 +51,9 @@ function getInitials(name) {
 export default function DashboardPage() {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
+  const screenWidth = useWindowWidth();
+  const isMobile = screenWidth < 640;
+  const isTablet = screenWidth < 1024;
 
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({});
@@ -139,11 +152,13 @@ export default function DashboardPage() {
     allOrders.forEach(o => {
       (o.items || []).forEach(item => {
         const name = item.product_name || item.product?.name || `Product #${item.product}`;
-        map[name] = (map[name] || 0) + Number.parseFloat(item.unit_price || 0) * (item.quantity || 1);
+        const sku = item.product_sku || item.product?.sku || 'N/A';
+        if (!map[name]) map[name] = { revenue: 0, sku };
+        map[name].revenue += Number.parseFloat(item.unit_price || 0) * (item.quantity || 1);
       });
     });
     return Object.entries(map)
-      .map(([name, revenue]) => ({ name: name.length > 20 ? name.slice(0, 20) + '...' : name, revenue }))
+      .map(([name, { revenue, sku }]) => ({ name, sku, revenue }))
       .sort((a, b) => b.revenue - a.revenue)
       .slice(0, 5);
   }, [allOrders]);
@@ -336,13 +351,13 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Revenue & Orders Chart - Full Width */}
           <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
-            <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white">Revenue &amp; Orders (Last 7 Days)</h3>
+            <div className="px-4 py-3 sm:p-6 border-b border-gray-200 dark:border-gray-700">
+              <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">Revenue &amp; Orders (Last 7 Days)</h3>
             </div>
             {/* 3D Chart */}
-            <div className="p-6">
-                  <ResponsiveContainer width="100%" height={320}>
-                    <ComposedChart data={revenueByDay} margin={{ top: 10, right: 30, left: 20, bottom: 5 }}>
+            <div className="p-2 sm:p-6">
+                  <ResponsiveContainer width="100%" height={isMobile ? 220 : 320}>
+                    <ComposedChart data={revenueByDay} margin={isMobile ? { top: 5, right: 5, left: -10, bottom: 5 } : { top: 10, right: 30, left: 20, bottom: 5 }}>
                       <defs>
                         <linearGradient id="revGrad3d" x1="0" y1="0" x2="0" y2="1">
                           <stop offset="0%" stopColor="#ff6600" stopOpacity={0.4} />
@@ -358,35 +373,38 @@ export default function DashboardPage() {
                       <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
                       <XAxis
                         dataKey="date"
-                        tick={{ fontSize: 13, fill: '#334155', fontWeight: 500 }}
+                        tick={{ fontSize: isMobile ? 10 : 13, fill: '#334155', fontWeight: 500 }}
                         axisLine={{ stroke: '#e2e8f0' }}
                         tickLine={false}
                       />
                       <YAxis
                         yAxisId="revenue"
-                        tick={{ fontSize: 13, fill: '#334155', fontWeight: 500 }}
+                        tick={{ fontSize: isMobile ? 10 : 13, fill: '#334155', fontWeight: 500 }}
                         tickFormatter={(v) => {
-                          const label = v >= 1000 ? `${(v / 1000).toFixed(1)}k` : v;
+                          const label = v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v;
                           return `$${label}`;
                         }}
                         axisLine={false}
                         tickLine={false}
+                        width={isMobile ? 40 : 60}
                       />
-                      <YAxis
-                        yAxisId="orders"
-                        orientation="right"
-                        tick={{ fontSize: 13, fill: '#334155', fontWeight: 500 }}
-                        allowDecimals={false}
-                        axisLine={false}
-                        tickLine={false}
-                      />
+                      {!isMobile && (
+                        <YAxis
+                          yAxisId="orders"
+                          orientation="right"
+                          tick={{ fontSize: 13, fill: '#334155', fontWeight: 500 }}
+                          allowDecimals={false}
+                          axisLine={false}
+                          tickLine={false}
+                        />
+                      )}
                       <Tooltip
                         contentStyle={{
                           backgroundColor: 'rgba(255,255,255,0.95)',
                           backdropFilter: 'blur(8px)',
                           border: '1px solid #e2e8f0',
                           borderRadius: '12px',
-                          fontSize: '12px',
+                          fontSize: isMobile ? '11px' : '12px',
                           boxShadow: '0 8px 30px rgba(0,0,0,0.08)',
                         }}
                         formatter={(value, name) =>
@@ -398,29 +416,30 @@ export default function DashboardPage() {
                       />
                       <Legend
                         iconType="circle"
-                        wrapperStyle={{ fontSize: '12px', paddingTop: '12px' }}
+                        iconSize={isMobile ? 8 : 14}
+                        wrapperStyle={{ fontSize: isMobile ? '10px' : '12px', paddingTop: '8px' }}
                       />
                       <Area
                         yAxisId="revenue"
                         type="monotone"
                         dataKey="revenue"
                         stroke="#ff6600"
-                        strokeWidth={2.5}
+                        strokeWidth={isMobile ? 1.5 : 2.5}
                         fill="url(#revGrad3d)"
                         name="Revenue"
-                        dot={{ r: 3, fill: '#ff6600', stroke: '#fff', strokeWidth: 2 }}
-                        activeDot={{ r: 5, fill: '#ff6600', stroke: '#fff', strokeWidth: 2 }}
+                        dot={isMobile ? false : { r: 3, fill: '#ff6600', stroke: '#fff', strokeWidth: 2 }}
+                        activeDot={{ r: isMobile ? 3 : 5, fill: '#ff6600', stroke: '#fff', strokeWidth: 2 }}
                       />
                       <Area
-                        yAxisId="orders"
+                        yAxisId={isMobile ? 'revenue' : 'orders'}
                         type="monotone"
                         dataKey="orders"
                         stroke="#3b82f6"
-                        strokeWidth={2}
+                        strokeWidth={isMobile ? 1.5 : 2}
                         fill="url(#ordGrad3d)"
                         name="Orders"
-                        dot={{ r: 2.5, fill: '#3b82f6', stroke: '#fff', strokeWidth: 2 }}
-                        activeDot={{ r: 4.5, fill: '#3b82f6', stroke: '#fff', strokeWidth: 2 }}
+                        dot={isMobile ? false : { r: 2.5, fill: '#3b82f6', stroke: '#fff', strokeWidth: 2 }}
+                        activeDot={{ r: isMobile ? 3 : 4.5, fill: '#3b82f6', stroke: '#fff', strokeWidth: 2 }}
                       />
                     </ComposedChart>
                   </ResponsiveContainer>
@@ -429,21 +448,21 @@ export default function DashboardPage() {
 
           {/* Order Status Distribution - Pie Chart */}
           <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
-            <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white">Order Status Distribution</h3>
+            <div className="px-4 py-3 sm:p-6 border-b border-gray-200 dark:border-gray-700">
+              <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">Order Status Distribution</h3>
             </div>
-            <div className="px-2 py-3">
-              <ResponsiveContainer width="100%" height={300}>
+            <div className="px-1 py-2 sm:px-2 sm:py-3">
+              <ResponsiveContainer width="100%" height={isMobile ? 240 : 300}>
                 <PieChart>
                   <Pie
                     data={statusData}
                     cx="50%"
                     cy="50%"
-                    innerRadius={55}
-                    outerRadius={90}
+                    innerRadius={isMobile ? 35 : 55}
+                    outerRadius={isMobile ? 60 : 90}
                     paddingAngle={4}
                     dataKey="value"
-                    label={({ cx, cy, midAngle, outerRadius: oR, name, percent, fill: sliceColor }) => {
+                    label={isMobile ? false : ({ cx, cy, midAngle, outerRadius: oR, name, percent, fill: sliceColor }) => {
                       const RADIAN = Math.PI / 180;
                       const radius = oR + 25;
                       const x = cx + radius * Math.cos(-midAngle * RADIAN);
@@ -462,7 +481,7 @@ export default function DashboardPage() {
                         </text>
                       );
                     }}
-                    labelLine={({ cx, cy, midAngle, outerRadius: oR, stroke }) => {
+                    labelLine={isMobile ? false : ({ cx, cy, midAngle, outerRadius: oR, stroke }) => {
                       const RADIAN = Math.PI / 180;
                       const startX = cx + oR * Math.cos(-midAngle * RADIAN);
                       const startY = cy + oR * Math.sin(-midAngle * RADIAN);
@@ -482,6 +501,13 @@ export default function DashboardPage() {
                     }}
                     formatter={(value, name) => [value, name]}
                   />
+                  {isMobile && (
+                    <Legend
+                      iconType="circle"
+                      iconSize={8}
+                      wrapperStyle={{ fontSize: '11px', paddingTop: '4px' }}
+                    />
+                  )}
                 </PieChart>
               </ResponsiveContainer>
             </div>
@@ -489,42 +515,54 @@ export default function DashboardPage() {
 
           {/* Top 5 Products by Revenue - Bar Chart */}
           <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
-            <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white">Top 5 Products by Revenue</h3>
+            <div className="px-4 py-3 sm:p-6 border-b border-gray-200 dark:border-gray-700">
+              <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">Top 5 Products by Revenue</h3>
             </div>
-            <div className="p-6">
+            <div className="p-2 sm:p-6">
               {topProducts.length === 0 ? (
                 <div className="flex items-center justify-center h-[300px]">
                   <p className="text-slate-400 dark:text-gray-500 text-sm">No product data available</p>
                 </div>
               ) : (
-                <ResponsiveContainer width="100%" height={300}>
+                <ResponsiveContainer width="100%" height={isMobile ? 240 : 300}>
                   <BarChart
                     data={topProducts}
-                    margin={{ top: 5, right: 20, left: 10, bottom: 40 }}
+                    margin={isMobile ? { top: 5, right: 5, left: -15, bottom: 5 } : { top: 5, right: 20, left: 10, bottom: 5 }}
                   >
                     <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                     <XAxis
-                      dataKey="name"
-                      tick={{ fontSize: 13, fill: '#334155', fontWeight: 500 }}
-                      angle={-30}
-                      textAnchor="end"
+                      dataKey="sku"
+                      tick={{ fontSize: isMobile ? 9 : 12, fill: '#334155', fontWeight: 500 }}
                       interval={0}
+                      angle={isMobile ? -45 : 0}
+                      textAnchor={isMobile ? 'end' : 'middle'}
+                      height={isMobile ? 50 : 30}
                     />
                     <YAxis
-                      tick={{ fontSize: 13, fill: '#334155', fontWeight: 500 }}
-                      tickFormatter={(v) => `$${v.toLocaleString()}`}
+                      tick={{ fontSize: isMobile ? 10 : 13, fill: '#334155', fontWeight: 500 }}
+                      tickFormatter={(v) => {
+                        if (isMobile) {
+                          return v >= 1000 ? `$${(v / 1000).toFixed(0)}k` : `$${v}`;
+                        }
+                        return `$${v.toLocaleString()}`;
+                      }}
+                      width={isMobile ? 40 : 60}
                     />
                     <Tooltip
-                      contentStyle={{
-                        backgroundColor: '#fff',
-                        border: '1px solid #e2e8f0',
-                        borderRadius: '8px',
-                        fontSize: '13px',
+                      content={({ active, payload }) => {
+                        if (!active || !payload?.length) return null;
+                        const { name, revenue } = payload[0].payload;
+                        return (
+                          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg px-3 py-2 sm:px-4 sm:py-3 text-xs sm:text-sm">
+                            <p className="font-semibold text-slate-900 dark:text-white">{name}</p>
+                            <p className="text-orange-600 font-bold mt-1">
+                              ${Number.parseFloat(revenue).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                            </p>
+                          </div>
+                        );
                       }}
-                      formatter={(value) => [`$${Number.parseFloat(value).toLocaleString(undefined, { minimumFractionDigits: 2 })}`, 'Revenue']}
                     />
-                    <Bar dataKey="revenue" fill="#ff6600" radius={[4, 4, 0, 0]} barSize={36} />
+                    <Bar dataKey="revenue" fill="#ff6600" radius={[4, 4, 0, 0]} barSize={isMobile ? 24 : 36} />
                   </BarChart>
                 </ResponsiveContainer>
               )}

@@ -1122,47 +1122,44 @@ export default function CreateProductPage() {
           </div>
 
           <div className="space-y-5">
-            {/* Attribute Value Selector for catalog products */}
-            {formData.product_type === 'catalog' && selectedAttributes.length > 0 && (
-              <div>
-                <label htmlFor="upload-attr-select" className="text-sm font-semibold text-slate-700 dark:text-gray-300 mb-1.5 block">
-                  Upload images for:
-                </label>
-                <div className="relative inline-block">
-                  <select
-                    id="upload-attr-select"
-                    value={selectedUploadAttr}
-                    onChange={(e) => setSelectedUploadAttr(e.target.value)}
-                    className="appearance-none rounded-lg border border-[#ff6600]/20 bg-[#ff6600]/5 px-4 py-2.5 pr-10 text-sm text-slate-900 dark:text-white dark:bg-gray-700 dark:border-gray-600 focus:outline-none focus:border-[#ff6600] focus:ring-2 focus:ring-[#ff6600]/20 transition-all font-medium"
-                  >
-                    <option value="">General (Product Main)</option>
-                    {attributes
-                      .filter((a) => selectedAttributes.includes(a.id))
-                      .flatMap((a) =>
-                        (a.values || []).map((v) => (
-                          <option key={v.id} value={v.id}>
-                            {a.name}: {v.value}
-                          </option>
-                        ))
-                      )}
-                  </select>
-                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+            {/* Attribute Value Selector + Upload Button */}
+            <div className="flex flex-wrap items-end gap-4">
+              {formData.product_type === 'catalog' && selectedAttributes.length > 0 && (
+                <div>
+                  <label htmlFor="upload-attr-select" className="text-sm font-semibold text-slate-700 dark:text-gray-300 mb-1.5 block">
+                    Upload images for:
+                  </label>
+                  <div className="relative w-64">
+                    <select
+                      id="upload-attr-select"
+                      value={selectedUploadAttr}
+                      onChange={(e) => setSelectedUploadAttr(e.target.value)}
+                      className="w-full appearance-none rounded-lg border border-[#ff6600]/20 bg-[#ff6600]/5 px-4 py-2.5 pr-10 text-sm text-slate-900 dark:text-white dark:bg-gray-700 dark:border-gray-600 focus:outline-none focus:border-[#ff6600] focus:ring-2 focus:ring-[#ff6600]/20 transition-all font-medium truncate"
+                    >
+                      <option value="">General (Product Main)</option>
+                      {attributes
+                        .filter((a) => selectedAttributes.includes(a.id))
+                        .flatMap((a) =>
+                          (a.values || []).map((v) => (
+                            <option key={v.id} value={v.id}>
+                              {a.name}: {v.value}
+                            </option>
+                          ))
+                        )}
+                    </select>
+                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                  </div>
                 </div>
-                <p className="text-xs text-slate-400 dark:text-gray-500 mt-1">
-                  Selected: <span className="font-bold text-[#ff6600]">
-                    {selectedUploadAttr ? getAttrValueLabel(selectedUploadAttr) : 'General (Product Main)'}
-                  </span>
-                </p>
-              </div>
-            )}
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="flex items-center gap-2 cursor-pointer rounded-lg h-11 px-6 bg-orange-500 text-white text-sm font-bold shadow-lg shadow-orange-500/20 hover:bg-orange-600 transition-all"
-            >
-              <CloudUpload className="w-5 h-5" />
-              <span>Upload Images</span>
-            </button>
+              )}
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="flex items-center gap-2 cursor-pointer rounded-lg h-11 px-6 bg-orange-500 text-white text-sm font-bold shadow-lg shadow-orange-500/20 hover:bg-orange-600 transition-all"
+              >
+                <CloudUpload className="w-5 h-5" />
+                <span>Upload Images</span>
+              </button>
+            </div>
             <input
               ref={fileInputRef}
               type="file"
