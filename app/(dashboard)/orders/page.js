@@ -10,7 +10,7 @@ import {
 import Pagination from '@/components/dashboard/Pagination';
 import { formatDate } from '@/lib/utils';
 
-const PER_PAGE = 15;
+const PER_PAGE = 10;
 
 const STATUS_TABS = [
   { label: 'All Orders',       value: '' },

@@ -6,8 +6,8 @@ import { orderAPI, productAPI } from '@/lib/api';
 import { toast } from 'sonner';
 import {
   ArrowLeft, ChevronRight, Printer, Truck, Package,
-  FileText, Mail, Phone, MapPin, Save,
-  ChevronDown, Loader2, Info,
+  Mail, Phone, MapPin, Save, CheckCircle2, Clock,
+  ChevronDown, Loader2, Info, XCircle, RotateCcw,
 } from 'lucide-react';
 import { formatDateTime } from '@/lib/utils';
 
@@ -47,13 +47,13 @@ const STATUS_LABELS = {
 /* Status timeline progression */
 const STATUS_FLOW = ['pending', 'confirmed', 'processing', 'shipped', 'delivered'];
 
-const STATUS_TIMELINE_LABELS = {
-  pending: 'Order Placed',
-  confirmed: 'Order Confirmed',
-  processing: 'Payment Received',
-  shipped: 'Order Shipped',
-  delivered: 'Delivered',
-};
+const PROGRESS_STEPS = [
+  { key: 'pending',    label: 'Order Placed',  Icon: Package      },
+  { key: 'confirmed',  label: 'Confirmed',     Icon: CheckCircle2 },
+  { key: 'processing', label: 'Processing',    Icon: Clock        },
+  { key: 'shipped',    label: 'Shipped',       Icon: Truck        },
+  { key: 'delivered',  label: 'Delivered',     Icon: CheckCircle2 },
+];
 
 export default function OrderDetailPage() {
   const router = useRouter();
@@ -63,7 +63,6 @@ export default function OrderDetailPage() {
   const [loading,      setLoading]      = useState(true);
   const [saving,       setSaving]       = useState(false);
   const [newStatus,    setNewStatus]    = useState('');
-  const [internalNote, setInternalNote] = useState('');
   const [stockMap,     setStockMap]     = useState({});
   const [stockLoading, setStockLoading] = useState(false);
 
@@ -122,12 +121,11 @@ export default function OrderDetailPage() {
 
   /* ── save status ── */
   const handleStatusSave = async () => {
-    if (newStatus === order.status && !internalNote.trim()) return;
+    if (newStatus === order.status) return;
     setSaving(true);
     try {
       const res = await orderAPI.updateStatus(id, newStatus);
       setOrder(res.data);
-      setInternalNote('');
       toast.success('Status updated!');
     } catch {
       toast.error('Failed to update status');
@@ -145,75 +143,110 @@ export default function OrderDetailPage() {
 
   if (!order) return null;
 
-  const statusIndex   = STATUS_FLOW.indexOf(order.status);
   const isCancelled   = order.status === 'cancelled';
   const isReturned    = order.status === 'returned';
   const isReturnReq   = order.status === 'return_requested';
   const customerInit  = order.customer_name?.charAt(0).toUpperCase() || '?';
   const allowedNext   = VALID_TRANSITIONS[order.status] || [];
 
-  let timelineContent;
-  if (isCancelled) {
-    timelineContent = (
-      <div className="relative pl-8 space-y-4">
-        <div className="relative">
-          <div className="absolute left-[-24px] top-1.5 w-5 h-5 rounded-full bg-red-500 ring-4 ring-red-100" />
-          <p className="text-sm font-bold text-slate-900 dark:text-white">Order Cancelled</p>
-          <p className="text-xs text-slate-400 dark:text-gray-500">{formatDateTime(order.updated_at || order.created_at)}</p>
+  /* ── Horizontal progress tracker ── */
+  const renderProgressTracker = () => {
+    if (isCancelled) {
+      return (
+        <div className="flex items-center gap-3 py-3">
+          <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 bg-red-100 dark:bg-red-900/30 text-red-600 border border-red-200">
+            <XCircle className="w-5 h-5" />
+          </div>
+          <div>
+            <p className="text-sm font-bold text-red-600">Order Cancelled</p>
+            <p className="text-xs text-slate-400 dark:text-gray-500">{formatDateTime(order.updated_at || order.created_at)}</p>
+          </div>
         </div>
-        <div className="relative">
-          <div className="absolute left-[-24px] top-1.5 w-5 h-5 rounded-full bg-slate-200" />
-          <p className="text-sm font-bold text-slate-900 dark:text-white">Order Placed</p>
-          <p className="text-xs text-slate-400 dark:text-gray-500">{formatDateTime(order.created_at)}</p>
-        </div>
-      </div>
-    );
-  } else if (isReturnReq || isReturned) {
-    timelineContent = (
-      <div className="relative pl-8 space-y-4">
-        {isReturned && (
-          <div className="relative">
-            <div className="absolute left-[-24px] top-1.5 w-5 h-5 rounded-full bg-rose-500 ring-4 ring-rose-100" />
-            <p className="text-sm font-bold text-slate-900 dark:text-white">Returned</p>
+      );
+    }
+
+    if (isReturnReq || isReturned) {
+      const Icon = RotateCcw;
+      const label = isReturned ? 'Returned' : 'Return Requested';
+      const colorClasses = isReturned
+        ? 'bg-rose-100 dark:bg-rose-900/30 text-rose-600 border-rose-200'
+        : 'bg-orange-100 dark:bg-orange-900/30 text-orange-600 border-orange-200';
+      return (
+        <div className="flex items-center gap-3 py-3">
+          <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 border ${colorClasses}`}>
+            <Icon className="w-5 h-5" />
+          </div>
+          <div>
+            <p className={`text-sm font-bold ${isReturned ? 'text-rose-600' : 'text-orange-600'}`}>{label}</p>
             <p className="text-xs text-slate-400 dark:text-gray-500">{formatDateTime(order.updated_at)}</p>
           </div>
-        )}
-        <div className="relative">
-          <div className={`absolute left-[-24px] top-1.5 w-5 h-5 rounded-full ring-4 ${isReturnReq ? 'bg-orange-500 ring-orange-100' : 'bg-slate-300 ring-slate-50'}`} />
-          <p className="text-sm font-bold text-slate-900 dark:text-white">Return Requested</p>
-          <p className="text-xs text-slate-400 dark:text-gray-500">{formatDateTime(order.updated_at)}</p>
         </div>
-        {STATUS_FLOW.slice().reverse().map((s) => (
-          <div key={s} className="relative">
-            <div className="absolute left-[-24px] top-1.5 w-5 h-5 rounded-full bg-slate-300 ring-4 ring-slate-50" />
-            <p className="text-sm font-bold text-slate-900 dark:text-white capitalize">
-              {STATUS_TIMELINE_LABELS[s] || s}
-            </p>
-          </div>
-        ))}
+      );
+    }
+
+    const activeIdx = order.status === 'delivered' ? PROGRESS_STEPS.length : STATUS_FLOW.indexOf(order.status);
+
+    return (
+      <div className="py-3 select-none">
+        {/* Row 1: Icons + connector lines */}
+        <div className="flex items-center w-full">
+          {PROGRESS_STEPS.map((step, idx) => {
+            const done   = idx < activeIdx;
+            const active = idx === activeIdx;
+            const isLast = idx === PROGRESS_STEPS.length - 1;
+            const { Icon } = step;
+
+            return (
+              <div key={step.key} className={`flex items-center ${isLast ? 'shrink-0' : 'flex-1'}`}>
+                <div
+                  className={`w-10 h-10 shrink-0 rounded-full flex items-center justify-center border-2 transition-colors ${
+                    done
+                      ? 'bg-[#ff6600] border-[#ff6600] text-white shadow-[0_0_14px_rgba(255,102,0,0.35)]'
+                      : active
+                      ? 'bg-[#ff6600]/15 border-[#ff6600] text-[#ff6600]'
+                      : 'bg-white dark:bg-gray-800 border-slate-200 dark:border-gray-600 text-slate-400 dark:text-gray-500'
+                  }`}
+                >
+                  {done ? <CheckCircle2 className="w-4 h-4" /> : <Icon className="w-4 h-4" />}
+                </div>
+
+                {!isLast && (
+                  <div className="flex-1 h-0.5 mx-1 bg-slate-200 dark:bg-gray-700 relative overflow-hidden">
+                    <div
+                      className="absolute inset-0 bg-[#ff6600] origin-left transition-transform duration-500"
+                      style={{ transform: `scaleX(${done ? 1 : 0})` }}
+                    />
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Row 2: Labels */}
+        <div className="flex items-start mt-2 w-full">
+          {PROGRESS_STEPS.map((step, idx) => {
+            const done   = idx < activeIdx;
+            const active = idx === activeIdx;
+            const isLast = idx === PROGRESS_STEPS.length - 1;
+
+            return (
+              <div key={step.key} className={`flex ${isLast ? 'shrink-0' : 'flex-1'}`}>
+                <div className="w-10 shrink-0 flex justify-center">
+                  <span className={`text-[10px] font-bold text-center leading-tight w-14 -mx-2 ${
+                    done || active ? 'text-slate-900 dark:text-white' : 'text-slate-400 dark:text-gray-500'
+                  }`}>
+                    {step.label}
+                  </span>
+                </div>
+                {!isLast && <div className="flex-1" />}
+              </div>
+            );
+          })}
+        </div>
       </div>
     );
-  } else {
-    timelineContent = (
-      <div className="relative pl-8 space-y-4 before:absolute before:inset-0 before:ml-2.5 before:-mt-1 before:w-0.5 before:bg-slate-100">
-        {STATUS_FLOW.filter((_, i) => i <= statusIndex).reverse().map((s, i) => (
-          <div key={s} className="relative">
-            <div className={`absolute left-[-24px] top-1.5 w-5 h-5 rounded-full ring-4 ${
-              i === 0
-                ? 'bg-[#ff6600] ring-orange-100'
-                : 'bg-slate-300 ring-slate-50'
-            }`} />
-            <p className="text-sm font-bold text-slate-900 dark:text-white capitalize">
-              {STATUS_TIMELINE_LABELS[s] || s}
-            </p>
-            <p className="text-xs text-slate-400 dark:text-gray-500">
-              {i === 0 ? formatDateTime(order.updated_at || order.created_at) : formatDateTime(order.created_at)}
-            </p>
-          </div>
-        ))}
-      </div>
-    );
-  }
+  };
 
   /* ──────────────────────────────────────────────────────────────── */
   return (
@@ -267,13 +300,11 @@ export default function OrderDetailPage() {
         Placed on {formatDateTime(order.created_at)}
       </p>
 
-      {/* ── 3-column grid ───────────────────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+      {/* ── Top row: Order Items + Customer Details ──────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start mb-6">
 
-        {/* ── LEFT: 2/3 ────────────────────────────────────────── */}
-        <div className="lg:col-span-2 flex flex-col gap-6">
-
-          {/* Order Items */}
+        {/* ── LEFT: Order Items (2/3) ─────────────────────────── */}
+        <div className="lg:col-span-2">
           <div className="bg-white dark:bg-gray-800 rounded-xl border border-slate-200 dark:border-gray-700 overflow-hidden shadow-sm">
             <div className="px-6 py-4 border-b border-slate-100 dark:border-gray-700 flex items-center gap-2">
               <Package className="w-5 h-5 text-[#ff6600]" />
@@ -396,25 +427,10 @@ export default function OrderDetailPage() {
               </p>
             </div>
           </div>
-
-          {/* Customer Notes */}
-          {order.notes && (
-            <div className="bg-white dark:bg-gray-800 rounded-xl border border-slate-200 dark:border-gray-700 p-6 shadow-sm">
-              <div className="flex items-center gap-2 mb-4">
-                <FileText className="w-5 h-5 text-[#ff6600]" />
-                <h3 className="text-lg font-bold text-slate-900 dark:text-white">Customer Notes</h3>
-              </div>
-              <div className="bg-[#ff6600]/5 border border-[#ff6600]/20 rounded-lg p-4">
-                <p className="text-slate-700 dark:text-gray-300 italic leading-relaxed text-sm">"{order.notes}"</p>
-              </div>
-            </div>
-          )}
         </div>
 
-        {/* ── RIGHT: 1/3 ───────────────────────────────────────── */}
-        <div className="flex flex-col gap-6">
-
-          {/* Customer Details */}
+        {/* ── RIGHT: Customer Details (1/3) ───────────────────── */}
+        <div>
           <div className="bg-white dark:bg-gray-800 rounded-xl border border-slate-200 dark:border-gray-700 p-6 shadow-sm">
             <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-5">Customer Details</h3>
 
@@ -459,8 +475,14 @@ export default function OrderDetailPage() {
               )}
             </div>
           </div>
+        </div>
+      </div>
 
-          {/* Update Status */}
+      {/* ── Bottom row: Update Status + Order History ──────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+
+        {/* Update Status */}
+        <div>
           <div className="bg-white dark:bg-gray-800 rounded-xl border border-slate-200 dark:border-gray-700 p-6 shadow-sm">
             <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4">Update Status</h3>
             <div className="space-y-4">
@@ -485,23 +507,9 @@ export default function OrderDetailPage() {
                 </div>
               </div>
 
-              <div>
-                <label htmlFor="internal-note" className="text-xs text-slate-400 dark:text-gray-500 uppercase font-bold tracking-wider block mb-2">
-                  Internal Note (Optional)
-                </label>
-                <textarea
-                  id="internal-note"
-                  rows={3}
-                  placeholder="Add a note for the staff..."
-                  value={internalNote}
-                  onChange={(e) => setInternalNote(e.target.value)}
-                  className="w-full rounded-lg border border-slate-200 dark:border-gray-700 bg-slate-50 dark:bg-gray-700/50 px-4 py-3 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-[#ff6600] focus:ring-2 focus:ring-[#ff6600]/20 resize-none transition-all"
-                />
-              </div>
-
               <button
                 onClick={handleStatusSave}
-                disabled={saving || (newStatus === order.status && !internalNote.trim())}
+                disabled={saving || newStatus === order.status}
                 className="w-full py-2.5 bg-[#ff6600] text-white rounded-lg font-bold shadow-md shadow-orange-500/20 hover:bg-[#ff6600]/90 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 {saving
@@ -511,15 +519,17 @@ export default function OrderDetailPage() {
               </button>
             </div>
           </div>
-
-          {/* Order History Timeline */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl border border-slate-200 dark:border-gray-700 p-6 shadow-sm">
-            <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-5">Order History</h3>
-
-            {timelineContent}
-          </div>
-
         </div>
+
+        {/* Order History - Horizontal Progress Tracker */}
+        <div className="lg:col-span-2">
+          <div className="bg-white dark:bg-gray-800 rounded-xl border border-slate-200 dark:border-gray-700 p-6 shadow-sm">
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">Order History</h3>
+
+            {renderProgressTracker()}
+          </div>
+        </div>
+
       </div>
     </div>
   );

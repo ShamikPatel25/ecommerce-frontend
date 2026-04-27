@@ -8,7 +8,7 @@ import { useCartStore } from '@/store/cartStore';
 import { useStorefrontAuthStore } from '@/store/storefrontAuthStore';
 import { storefrontAPI } from '@/lib/storefrontApi';
 import { toast } from 'sonner';
-import { ArrowLeft, Loader2, ShoppingBag, Shield, Lock, CreditCard, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Loader2, ShoppingBag, Shield, Lock, CreditCard, AlertTriangle, MapPin } from 'lucide-react';
 import { PageTransition } from '@/components/storefront/animations';
 import { useStorefrontPath } from '@/lib/useStorefrontPath';
 import { Button, buttonVariants } from '@/components/ui/button';
@@ -26,6 +26,15 @@ function validateCheckoutForm(form) {
   } else if (!/^\d{10}$/.test(form.customer_phone)) {
     errs.customer_phone = 'Enter a valid 10-digit phone number';
   }
+  if (!form.address_line_1.trim()) errs.address_line_1 = 'Address line 1 is required';
+  if (!form.city.trim()) errs.city = 'City is required';
+  if (!form.state.trim()) errs.state = 'State is required';
+  if (!form.postal_code.trim()) {
+    errs.postal_code = 'Postal code is required';
+  } else if (!/^\d{5,10}$/.test(form.postal_code)) {
+    errs.postal_code = 'Enter a valid postal code';
+  }
+  if (!form.country.trim()) errs.country = 'Country is required';
   return errs;
 }
 
@@ -78,6 +87,13 @@ export default function CheckoutPage() {
     customer_email: '',
     customer_phone: '',
     notes: '',
+    address_line_1: '',
+    address_line_2: '',
+    city: '',
+    state: '',
+    postal_code: '',
+    country: 'India',
+    address_type: 'home',
   });
 
   // Compute after stock is validated
@@ -198,6 +214,13 @@ export default function CheckoutPage() {
       customer_email: form.customer_email,
       customer_phone: form.customer_phone,
       notes: form.notes || undefined,
+      address_line_1: form.address_line_1,
+      address_line_2: form.address_line_2 || undefined,
+      city: form.city,
+      state: form.state,
+      postal_code: form.postal_code,
+      country: form.country,
+      address_type: form.address_type,
       items: validItems.map((item) => ({
         product: item.product || item.id,
         variant: item.variant || null,
@@ -323,6 +346,138 @@ export default function CheckoutPage() {
                       rows={4}
                       className="w-full px-5 py-4 rounded-xl bg-background border border-border focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none text-sm font-medium resize-none transition-all placeholder:text-muted-foreground/50 text-foreground leading-relaxed"
                     />
+                  </div>
+                </div>
+
+                {/* Shipping Address */}
+                <div className="mt-10 pt-10 border-t border-border/50">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-10">
+                    <div className="w-12 h-12 rounded-2xl bg-background border border-border flex items-center justify-center text-primary shadow-[0_0_15px_rgba(212,175,55,0.1)] shrink-0">
+                      <MapPin className="w-6 h-6" />
+                    </div>
+                    <h2 className="font-black text-card-foreground text-2xl tracking-tight">Shipping Address</h2>
+                  </div>
+                  <div className="space-y-6">
+                    <div className="space-y-2">
+                      <label htmlFor="address-line-1" className="block text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                        Address Line 1 <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        id="address-line-1"
+                        type="text"
+                        required
+                        value={form.address_line_1}
+                        onChange={(e) => { setForm({ ...form, address_line_1: e.target.value }); setErrors({ ...errors, address_line_1: '' }); }}
+                        placeholder="House No, Flat No, Building Name, Street Name"
+                        className={`w-full px-5 py-4 rounded-xl bg-background border ${errors.address_line_1 ? 'border-red-500 focus:ring-1 focus:ring-red-500' : 'border-border focus:border-primary focus:ring-1 focus:ring-primary'} focus:outline-none text-sm font-medium transition-all placeholder:text-muted-foreground/50 text-foreground`}
+                      />
+                      {errors.address_line_1 && <p className="text-red-500 text-xs font-bold mt-1.5">{errors.address_line_1}</p>}
+                    </div>
+                    <div className="space-y-2">
+                      <label htmlFor="address-line-2" className="block text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                        Address Line 2
+                      </label>
+                      <input
+                        id="address-line-2"
+                        type="text"
+                        value={form.address_line_2}
+                        onChange={(e) => setForm({ ...form, address_line_2: e.target.value })}
+                        placeholder="Area, Landmark, Apartment, Floor (optional)"
+                        className="w-full px-5 py-4 rounded-xl bg-background border border-border focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none text-sm font-medium transition-all placeholder:text-muted-foreground/50 text-foreground"
+                      />
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <label htmlFor="city" className="block text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                          City <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          id="city"
+                          type="text"
+                          required
+                          value={form.city}
+                          onChange={(e) => { setForm({ ...form, city: e.target.value }); setErrors({ ...errors, city: '' }); }}
+                          placeholder="City"
+                          className={`w-full px-5 py-4 rounded-xl bg-background border ${errors.city ? 'border-red-500 focus:ring-1 focus:ring-red-500' : 'border-border focus:border-primary focus:ring-1 focus:ring-primary'} focus:outline-none text-sm font-medium transition-all placeholder:text-muted-foreground/50 text-foreground`}
+                        />
+                        {errors.city && <p className="text-red-500 text-xs font-bold mt-1.5">{errors.city}</p>}
+                      </div>
+                      <div className="space-y-2">
+                        <label htmlFor="state" className="block text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                          State / Province <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          id="state"
+                          type="text"
+                          required
+                          value={form.state}
+                          onChange={(e) => { setForm({ ...form, state: e.target.value }); setErrors({ ...errors, state: '' }); }}
+                          placeholder="State"
+                          className={`w-full px-5 py-4 rounded-xl bg-background border ${errors.state ? 'border-red-500 focus:ring-1 focus:ring-red-500' : 'border-border focus:border-primary focus:ring-1 focus:ring-primary'} focus:outline-none text-sm font-medium transition-all placeholder:text-muted-foreground/50 text-foreground`}
+                        />
+                        {errors.state && <p className="text-red-500 text-xs font-bold mt-1.5">{errors.state}</p>}
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <label htmlFor="postal-code" className="block text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                          Postal Code / ZIP <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          id="postal-code"
+                          type="text"
+                          required
+                          inputMode="numeric"
+                          value={form.postal_code}
+                          onChange={(e) => {
+                            const val = e.target.value.replaceAll(/\D/g, '').slice(0, 10);
+                            setForm({ ...form, postal_code: val });
+                            setErrors({ ...errors, postal_code: '' });
+                          }}
+                          placeholder="380015"
+                          className={`w-full px-5 py-4 rounded-xl bg-background border ${errors.postal_code ? 'border-red-500 focus:ring-1 focus:ring-red-500' : 'border-border focus:border-primary focus:ring-1 focus:ring-primary'} focus:outline-none text-sm font-medium transition-all placeholder:text-muted-foreground/50 text-foreground`}
+                        />
+                        {errors.postal_code && <p className="text-red-500 text-xs font-bold mt-1.5">{errors.postal_code}</p>}
+                      </div>
+                      <div className="space-y-2">
+                        <label htmlFor="country" className="block text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                          Country <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          id="country"
+                          type="text"
+                          required
+                          value={form.country}
+                          onChange={(e) => { setForm({ ...form, country: e.target.value }); setErrors({ ...errors, country: '' }); }}
+                          placeholder="India"
+                          className={`w-full px-5 py-4 rounded-xl bg-background border ${errors.country ? 'border-red-500 focus:ring-1 focus:ring-red-500' : 'border-border focus:border-primary focus:ring-1 focus:ring-primary'} focus:outline-none text-sm font-medium transition-all placeholder:text-muted-foreground/50 text-foreground`}
+                        />
+                        {errors.country && <p className="text-red-500 text-xs font-bold mt-1.5">{errors.country}</p>}
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider">Address Type</label>
+                      <div className="flex gap-3">
+                        {[
+                          { value: 'home', label: 'Home' },
+                          { value: 'work', label: 'Work' },
+                          { value: 'other', label: 'Other' },
+                        ].map((opt) => (
+                          <button
+                            key={opt.value}
+                            type="button"
+                            onClick={() => setForm({ ...form, address_type: opt.value })}
+                            className={`px-5 py-3 rounded-xl text-sm font-bold border transition-all ${
+                              form.address_type === opt.value
+                                ? 'bg-primary text-primary-foreground border-primary shadow-[0_0_10px_rgba(212,175,55,0.2)]'
+                                : 'bg-background border-border text-muted-foreground hover:border-primary/50'
+                            }`}
+                          >
+                            {opt.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 </div>
 

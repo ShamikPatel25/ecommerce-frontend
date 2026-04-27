@@ -349,6 +349,19 @@ function OrderCard({ order, isExpanded, onToggle, href }) {
                   <p className="text-muted-foreground text-xs">Updated: {new Date(order.updated_at).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' })}</p>
                 </div>
               </div>
+
+              {/* Shipping Address */}
+              {order.shipping_address && (
+                <div className="mt-3 p-4 rounded-2xl bg-muted/10 border border-border/50 text-sm">
+                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">Shipping Address</p>
+                  <p className="font-semibold text-foreground whitespace-pre-line">{order.shipping_address}</p>
+                  {order.address_type && (
+                    <span className="inline-block mt-1.5 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-wider">
+                      {order.address_type}
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
           </motion.div>
         )}
