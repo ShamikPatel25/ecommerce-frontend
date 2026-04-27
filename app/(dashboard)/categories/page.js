@@ -258,7 +258,7 @@ export default function CategoriesPage() {
 
                       {/* Status */}
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${cat.is_active ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'}`}>
+                        <span className={`inline-block w-[72px] text-center px-3 py-1 rounded-full text-xs font-semibold ${cat.is_active ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'}`}>
                           {cat.is_active ? 'Active' : 'Inactive'}
                         </span>
                       </td>
