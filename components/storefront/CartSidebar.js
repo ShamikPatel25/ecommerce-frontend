@@ -56,9 +56,16 @@ export default function CartSidebar({ open, onClose }) {
               liveStock = 0;
               for (const group of product.attribute_groups) {
                 for (const val of group.values || []) {
-                  for (const av of val.available_variants || val.available_sizes || []) {
-                    if (av.variant_id === cartItem.variant) {
-                      liveStock = av.stock ?? 0;
+                  // Check direct variant (single-attribute products)
+                  if (val.variant?.variant_id === cartItem.variant) {
+                    liveStock = val.variant.stock ?? 0;
+                  }
+                  // Check available_variants (multi-attribute products)
+                  for (const av of val.available_variants || []) {
+                    for (const v of av.available_values || []) {
+                      if (v.variant_id === cartItem.variant) {
+                        liveStock = v.stock ?? 0;
+                      }
                     }
                   }
                 }

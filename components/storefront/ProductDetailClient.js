@@ -179,9 +179,14 @@ export default function ProductDetailClient({ slug, initialVariantSku = null }) 
     const matched = lookupGroup.values.find((v) => v.value_id === selectedValues[lookupGroup.attribute_id]);
     if (!matched) return { variant: null, price: product.price, stock: 0, label: '', sku: null };
     let selectedVariant = null;
-    for (const otherAttr of matched.available_variants || []) {
-      const m = otherAttr.available_values.find((v) => v.value_id === selectedValues[otherAttr.attribute_id]);
-      if (m) { selectedVariant = m; break; }
+    if (matched.available_variants?.length) {
+      for (const otherAttr of matched.available_variants) {
+        const m = otherAttr.available_values.find((v) => v.value_id === selectedValues[otherAttr.attribute_id]);
+        if (m) { selectedVariant = m; break; }
+      }
+    } else if (matched.variant) {
+      // Single-attribute product: variant info is directly on the value
+      selectedVariant = matched.variant;
     }
     const labels = [];
     product.attribute_groups.forEach((g) => {

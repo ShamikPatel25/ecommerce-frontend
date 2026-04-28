@@ -545,6 +545,7 @@ export default function CreateProductPage() {
       if (formData.product_type === 'catalog') {
         const success = await createVariants(productId);
         if (!success) {
+          clearFormDraft(); clearSelAttrDraft(); clearStepDraft(); clearCombosDraft(); clearComboSelDraft();
           router.push('/products');
           setSubmitting(false);
           return;
@@ -912,8 +913,8 @@ export default function CreateProductPage() {
           <button
             type="button"
             onClick={() => {
-              clearCombosDraft(); clearComboSelDraft(); clearStepDraft();
-              setStep(1);
+              clearFormDraft(); clearSelAttrDraft(); clearCombosDraft(); clearComboSelDraft(); clearStepDraft();
+              router.push('/products');
             }}
             className="px-8 py-3 rounded-lg font-bold border border-slate-200 dark:border-gray-600 text-slate-700 dark:text-gray-300 hover:bg-slate-100 dark:hover:bg-gray-700 transition-colors"
           >
@@ -956,7 +957,10 @@ export default function CreateProductPage() {
         <h1 className="text-3xl font-black tracking-tight text-slate-900 dark:text-white">Create New Product</h1>
         <button
           type="button"
-          onClick={() => router.push('/products')}
+          onClick={() => {
+            clearFormDraft(); clearSelAttrDraft(); clearStepDraft(); clearCombosDraft(); clearComboSelDraft();
+            router.push('/products');
+          }}
           className="flex items-center gap-2 px-4 py-2 rounded-lg border border-[#ff6600]/20 bg-white dark:bg-gray-800 dark:border-gray-600 hover:bg-[#ff6600]/5 transition-colors text-sm font-bold self-start md:self-auto"
         >
           <ArrowLeft className="w-4 h-4" />
