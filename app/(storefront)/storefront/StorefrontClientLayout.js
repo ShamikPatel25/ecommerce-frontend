@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import PropTypes from 'prop-types';
 import { Outfit } from 'next/font/google';
 import { storefrontAPI } from '@/lib/storefrontApi';
 import { useStorefrontPath } from '@/lib/useStorefrontPath';
@@ -90,7 +89,3 @@ export default function StorefrontClientLayout({ children }) {
     </ThemeProvider>
   );
 }
-
-StorefrontClientLayout.propTypes = {
-  children: PropTypes.node.isRequired,
-};

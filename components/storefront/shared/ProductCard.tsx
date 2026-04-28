@@ -8,7 +8,6 @@ import { Button } from '@/components/ui/button';
 import { calcDiscountPercent, formatCurrency } from '@/lib/utils';
 import { useStoreInfo } from '@/lib/StorefrontContext';
 import { toast } from 'sonner';
-import PropTypes from 'prop-types';
 
 export function ProductCard({ product, href }) {
   const addItem = useCartStore((state) => state.addItem);
@@ -107,21 +106,3 @@ export function ProductCard({ product, href }) {
     </div>
   );
 }
-
-ProductCard.propTypes = {
-  product: PropTypes.shape({
-    id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-    name: PropTypes.string,
-    price: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-    compare_at_price: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-    slug: PropTypes.string,
-    thumbnail: PropTypes.string,
-    stock: PropTypes.number,
-    total_stock: PropTypes.number,
-    category_name: PropTypes.string,
-    sku: PropTypes.string,
-    vendor: PropTypes.string,
-    type: PropTypes.string
-  }).isRequired,
-  href: PropTypes.func.isRequired,
-};

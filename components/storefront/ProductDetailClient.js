@@ -10,7 +10,6 @@ import { useCartStore } from '@/store/cartStore';
 import { calcDiscountPercent, formatCurrency } from '@/lib/utils';
 import { useStoreInfo } from '@/lib/StorefrontContext';
 import { toast } from 'sonner';
-import PropTypes from 'prop-types';
 import { X, ChevronLeft, ChevronRight, Check, Diamond, ShieldCheck, Truck, RefreshCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -608,8 +607,3 @@ export default function ProductDetailClient({ slug, initialVariantSku = null }) 
     </>
   );
 }
-
-ProductDetailClient.propTypes = {
-  slug: PropTypes.string.isRequired,
-  initialVariantSku: PropTypes.string,
-};

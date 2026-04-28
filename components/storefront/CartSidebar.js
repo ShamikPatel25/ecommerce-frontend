@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import PropTypes from 'prop-types';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useCartStore } from '@/store/cartStore';
@@ -274,8 +273,3 @@ export default function CartSidebar({ open, onClose }) {
     </>
   );
 }
-
-CartSidebar.propTypes = {
-  open: PropTypes.bool.isRequired,
-  onClose: PropTypes.func.isRequired,
-};

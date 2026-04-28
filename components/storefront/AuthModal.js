@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import PropTypes from 'prop-types';
 import { storefrontAPI } from '@/lib/storefrontApi';
 import { useStorefrontAuthStore } from '@/store/storefrontAuthStore';
 import { X, Loader2 } from 'lucide-react';
@@ -263,9 +262,3 @@ export default function AuthModal({ open, onClose, initialTab = 'signin' }) {
     </>
   );
 }
-
-AuthModal.propTypes = {
-  open: PropTypes.bool.isRequired,
-  onClose: PropTypes.func.isRequired,
-  initialTab: PropTypes.string,
-};

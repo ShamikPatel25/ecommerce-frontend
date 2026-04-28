@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import PropTypes from 'prop-types';
 import { Facebook, Twitter, Instagram, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -90,9 +89,3 @@ export function Footer({ store, categories, href }) {
     </footer>
   );
 }
-
-Footer.propTypes = {
-  store: PropTypes.object,
-  categories: PropTypes.array,
-  href: PropTypes.func.isRequired,
-};
