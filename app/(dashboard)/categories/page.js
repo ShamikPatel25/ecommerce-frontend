@@ -117,10 +117,11 @@ export default function CategoriesPage() {
   };
 
   /* ── filter + paginate ── */
+  const lowerQuery = searchQuery.toLowerCase().trim();
   const baseFiltered = categories.filter((c) => {
     const matchSearch =
-      c.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.slug?.toLowerCase().includes(searchQuery.toLowerCase());
+      c.name?.toLowerCase().includes(lowerQuery) ||
+      c.slug?.toLowerCase().includes(lowerQuery);
     if (!matchSearch) return false;
     if (activeTab === 'Main')     return c.level === 0;
     if (activeTab === 'Sub')      return c.level >= 1;
@@ -128,7 +129,7 @@ export default function CategoriesPage() {
   });
 
   const filtered =
-    activeTab === 'All' && !searchQuery.trim()
+    activeTab === 'All' && !lowerQuery
       ? buildTreeOrder(baseFiltered)
       : baseFiltered;
 

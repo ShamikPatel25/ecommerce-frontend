@@ -46,7 +46,7 @@ export default function StorefrontClientLayout({ children }) {
           onOpenCart={() => setCartOpen(true)}
         />
 
-        <main className="flex-grow pt-[85px]">
+        <main className="flex-grow pt-16">
           {children}
         </main>
 

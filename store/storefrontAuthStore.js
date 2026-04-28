@@ -1,18 +1,31 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { useCartStore } from './cartStore';
 
 export const useStorefrontAuthStore = create(
   persist(
-    (set) => ({
+    (set, get) => ({
       customer: null,
       accessToken: null,
       refreshToken: null,
 
-      setAuth: (customer, accessToken, refreshToken) =>
-        set({ customer, accessToken, refreshToken }),
+      setAuth: (customer, accessToken, refreshToken) => {
+        set({ customer, accessToken, refreshToken });
+        if (customer?.id) {
+          useCartStore.getState().loadForUser(customer.id);
+        }
+      },
 
-      logout: () =>
-        set({ customer: null, accessToken: null, refreshToken: null }),
+      setCustomer: (customer) => set({ customer }),
+
+      logout: () => {
+        const { customer } = get();
+        if (customer?.id) {
+          useCartStore.getState().saveForUser(customer.id);
+        }
+        useCartStore.getState().clearCart();
+        set({ customer: null, accessToken: null, refreshToken: null });
+      },
     }),
     {
       name: 'storefront-auth',

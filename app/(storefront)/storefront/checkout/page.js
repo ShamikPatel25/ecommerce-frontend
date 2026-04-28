@@ -8,7 +8,7 @@ import { useCartStore } from '@/store/cartStore';
 import { useStorefrontAuthStore } from '@/store/storefrontAuthStore';
 import { storefrontAPI } from '@/lib/storefrontApi';
 import { toast } from 'sonner';
-import { ArrowLeft, Loader2, ShoppingBag, Shield, Lock, CreditCard, AlertTriangle, MapPin } from 'lucide-react';
+import { ArrowLeft, Loader2, ShoppingBag, Shield, Lock, CreditCard, AlertTriangle, MapPin, Home, Briefcase } from 'lucide-react';
 import { PageTransition } from '@/components/storefront/animations';
 import { useStorefrontPath } from '@/lib/useStorefrontPath';
 import { Button, buttonVariants } from '@/components/ui/button';
@@ -78,10 +78,13 @@ export default function CheckoutPage() {
   const updateItemStock = useCartStore((s) => s.updateItemStock);
   const { href } = useStorefrontPath();
   const customer = useStorefrontAuthStore((s) => s.customer);
+  const accessToken = useStorefrontAuthStore((s) => s.accessToken);
   const [hydrated, setHydrated] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [stockValidated, setStockValidated] = useState(false);
   const [errors, setErrors] = useState({});
+  const [savedAddresses, setSavedAddresses] = useState([]);
+  const [selectedAddressId, setSelectedAddressId] = useState(null);
   const [form, setForm] = useState({
     customer_name: '',
     customer_email: '',
@@ -143,13 +146,38 @@ export default function CheckoutPage() {
         ...prev,
         customer_name: prev.customer_name || [customer.first_name, customer.last_name].filter(Boolean).join(' '),
         customer_email: prev.customer_email || customer.email || '',
+        customer_phone: prev.customer_phone || customer.phone || '',
       }));
     }
   }, [customer]);
 
+  // Fetch saved addresses
+  useEffect(() => {
+    if (hydrated && accessToken) {
+      storefrontAPI.getAddresses()
+        .then((res) => setSavedAddresses(res.data || []))
+        .catch(() => {});
+    }
+  }, [hydrated, accessToken]);
+
+  const selectSavedAddress = (addr) => {
+    setSelectedAddressId(addr.id);
+    setForm((prev) => ({
+      ...prev,
+      address_line_1: addr.address_line_1,
+      address_line_2: addr.address_line_2 || '',
+      city: addr.city,
+      state: addr.state,
+      postal_code: addr.postal_code,
+      country: addr.country || 'India',
+      address_type: addr.label,
+    }));
+    setErrors((prev) => ({ ...prev, address_line_1: '', city: '', state: '', postal_code: '', country: '' }));
+  };
+
   if (!hydrated) {
     return (
-      <div className="min-h-[60vh] flex items-center justify-center pt-24">
+      <div className="min-h-[60vh] flex items-center justify-center pt-6">
         <motion.div
           className="w-12 h-12 rounded-full border-2 border-primary/30 border-t-primary"
           animate={{ rotate: 360 }}
@@ -162,7 +190,7 @@ export default function CheckoutPage() {
   if (items.length === 0) {
     return (
       <PageTransition>
-        <div className="max-w-7xl mx-auto px-4 py-20 text-center pt-32">
+        <div className="max-w-7xl mx-auto px-4 py-8 text-center pt-8">
           <motion.div
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
@@ -244,13 +272,13 @@ export default function CheckoutPage() {
 
   return (
     <PageTransition>
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pt-24 md:pt-28">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
         <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
         >
-          <Link href={href('/cart')} className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-primary mb-8 font-semibold transition-colors">
-            <ArrowLeft className="w-4 h-4" /> Back to Cart
+          <Link href={href('/products')} className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-primary mb-8 font-semibold transition-colors">
+            <ArrowLeft className="w-4 h-4" /> Back to Products
           </Link>
         </motion.div>
 
@@ -290,10 +318,11 @@ export default function CheckoutPage() {
                       id="customer-name"
                       type="text"
                       required
+                      readOnly={!!(customer?.first_name || customer?.last_name)}
                       value={form.customer_name}
-                      onChange={(e) => { setForm({ ...form, customer_name: e.target.value }); setErrors({ ...errors, customer_name: '' }); }}
+                      onChange={(e) => { if (!(customer?.first_name || customer?.last_name)) { setForm({ ...form, customer_name: e.target.value }); setErrors({ ...errors, customer_name: '' }); } }}
                       placeholder="John Doe"
-                      className={`w-full px-5 py-4 rounded-xl bg-background border ${errors.customer_name ? 'border-red-500 focus:ring-1 focus:ring-red-500' : 'border-border focus:border-primary focus:ring-1 focus:ring-primary'} focus:outline-none text-sm font-medium transition-all placeholder:text-muted-foreground/50 text-foreground`}
+                      className={`w-full px-5 py-4 rounded-xl border ${(customer?.first_name || customer?.last_name) ? 'bg-muted/50 opacity-60 cursor-not-allowed border-border focus:ring-0' : `bg-background ${errors.customer_name ? 'border-red-500 focus:ring-1 focus:ring-red-500' : 'border-border focus:border-primary focus:ring-1 focus:ring-primary'}`} focus:outline-none text-sm font-medium transition-all placeholder:text-muted-foreground/50 text-foreground`}
                     />
                     {errors.customer_name && <p className="text-red-500 text-xs font-bold mt-1.5">{errors.customer_name}</p>}
                   </div>
@@ -310,7 +339,7 @@ export default function CheckoutPage() {
                         value={form.customer_email}
                         onChange={(e) => { if (!customer?.email) { setForm({ ...form, customer_email: e.target.value }); setErrors({ ...errors, customer_email: '' }); } }}
                         placeholder="john@example.com"
-                        className={`w-full px-5 py-4 rounded-xl bg-background border ${customer?.email ? 'opacity-60 cursor-not-allowed' : ''} ${errors.customer_email ? 'border-red-500 focus:ring-1 focus:ring-red-500' : 'border-border focus:border-primary focus:ring-1 focus:ring-primary'} focus:outline-none text-sm font-medium transition-all placeholder:text-muted-foreground/50 text-foreground`}
+                        className={`w-full px-5 py-4 rounded-xl border ${customer?.email ? 'bg-muted/50 opacity-60 cursor-not-allowed border-border focus:ring-0' : `bg-background ${errors.customer_email ? 'border-red-500 focus:ring-1 focus:ring-red-500' : 'border-border focus:border-primary focus:ring-1 focus:ring-primary'}`} focus:outline-none text-sm font-medium transition-all placeholder:text-muted-foreground/50 text-foreground`}
                       />
                       {errors.customer_email && <p className="text-red-500 text-xs font-bold mt-1.5">{errors.customer_email}</p>}
                     </div>
@@ -357,6 +386,49 @@ export default function CheckoutPage() {
                     </div>
                     <h2 className="font-black text-card-foreground text-2xl tracking-tight">Shipping Address</h2>
                   </div>
+
+                  {/* Saved Address Selector */}
+                  {savedAddresses.length > 0 && (
+                    <div className="mb-8">
+                      <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">Select Saved Address</label>
+                      <div className="flex flex-wrap gap-3">
+                        {savedAddresses.map((addr) => {
+                          const Icon = addr.label === 'home' ? Home : addr.label === 'work' ? Briefcase : MapPin;
+                          const isSelected = selectedAddressId === addr.id;
+                          return (
+                            <button
+                              key={addr.id}
+                              type="button"
+                              onClick={() => selectSavedAddress(addr)}
+                              className={`flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-bold border transition-all ${
+                                isSelected
+                                  ? 'bg-primary text-primary-foreground border-primary shadow-[0_0_10px_rgba(212,175,55,0.2)]'
+                                  : 'bg-background border-border text-muted-foreground hover:border-primary/50'
+                              }`}
+                            >
+                              <Icon className="w-4 h-4" />
+                              <span className="capitalize">{addr.label}</span>
+                              <span className="text-xs opacity-70">— {addr.city}</span>
+                            </button>
+                          );
+                        })}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedAddressId(null);
+                            setForm((prev) => ({ ...prev, address_line_1: '', address_line_2: '', city: '', state: '', postal_code: '', country: 'India', address_type: 'home' }));
+                          }}
+                          className={`px-4 py-3 rounded-xl text-sm font-bold border transition-all ${
+                            selectedAddressId === null
+                              ? 'bg-primary text-primary-foreground border-primary'
+                              : 'bg-background border-border text-muted-foreground hover:border-primary/50'
+                          }`}
+                        >
+                          New Address
+                        </button>
+                      </div>
+                    </div>
+                  )}
                   <div className="space-y-6">
                     <div className="space-y-2">
                       <label htmlFor="address-line-1" className="block text-xs font-bold text-muted-foreground uppercase tracking-wider">

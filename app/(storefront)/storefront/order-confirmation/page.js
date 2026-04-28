@@ -29,7 +29,7 @@ function OrderConfirmationContent() {
 
   return (
     <PageTransition>
-      <div className="max-w-2xl mx-auto px-4 py-20 text-center pt-32">
+      <div className="max-w-2xl mx-auto px-4 py-8 text-center pt-8">
 
         {/* ── Success animation ── */}
         <motion.div

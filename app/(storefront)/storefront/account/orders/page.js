@@ -422,7 +422,7 @@ export default function StorefrontOrdersPage() {
   /* ── Skeleton: shown while not yet mounted / hydrating / fetching ── */
   if (!isMounted || loading) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-16 sm:py-24">
+      <div className="max-w-4xl mx-auto px-4 py-6 sm:py-8">
         <div className="mb-12 space-y-3">
           <div className="h-4 w-24 bg-muted/50 rounded-full animate-pulse" />
           <div className="h-10 w-56 bg-muted/50 rounded-2xl animate-pulse" />
@@ -449,7 +449,7 @@ export default function StorefrontOrdersPage() {
   /* ── Error state ── */
   if (error) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-16 sm:py-24">
+      <div className="max-w-4xl mx-auto px-4 py-6 sm:py-8">
         <div className="flex flex-col items-center justify-center py-24 px-4 text-center bg-card border border-red-500/20 rounded-3xl shadow-xl">
           <AlertCircle className="w-16 h-16 text-red-400 mb-6" />
           <h3 className="text-2xl font-black text-foreground mb-3">Couldn&apos;t Load Orders</h3>
@@ -466,7 +466,7 @@ export default function StorefrontOrdersPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-16 sm:py-24">
+    <div className="max-w-4xl mx-auto px-4 py-6 sm:py-8">
       {/* ── Page Header ── */}
       <div className="mb-10 flex flex-col md:flex-row md:items-end md:justify-between gap-4">
         <div className="space-y-2">

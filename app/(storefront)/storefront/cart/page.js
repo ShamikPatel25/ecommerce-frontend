@@ -19,7 +19,7 @@ export default function CartPage() {
 
   if (!hydrated) {
     return (
-      <div className="min-h-[60vh] flex items-center justify-center pt-24">
+      <div className="min-h-[60vh] flex items-center justify-center pt-6">
         <motion.div
           className="w-12 h-12 rounded-full border-2 border-orange-500/30 border-t-orange-500"
           animate={{ rotate: 360 }}
@@ -32,7 +32,7 @@ export default function CartPage() {
   if (items.length === 0) {
     return (
       <PageTransition>
-        <div className="max-w-7xl mx-auto px-4 py-20 text-center pt-32">
+        <div className="max-w-7xl mx-auto px-4 py-8 text-center pt-8">
           <motion.div
             initial={{ scale: 0, rotate: -10 }}
             animate={{ scale: 1, rotate: 0 }}
@@ -79,11 +79,11 @@ export default function CartPage() {
 
   return (
     <PageTransition>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pt-24 md:pt-28">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-10"
+          className="mb-6"
         >
           <span className="text-orange-500 font-bold text-xs uppercase tracking-[0.2em] mb-2 block">Shopping</span>
           <h1 className="text-3xl md:text-5xl font-black text-gray-900 tracking-tight">

@@ -52,7 +52,7 @@ function ProductsContent() {
   const totalPages = Math.ceil(totalCount / 20);
 
   return (
-    <div className="container mx-auto px-4 md:px-6 py-12 md:py-16">
+    <div className="container mx-auto px-4 md:px-6 py-6 md:py-8">
       
       {/* Header & Breadcrumbs */}
       <div className="mb-8 md:mb-12">

@@ -57,7 +57,7 @@ export function middleware(request) {
       return NextResponse.redirect(url);
     }
 
-    const storefrontPaths = ['/', '/products', '/cart', '/checkout', '/order-confirmation', '/account/login', '/account/orders'];
+    const storefrontPaths = ['/', '/products', '/cart', '/checkout', '/order-confirmation', '/account', '/account/login', '/account/orders'];
     const isStorefrontPath =
       storefrontPaths.includes(pathname) ||
       pathname.startsWith('/products/') ||

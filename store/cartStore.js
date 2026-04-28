@@ -63,6 +63,26 @@ export const useCartStore = create(
       },
 
       clearCart: () => set({ items: [] }),
+
+      saveForUser: (userId) => {
+        if (!userId) return;
+        const { items } = get();
+        localStorage.setItem(`cart-storage-${userId}`, JSON.stringify(items));
+      },
+
+      loadForUser: (userId) => {
+        if (!userId) return;
+        try {
+          const saved = localStorage.getItem(`cart-storage-${userId}`);
+          if (saved) {
+            set({ items: JSON.parse(saved) });
+          } else {
+            set({ items: [] });
+          }
+        } catch {
+          set({ items: [] });
+        }
+      },
     }),
     {
       name: 'cart-storage',
