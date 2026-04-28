@@ -24,7 +24,7 @@ export function Navbar({ storeName, onOpenAuth, onOpenCart }) {
   const router = useRouter();
   const customer = useStorefrontAuthStore((state) => state.customer);
   const accessToken = useStorefrontAuthStore((state) => state.accessToken);
-  const logoutFn = useStorefrontAuthStore((state) => state.logout);
+  const logoutFn = useStorefrontAuthStore((state) => state.fullLogout);
   const isLoggedIn = !!(customer && accessToken);
 
   const handleLogout = () => {
@@ -37,6 +37,7 @@ export function Navbar({ storeName, onOpenAuth, onOpenCart }) {
   const [isMounted, setIsMounted] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
+  /* eslint-disable react-hooks/set-state-in-effect -- SSR hydration + scroll listener */
   useEffect(() => {
     setIsMounted(true);
     const handleScroll = () => {
@@ -45,6 +46,7 @@ export function Navbar({ storeName, onOpenAuth, onOpenCart }) {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const isActive = (path: string) => {
     const fullPath = href(path);

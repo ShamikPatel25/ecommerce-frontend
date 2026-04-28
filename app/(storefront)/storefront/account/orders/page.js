@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { storefrontAPI } from '@/lib/storefrontApi';
 import { useStorefrontAuthStore } from '@/store/storefrontAuthStore';
 import { useStorefrontPath } from '@/lib/useStorefrontPath';
@@ -270,21 +271,23 @@ function OrderCard({ order, isExpanded, onToggle, href }) {
                   >
                     {/* Thumbnail */}
                     {productLink ? (
-                      <Link href={productLink} className="w-16 h-16 rounded-xl bg-card border border-border overflow-hidden shrink-0 flex items-center justify-center hover:ring-2 hover:ring-primary/30 transition-all">
+                      <Link href={productLink} className="relative w-16 h-16 rounded-xl bg-card border border-border overflow-hidden shrink-0 flex items-center justify-center hover:ring-2 hover:ring-primary/30 transition-all">
                         {item.thumbnail ? (
-                          <img
+                          <Image
                             src={item.thumbnail}
                             alt={item.product_name}
-                            className="w-full h-full object-cover hover:scale-105 transition-transform"
+                            fill
+                            sizes="64px"
+                            className="object-cover hover:scale-105 transition-transform"
                           />
                         ) : (
                           <Box className="w-7 h-7 text-muted-foreground opacity-30" />
                         )}
                       </Link>
                     ) : (
-                      <div className="w-16 h-16 rounded-xl bg-card border border-border overflow-hidden shrink-0 flex items-center justify-center">
+                      <div className="relative w-16 h-16 rounded-xl bg-card border border-border overflow-hidden shrink-0 flex items-center justify-center">
                         {item.thumbnail ? (
-                          <img src={item.thumbnail} alt={item.product_name} className="w-full h-full object-cover" />
+                          <Image src={item.thumbnail} alt={item.product_name} fill sizes="64px" className="object-cover" />
                         ) : (
                           <Box className="w-7 h-7 text-muted-foreground opacity-30" />
                         )}
@@ -403,12 +406,13 @@ export default function StorefrontOrdersPage() {
   };
 
   useEffect(() => {
-    setIsMounted(true);
+    setIsMounted(true); // eslint-disable-line react-hooks/set-state-in-effect -- hydration guard
   }, []);
 
   // Once mounted, check auth and fetch orders.
   // accessToken is reactive — when the token changes (login/logout/refresh),
   // this effect re-runs automatically.
+  /* eslint-disable react-hooks/set-state-in-effect -- fetch on mount / redirect flow */
   useEffect(() => {
     if (!isMounted) return;
     if (accessToken) {
@@ -418,6 +422,7 @@ export default function StorefrontOrdersPage() {
       router.push(href('/account/login?redirect=' + encodeURIComponent(href('/account/orders'))));
     }
   }, [isMounted, accessToken]); // eslint-disable-line react-hooks/exhaustive-deps
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   /* ── Skeleton: shown while not yet mounted / hydrating / fetching ── */
   if (!isMounted || loading) {

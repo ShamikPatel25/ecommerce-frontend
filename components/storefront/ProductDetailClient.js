@@ -3,10 +3,12 @@
 import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { storefrontAPI } from '@/lib/storefrontApi';
 import { useStorefrontPath } from '@/lib/useStorefrontPath';
 import { useCartStore } from '@/store/cartStore';
-import { calcDiscountPercent } from '@/lib/utils';
+import { calcDiscountPercent, formatCurrency } from '@/lib/utils';
+import { useStoreInfo } from '@/lib/StorefrontContext';
 import { toast } from 'sonner';
 import PropTypes from 'prop-types';
 import { X, ChevronLeft, ChevronRight, Check, Diamond, ShieldCheck, Truck, RefreshCcw } from 'lucide-react';
@@ -79,6 +81,8 @@ function findReverseReferencedValues(attributeGroups, colorGroupId, groupId, sel
 export default function ProductDetailClient({ slug, initialVariantSku = null }) {
   const router = useRouter();
   const { href } = useStorefrontPath();
+  const storeInfo = useStoreInfo();
+  const currency = storeInfo?.currency;
 
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -92,6 +96,7 @@ export default function ProductDetailClient({ slug, initialVariantSku = null }) 
   const addItem = useCartStore((s) => s.addItem);
   const [selectedValues, setSelectedValues] = useState({});
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- SSR hydration guard
   useEffect(() => { setMounted(true); }, []);
 
   const closeLightbox = useCallback(() => setLightboxOpen(false), []);
@@ -128,7 +133,7 @@ export default function ProductDetailClient({ slug, initialVariantSku = null }) 
       })
       .catch(() => setProduct(null))
       .finally(() => setLoading(false));
-  }, [slug, initialVariantSku]);
+  }, [slug, initialVariantSku, href, router]);
 
   const isCatalog = product?.product_type === 'catalog';
 
@@ -164,6 +169,7 @@ export default function ProductDetailClient({ slug, initialVariantSku = null }) 
     return general.length > 0 ? general : (product.general_images || []);
   }, [product, selectedValues, isCatalog, colorGroup]);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- reset on selection change
   useEffect(() => { setSelectedImageIndex(0); }, [selectedValues]);
 
   const variantInfo = useMemo(() => {
@@ -196,10 +202,12 @@ export default function ProductDetailClient({ slug, initialVariantSku = null }) 
   const catalogInStock = variantInfo.variant ? maxStock > 0 : false;
   const inStock = isCatalog ? catalogInStock : (product?.stock || 0) > 0;
 
+  /* eslint-disable react-hooks/set-state-in-effect -- clamp quantity to stock */
   useEffect(() => {
     if (maxStock > 0 && quantity > maxStock) setQuantity(maxStock);
     else if (maxStock === 0) setQuantity(1);
-  }, [maxStock]);
+  }, [maxStock, quantity]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const displayPrice = Number.parseFloat(variantInfo.price || 0);
   const hasDiscount = product?.compare_at_price && Number.parseFloat(product.compare_at_price) > displayPrice;
@@ -306,11 +314,14 @@ export default function ProductDetailClient({ slug, initialVariantSku = null }) 
               onClick={() => { setLightboxIndex(selectedImageIndex); setLightboxOpen(true); }}
             >
               {images.length > 0 ? (
-                <img
+                <Image
                   key={images[selectedImageIndex]?.id || selectedImageIndex}
                   src={images[selectedImageIndex]?.file_url}
                   alt={images[selectedImageIndex]?.alt_text || product.name}
-                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                  fill
+                  sizes="(max-width: 1024px) 100vw, 50vw"
+                  priority
+                  className="object-cover transition-transform duration-700 group-hover:scale-105"
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center bg-muted text-muted-foreground">
@@ -343,7 +354,7 @@ export default function ProductDetailClient({ slug, initialVariantSku = null }) 
                       idx === selectedImageIndex ? 'border-primary ring-2 ring-primary/20 ring-offset-2 ring-offset-background' : 'border-border/50 hover:border-primary/50 opacity-70 hover:opacity-100'
                     }`}
                   >
-                    <img src={img.file_url} alt={img.alt_text || ''} className="w-full h-full object-cover" />
+                    <Image src={img.file_url} alt={img.alt_text || ''} fill sizes="96px" className="object-cover" />
                   </button>
                 ))}
               </div>
@@ -364,10 +375,10 @@ export default function ProductDetailClient({ slug, initialVariantSku = null }) 
 
             {/* Price */}
             <div className="flex items-baseline gap-4 mb-6">
-              <span className="text-3xl font-bold">${displayPrice.toFixed(2)}</span>
+              <span className="text-3xl font-bold">{formatCurrency(displayPrice, currency)}</span>
               {hasDiscount && (
                 <>
-                  <span className="text-xl text-muted-foreground line-through decoration-muted-foreground/50">${Number.parseFloat(product.compare_at_price).toFixed(2)}</span>
+                  <span className="text-xl text-muted-foreground line-through decoration-muted-foreground/50">{formatCurrency(product.compare_at_price, currency)}</span>
                   <span className="text-sm font-bold text-red-500 bg-red-500/10 px-2 py-1 rounded-md">{discountPercent}% OFF</span>
                 </>
               )}
@@ -408,7 +419,7 @@ export default function ProductDetailClient({ slug, initialVariantSku = null }) 
                         }`}
                       >
                         {displayImage ? (
-                          <img src={displayImage.file_url} alt={val.value} className="w-full h-full object-cover" />
+                          <Image src={displayImage.file_url} alt={val.value} fill sizes="56px" className="object-cover" />
                         ) : (
                           <span className="text-xs font-semibold uppercase">{val.value.slice(0, 2)}</span>
                         )}
@@ -558,10 +569,11 @@ export default function ProductDetailClient({ slug, initialVariantSku = null }) 
                 <ChevronLeft className="w-8 h-8" />
               </button>
             )}
-            
-            <img 
-              src={images[lightboxIndex]?.file_url} 
-              alt={product.name} 
+
+            {/* eslint-disable-next-line @next/next/no-img-element -- lightbox uses dynamic sizing */}
+            <img
+              src={images[lightboxIndex]?.file_url}
+              alt={product.name}
               className="max-w-full max-h-[75vh] object-contain rounded-xl shadow-2xl" 
             />
 
@@ -585,6 +597,7 @@ export default function ProductDetailClient({ slug, initialVariantSku = null }) 
                     idx === lightboxIndex ? 'border-primary ring-2 ring-primary/20 scale-105' : 'border-border/50 hover:border-primary/50 opacity-60 hover:opacity-100'
                   }`}
                 >
+                  {/* eslint-disable-next-line @next/next/no-img-element -- lightbox thumbnails */}
                   <img src={img.file_url} alt="" className="w-full h-full object-cover" />
                 </button>
               ))}

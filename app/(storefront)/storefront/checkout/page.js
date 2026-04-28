@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCartStore } from '@/store/cartStore';
 import { useStorefrontAuthStore } from '@/store/storefrontAuthStore';
@@ -11,6 +12,8 @@ import { toast } from 'sonner';
 import { ArrowLeft, Loader2, ShoppingBag, Shield, Lock, CreditCard, AlertTriangle, MapPin, Home, Briefcase } from 'lucide-react';
 import { PageTransition } from '@/components/storefront/animations';
 import { useStorefrontPath } from '@/lib/useStorefrontPath';
+import { formatCurrency } from '@/lib/utils';
+import { useStoreInfo } from '@/lib/StorefrontContext';
 import { Button, buttonVariants } from '@/components/ui/button';
 
 function validateCheckoutForm(form) {
@@ -77,6 +80,8 @@ export default function CheckoutPage() {
   const { items, clearCart } = useCartStore();
   const updateItemStock = useCartStore((s) => s.updateItemStock);
   const { href } = useStorefrontPath();
+  const storeInfo = useStoreInfo();
+  const currency = storeInfo?.currency;
   const customer = useStorefrontAuthStore((s) => s.customer);
   const accessToken = useStorefrontAuthStore((s) => s.accessToken);
   const [hydrated, setHydrated] = useState(false);
@@ -126,9 +131,18 @@ export default function CheckoutPage() {
           items.forEach((cartItem) => {
             if (cartItem.slug !== slug) return;
             let liveStock;
-            if (cartItem.variant && product.variants?.length > 0) {
-              const v = product.variants.find((pv) => pv.id === cartItem.variant);
-              liveStock = v ? (v.stock ?? 0) : 0;
+            if (cartItem.variant && product.attribute_groups?.length > 0) {
+              // Find variant stock from attribute_groups structure
+              liveStock = 0;
+              for (const group of product.attribute_groups) {
+                for (const val of group.values || []) {
+                  for (const av of val.available_variants || val.available_sizes || []) {
+                    if (av.variant_id === cartItem.variant) {
+                      liveStock = av.stock ?? 0;
+                    }
+                  }
+                }
+              }
             } else {
               liveStock = product.stock ?? 0;
             }
@@ -225,7 +239,7 @@ export default function CheckoutPage() {
     setSubmitting(true);
 
     // Only send items that are confirmed in-stock
-    const validItems = items.filter((i) => (i.maxStock ?? 0) > 0);
+    const validItems = items.filter((i) => (i.maxStock ?? 1) > 0);
     if (validItems.length === 0) {
       toast.error('All items in your cart are out of stock.');
       setSubmitting(false);
@@ -583,17 +597,19 @@ export default function CheckoutPage() {
                     </p>
                   </div>
                 )}
-                {items.map((item, idx) => (
+                {items.map((item, idx) => {
+                    const isOOS = (item.maxStock ?? 1) <= 0;
+                    return (
                     <motion.div
                       key={`${item.product || item.id}-${item.variant || 'base'}`}
-                      className="flex gap-4"
+                      className={`flex gap-4 ${isOOS ? 'opacity-50' : ''}`}
                       initial={{ opacity: 0, x: 20 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: idx * 0.05 }}
                     >
                       <div className="w-16 h-16 bg-card rounded-xl overflow-hidden flex-shrink-0 border border-border flex items-center justify-center relative">
                         {item.thumbnail ? (
-                          <img src={item.thumbnail} alt={item.name} className="w-full h-full object-cover" />
+                          <Image src={item.thumbnail} alt={item.name} fill sizes="64px" className="object-cover" />
                         ) : (
                           <ShoppingBag className="w-5 h-5 text-muted-foreground opacity-30" />
                         )}
@@ -604,19 +620,21 @@ export default function CheckoutPage() {
                       <div className="flex-1 min-w-0 flex flex-col justify-center">
                         <p className="text-sm font-bold text-card-foreground line-clamp-1">{item.name}</p>
                         {item.variantLabel && <p className="text-xs text-muted-foreground font-medium mt-0.5">{item.variantLabel}</p>}
+                        {isOOS && <p className="text-xs text-red-500 font-semibold mt-0.5">Out of stock</p>}
                       </div>
                       <div className="flex items-center">
-                        <p className="text-sm font-black text-foreground flex-shrink-0">
-                          ${((Number.parseFloat(item.unitPrice || item.price || 0)) * item.quantity).toFixed(2)}
+                        <p className={`text-sm font-black flex-shrink-0 ${isOOS ? 'text-muted-foreground line-through' : 'text-foreground'}`}>
+                          {formatCurrency((Number.parseFloat(item.unitPrice || item.price || 0)) * item.quantity, currency)}
                         </p>
                       </div>
                     </motion.div>
-                  ))}
+                    );
+                  })}
                 </div>
                 <div className="border-t border-border pt-6 space-y-4 text-sm">
                   <div className="flex justify-between text-muted-foreground">
                     <span className="font-bold">Subtotal</span>
-                    <span className="font-black text-foreground">${subtotal.toFixed(2)}</span>
+                    <span className="font-black text-foreground">{formatCurrency(subtotal, currency)}</span>
                   </div>
                   <div className="flex justify-between text-muted-foreground">
                     <span className="font-bold">Shipping</span>
@@ -624,7 +642,7 @@ export default function CheckoutPage() {
                   </div>
                   <div className="border-t border-border/50 pt-4 flex justify-between items-center">
                     <span className="font-bold uppercase tracking-wider text-muted-foreground">Total</span>
-                    <span className="font-black text-foreground text-3xl">${subtotal.toFixed(2)}</span>
+                    <span className="font-black text-foreground text-3xl">{formatCurrency(subtotal, currency)}</span>
                   </div>
                 </div>
                 <Button

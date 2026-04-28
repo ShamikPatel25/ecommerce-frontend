@@ -49,10 +49,29 @@ export default function StoresPage() {
 
   const handleDelete = async () => {
     if (!deleteModal.store) return;
+
+    const storeToDelete = deleteModal.store;
+    const isActiveStore = activeStore?.id === storeToDelete.id;
+    const otherStores = stores.filter(s => s.id !== storeToDelete.id);
+
+    // If deleting the active store and other stores exist, block it
+    if (isActiveStore && otherStores.length > 0) {
+      toast.error('Switch to another store before deleting the active one.');
+      setDeleteModal({ open: false, store: null });
+      return;
+    }
+
     try {
-      await storeAPI.delete(deleteModal.store.id);
+      await storeAPI.delete(storeToDelete.id);
       toast.success('Store deleted!');
       setDeleteModal({ open: false, store: null });
+
+      // If it was the only store, clear active store
+      if (otherStores.length === 0) {
+        setActiveStore(null);
+        setGlobalStores([]);
+      }
+
       fetchStores();
     } catch {
       toast.error('Failed to delete store');

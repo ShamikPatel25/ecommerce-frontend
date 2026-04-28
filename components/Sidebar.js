@@ -27,11 +27,13 @@ export default function Sidebar() {
   const settingsDropdownRef = useRef(null);
 
   // Close sidebar on route change (mobile)
+  /* eslint-disable react-hooks/set-state-in-effect -- reset UI on route change */
   useEffect(() => {
     setOpen(false);
     setStoreDropdownOpen(false);
     setSettingsDropdownOpen(false);
   }, [pathname]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   // Close dropdowns on outside click
   useEffect(() => {
@@ -72,7 +74,7 @@ export default function Sidebar() {
       }
     };
     fetchStores();
-  }, []);
+  }, [activeStore, setActiveStore, setStores]);
 
   const handleStoreSwitch = (store) => {
     if (!store.is_active) {
@@ -86,20 +88,22 @@ export default function Sidebar() {
   };
 
   const menuItems = [
-    { name: 'Dashboard', href: '/dashboard', icon: '📊' },
+    { name: 'Dashboard', href: '/dashboard', icon: '📊', alwaysEnabled: true },
     { name: 'Orders', href: '/orders', icon: '🛒' },
     { name: 'Products', href: '/products', icon: '📦' },
     { name: 'Catalogs', href: '/catalogs', icon: '📚' },
     { name: 'Customers', href: '/customers', icon: '👥' },
-    { name: 'Stores', href: '/stores', icon: '🏪' },
+    { name: 'Stores', href: '/stores', icon: '🏪', alwaysEnabled: true },
     { name: 'Categories', href: '/categories', icon: '📁' },
     { name: 'Attributes', href: '/attributes', icon: '🏷️' },
   ];
 
+  const hasStore = !!activeStore;
+
   const storeName = activeStore?.name || 'No Store';
   const storeInitial = storeName.charAt(0).toUpperCase();
 
-  const NavContent = () => (
+  const renderNavContent = () => (
     <>
       {/* Brand */}
       <div className="p-6 border-b border-gray-800">
@@ -208,6 +212,24 @@ export default function Sidebar() {
       <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
         {menuItems.map((item) => {
           const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
+          const disabled = !hasStore && !item.alwaysEnabled;
+
+          if (disabled) {
+            return (
+              <div
+                key={item.href}
+                className="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-600 cursor-not-allowed"
+                title="Create a store first"
+              >
+                <span className="text-lg opacity-40">{item.icon}</span>
+                <span className="font-medium opacity-40">{item.name}</span>
+                <svg className="w-3.5 h-3.5 ml-auto opacity-30" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+              </div>
+            );
+          }
+
           return (
             <Link
               key={item.href}
@@ -339,12 +361,12 @@ export default function Sidebar() {
             <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
-        <NavContent />
+        {renderNavContent()}
       </div>
 
       {/* ── Desktop Fixed Sidebar ── */}
       <div className="hidden md:flex w-64 bg-gray-900 dark:bg-gray-950 text-white min-h-screen flex-col fixed left-0 top-0 border-r border-gray-800">
-        <NavContent />
+        {renderNavContent()}
       </div>
 
       <StoreDeactivatedModal

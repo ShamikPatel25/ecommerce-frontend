@@ -46,7 +46,7 @@ export default function EditAttributePage() {
     } finally {
       setLoading(false);
     }
-  }, [attributeId, router]);
+  }, [attributeId, router, setFormData]);
 
   useEffect(() => {
     fetchData();
@@ -139,9 +139,6 @@ export default function EditAttributePage() {
     router.push('/attributes');
   };
 
-  const getCategoryName = (catId) =>
-    categories.find((c) => String(c.id) === String(catId))?.name || '';
-
   /* ── loading ── */
   if (loading) return (
     <div className="min-h-[60vh] flex items-center justify-center">
@@ -153,7 +150,6 @@ export default function EditAttributePage() {
 
   const pendingCount = pendingDeletes.size;
   const pendingAddCount = pendingAdds.length;
-  const hasChanges = pendingCount > 0 || pendingAddCount > 0 || formData.name !== (attribute?.name || '') || formData.category !== String(attribute?.category || '');
 
   /* ──────────────────────────────────────────────────────────────── */
   return (

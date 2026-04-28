@@ -23,6 +23,17 @@ export const useStorefrontAuthStore = create(
         if (customer?.id) {
           useCartStore.getState().saveForUser(customer.id);
         }
+        // Only clear auth state — don't clear the cart on logout
+        // Cart is preserved so users can continue shopping after re-login
+        set({ customer: null, accessToken: null, refreshToken: null });
+      },
+
+      // Full logout with cart clear (for explicit user-initiated logout)
+      fullLogout: () => {
+        const { customer } = get();
+        if (customer?.id) {
+          useCartStore.getState().saveForUser(customer.id);
+        }
         useCartStore.getState().clearCart();
         set({ customer: null, accessToken: null, refreshToken: null });
       },

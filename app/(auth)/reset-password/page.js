@@ -1,14 +1,13 @@
 'use client';
 
 import { useState, useEffect, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { authAPI } from '@/lib/api';
 import { toast } from 'sonner';
 import { Lock, ShieldCheck, Loader2, AlertTriangle, CheckCircle, ArrowLeft } from 'lucide-react';
 
 function ResetPasswordForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const uid = searchParams.get('uid');
   const token = searchParams.get('token');

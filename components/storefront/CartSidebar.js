@@ -3,11 +3,14 @@
 import { useEffect, useRef, useState } from 'react';
 import PropTypes from 'prop-types';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useCartStore } from '@/store/cartStore';
 import { useStorefrontPath } from '@/lib/useStorefrontPath';
 import { storefrontAPI } from '@/lib/storefrontApi';
 import { X, ShoppingBag, Minus, Plus, Image as ImageIcon, AlertTriangle, Loader2 } from 'lucide-react';
 import { Button, buttonVariants } from '@/components/ui/button';
+import { formatCurrency } from '@/lib/utils';
+import { useStoreInfo } from '@/lib/StorefrontContext';
 
 export default function CartSidebar({ open, onClose }) {
   const items = useCartStore((s) => s.items);
@@ -16,11 +19,14 @@ export default function CartSidebar({ open, onClose }) {
   const removeOutOfStock = useCartStore((s) => s.removeOutOfStock);
   const updateItemStock = useCartStore((s) => s.updateItemStock);
   const { href } = useStorefrontPath();
+  const storeInfo = useStoreInfo();
+  const currency = storeInfo?.currency;
 
   const [validating, setValidating] = useState(false);
   const lastValidatedRef = useRef(null);
 
   // Validate live stock from API whenever cart opens
+  /* eslint-disable react-hooks/set-state-in-effect -- async validation */
   useEffect(() => {
     if (!open || items.length === 0) return;
 
@@ -46,10 +52,18 @@ export default function CartSidebar({ open, onClose }) {
             if (cartItem.slug !== slug) return;
 
             let liveStock;
-            if (cartItem.variant && product.variants?.length > 0) {
-              // Find the variant by id
-              const v = product.variants.find((pv) => pv.id === cartItem.variant);
-              liveStock = v ? (v.stock ?? 0) : 0;
+            if (cartItem.variant && product.attribute_groups?.length > 0) {
+              // Find variant stock from attribute_groups structure
+              liveStock = 0;
+              for (const group of product.attribute_groups) {
+                for (const val of group.values || []) {
+                  for (const av of val.available_variants || val.available_sizes || []) {
+                    if (av.variant_id === cartItem.variant) {
+                      liveStock = av.stock ?? 0;
+                    }
+                  }
+                }
+              }
             } else {
               liveStock = product.stock ?? 0;
             }
@@ -60,6 +74,7 @@ export default function CartSidebar({ open, onClose }) {
       })
       .finally(() => setValidating(false));
   }, [open, items.length]); // eslint-disable-line react-hooks/exhaustive-deps
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   // Only count in-stock items toward total
   const total = items.reduce((sum, item) => {
@@ -139,7 +154,7 @@ export default function CartSidebar({ open, onClose }) {
                     {/* Thumbnail */}
                     <div className="w-24 h-24 shrink-0 rounded-xl bg-muted border border-border overflow-hidden flex items-center justify-center relative">
                       {item.thumbnail ? (
-                        <img src={item.thumbnail} alt={item.name} className="w-full h-full object-cover" />
+                        <Image src={item.thumbnail} alt={item.name} fill sizes="96px" className="object-cover" />
                       ) : (
                         <ImageIcon className="w-8 h-8 text-muted-foreground opacity-30" />
                       )}
@@ -204,7 +219,7 @@ export default function CartSidebar({ open, onClose }) {
                           </div>
                         )}
                         <p className={`font-bold ${isOutOfStock ? 'text-muted-foreground line-through' : 'text-foreground'}`}>
-                          ${((item.unitPrice || item.price || 0) * item.quantity).toFixed(2)}
+                          {formatCurrency((item.unitPrice || item.price || 0) * item.quantity, currency)}
                         </p>
                       </div>
                     </div>
@@ -217,7 +232,7 @@ export default function CartSidebar({ open, onClose }) {
             <div className="p-6 border-t border-border bg-card">
               <div className="flex items-center justify-between font-black text-xl mb-2">
                 <span>Total</span>
-                <span>${total.toFixed(2)}</span>
+                <span>{formatCurrency(total, currency)}</span>
               </div>
               <p className="text-sm text-muted-foreground mb-6">Taxes and shipping calculated at checkout</p>
               <div className="grid grid-cols-1 gap-3">

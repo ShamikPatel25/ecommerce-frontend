@@ -8,7 +8,8 @@ import {
   Download, Search, ShoppingBag,
 } from 'lucide-react';
 import Pagination from '@/components/dashboard/Pagination';
-import { formatDate } from '@/lib/utils';
+import { formatDate, formatCurrency } from '@/lib/utils';
+import { useStoreStore } from '@/store/storeStore';
 
 const PER_PAGE = 10;
 
@@ -38,6 +39,7 @@ const STATUS_BADGE = {
 
 export default function OrdersPage() {
   const router = useRouter();
+  const { activeStore } = useStoreStore();
 
   const [orders,       setOrders]       = useState([]);
   const [loading,      setLoading]      = useState(true);
@@ -225,7 +227,7 @@ export default function OrdersPage() {
                             </td>
                             <td className="px-4 py-4">
                               <span className="text-sm font-bold text-slate-900 dark:text-white">
-                                ${Number.parseFloat(order.total_amount || 0).toLocaleString()}
+                                {formatCurrency(order.total_amount || 0, activeStore?.currency)}
                               </span>
                             </td>
                             <td className="px-4 py-4 whitespace-nowrap">

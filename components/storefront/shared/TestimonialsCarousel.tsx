@@ -1,7 +1,6 @@
 'use client';
 
 import { useRef } from 'react';
-import Image from 'next/image';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -71,11 +70,12 @@ export function TestimonialsCarousel({ testimonials }: { testimonials: Testimoni
                   </svg>
                 ))}
               </div>
-              <p className="text-card-foreground leading-relaxed italic mb-8">"{testimonial.content}"</p>
+              <p className="text-card-foreground leading-relaxed italic mb-8">&ldquo;{testimonial.content}&rdquo;</p>
             </div>
             <div className="flex items-center gap-4">
               <div className="relative w-12 h-12 rounded-full overflow-hidden flex-shrink-0">
-                <Image src={testimonial.avatar} alt={testimonial.name} fill className="object-cover" />
+                {/* eslint-disable-next-line @next/next/no-img-element -- external avatar URL */}
+                <img src={testimonial.avatar} alt={testimonial.name} className="object-cover w-full h-full" />
               </div>
               <div>
                 <h4 className="font-semibold text-sm text-card-foreground">{testimonial.name}</h4>

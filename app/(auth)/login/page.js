@@ -32,7 +32,7 @@ export default function LoginPage() {
       setAuth(user, tokens);
       toast.success('Login successful!');
       router.push('/dashboard');
-    } catch (error) {
+    } catch {
       setError('Invalid email or password. Please try again.');
     } finally {
       setLoading(false);

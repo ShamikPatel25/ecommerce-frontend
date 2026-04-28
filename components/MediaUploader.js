@@ -10,7 +10,6 @@ export default function MediaUploader({ productId, initialMedia = [], onMediaCha
   useEffect(() => {
     setMedia(initialMedia);
   }, [initialMedia]);
-  const [dragging, setDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [selectedAttrValue, setSelectedAttrValue] = useState('');
   const inputRef = useRef();
@@ -74,12 +73,6 @@ export default function MediaUploader({ productId, initialMedia = [], onMediaCha
     }
   };
 
-  const handleDrop = (e) => {
-    e.preventDefault();
-    setDragging(false);
-    handleFiles(e.dataTransfer.files);
-  };
-
   const [deletingId, setDeletingId] = useState(null);
   const [settingThumbId, setSettingThumbId] = useState(null);
 
@@ -123,12 +116,6 @@ export default function MediaUploader({ productId, initialMedia = [], onMediaCha
     } finally {
       setSettingThumbId(null);
     }
-  };
-
-  const getSelectedLabel = () => {
-    if (!selectedAttrValue) return 'General (Product Main)';
-    const av = attributeValues.find(v => String(v.id) === String(selectedAttrValue));
-    return av ? `${av.attribute_name}: ${av.value}` : 'General';
   };
 
   const renderMediaGrid = (items, label) => {

@@ -14,10 +14,17 @@ export const useCartStore = create(
         );
         if (existingIndex >= 0) {
           const updated = [...items];
+          const existing = updated[existingIndex];
+          const newMaxStock = item.maxStock ?? existing.maxStock;
+          let newQty = existing.quantity + item.quantity;
+          // Cap at maxStock if known
+          if (newMaxStock != null && newQty > newMaxStock) {
+            newQty = newMaxStock;
+          }
           updated[existingIndex] = {
-            ...updated[existingIndex],
-            quantity: updated[existingIndex].quantity + item.quantity,
-            maxStock: item.maxStock ?? updated[existingIndex].maxStock,
+            ...existing,
+            quantity: newQty,
+            maxStock: newMaxStock,
           };
           set({ items: updated });
         } else {
@@ -54,11 +61,12 @@ export const useCartStore = create(
           return;
         }
         set({
-          items: get().items.map((i) =>
-            (i.product || i.id) === product && i.variant === variant
-              ? { ...i, quantity }
-              : i
-          ),
+          items: get().items.map((i) => {
+            if (!((i.product || i.id) === product && i.variant === variant)) return i;
+            // Cap at maxStock if known
+            const capped = (i.maxStock != null && quantity > i.maxStock) ? i.maxStock : quantity;
+            return { ...i, quantity: capped };
+          }),
         });
       },
 

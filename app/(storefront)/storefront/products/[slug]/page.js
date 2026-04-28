@@ -1,10 +1,11 @@
-'use client';
-
-import { useParams } from 'next/navigation';
 import ProductDetailClient from '@/components/storefront/ProductDetailClient';
 
-export default function ProductPage() {
-  const { slug } = useParams();
-  if (!slug) return null;
+export const metadata = {
+  title: 'Product Details',
+  description: 'View product details, select variants, and add to cart.',
+};
+
+export default async function ProductPage({ params }) {
+  const { slug } = await params;
   return <ProductDetailClient slug={slug} initialVariantSku={null} />;
 }

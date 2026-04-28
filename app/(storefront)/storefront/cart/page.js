@@ -2,18 +2,23 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCartStore } from '@/store/cartStore';
 import { Minus, Plus, Trash2, ArrowRight, ShoppingBag } from 'lucide-react';
 import { PageTransition, MagneticButton } from '@/components/storefront/animations';
 import { useStorefrontPath } from '@/lib/useStorefrontPath';
+import { formatCurrency } from '@/lib/utils';
+import { useStoreInfo } from '@/lib/StorefrontContext';
 
 export default function CartPage() {
   const [hydrated, setHydrated] = useState(false);
   const { items, removeItem, updateQuantity } = useCartStore();
   const { href } = useStorefrontPath();
+  const storeInfo = useStoreInfo();
+  const currency = storeInfo?.currency;
 
-  useEffect(() => { setHydrated(true); }, []);
+  useEffect(() => { setHydrated(true); }, []); // eslint-disable-line react-hooks/set-state-in-effect -- hydration guard
 
   const subtotal = items.reduce((sum, item) => sum + Number.parseFloat(item.unitPrice || item.price || 0) * item.quantity, 0);
 
@@ -113,7 +118,7 @@ export default function CartPage() {
                       whileHover={{ scale: 1.05 }}
                     >
                       {item.thumbnail ? (
-                        <img src={item.thumbnail} alt={item.name} className="w-full h-full object-cover" />
+                        <Image src={item.thumbnail} alt={item.name} fill sizes="96px" className="object-cover" />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-gray-300">
                           <ShoppingBag className="w-8 h-8" />
@@ -131,7 +136,7 @@ export default function CartPage() {
                       <p className="text-sm text-gray-400 mt-1 font-medium">{item.variantLabel}</p>
                     )}
                     <p className="text-lg font-black bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent mt-2">
-                      ${Number.parseFloat(item.unitPrice || item.price || 0).toFixed(2)}
+                      {formatCurrency(item.unitPrice || item.price || 0, currency)}
                     </p>
 
                     <div className="flex items-center justify-between mt-4">
@@ -146,7 +151,8 @@ export default function CartPage() {
                         <span className="w-10 text-center text-sm font-bold">{item.quantity}</span>
                         <motion.button
                           onClick={() => updateQuantity(item.product || item.id, item.variant, item.quantity + 1)}
-                          className="p-2.5 text-gray-500 hover:text-gray-700 hover:bg-gray-50 transition-colors"
+                          disabled={item.maxStock != null && item.quantity >= item.maxStock}
+                          className="p-2.5 text-gray-500 hover:text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                           whileTap={{ scale: 0.9 }}
                         >
                           <Plus className="w-3.5 h-3.5" />
@@ -154,7 +160,7 @@ export default function CartPage() {
                       </div>
                       <div className="flex items-center gap-4">
                         <span className="font-black text-gray-900 text-lg">
-                          ${(Number.parseFloat(item.unitPrice || item.price || 0) * item.quantity).toFixed(2)}
+                          {formatCurrency(Number.parseFloat(item.unitPrice || item.price || 0) * item.quantity, currency)}
                         </span>
                         <motion.button
                           onClick={() => removeItem(item.product || item.id, item.variant)}
@@ -184,7 +190,7 @@ export default function CartPage() {
               <div className="space-y-4 text-sm">
                 <div className="flex justify-between text-gray-500">
                   <span className="font-medium">Subtotal ({items.reduce((s, i) => s + i.quantity, 0)} items)</span>
-                  <span className="font-bold text-gray-900">${subtotal.toFixed(2)}</span>
+                  <span className="font-bold text-gray-900">{formatCurrency(subtotal, currency)}</span>
                 </div>
                 <div className="flex justify-between text-gray-500">
                   <span className="font-medium">Shipping</span>
@@ -192,7 +198,7 @@ export default function CartPage() {
                 </div>
                 <div className="border-t-2 border-gray-200/50 pt-4 flex justify-between">
                   <span className="font-black text-gray-900 text-lg">Total</span>
-                  <span className="font-black text-gray-900 text-2xl">${subtotal.toFixed(2)}</span>
+                  <span className="font-black text-gray-900 text-2xl">{formatCurrency(subtotal, currency)}</span>
                 </div>
               </div>
               <Link href={href('/checkout')}>

@@ -1,6 +1,6 @@
 'use client';
 
-import { motion, useMotionValue, useSpring, useTransform, useInView, useScroll } from 'framer-motion';
+import { motion, useMotionValue, useSpring, useTransform, useInView } from 'framer-motion';
 import { useRef, useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 
@@ -10,6 +10,7 @@ export function ScrollReveal({ children, className = '', delay = 0, direction = 
   const isInView = useInView(ref, { once: true, margin: '-60px' });
   const [hasMounted, setHasMounted] = useState(false);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- SSR hydration guard
   useEffect(() => { setHasMounted(true); }, []);
 
   const directions = {
@@ -49,6 +50,7 @@ export function StaggerContainer({ children, className = '', staggerDelay = 0.1 
   const isInView = useInView(ref, { once: true, margin: '-40px' });
   const [hasMounted, setHasMounted] = useState(false);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- SSR hydration guard
   useEffect(() => { setHasMounted(true); }, []);
 
   if (!hasMounted) {
@@ -252,6 +254,7 @@ GlowCard.propTypes = {
 /* ─── Page Transition Wrapper (SSR-safe) ─── */
 export function PageTransition({ children, className = '' }) {
   const [hasMounted, setHasMounted] = useState(false);
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- SSR hydration guard
   useEffect(() => { setHasMounted(true); }, []);
 
   if (!hasMounted) {
@@ -281,6 +284,7 @@ export function TextReveal({ children, className = '', delay = 0 }) {
   const isInView = useInView(ref, { once: true, margin: '-20px' });
   const [hasMounted, setHasMounted] = useState(false);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- SSR hydration guard
   useEffect(() => { setHasMounted(true); }, []);
 
   if (!hasMounted) {
@@ -309,6 +313,7 @@ TextReveal.propTypes = {
 /* ─── Horizontal Scroll Marquee (SSR-safe) ─── */
 export function Marquee({ children, className = '', speed = 30, direction = 'left' }) {
   const [hasMounted, setHasMounted] = useState(false);
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- SSR hydration guard
   useEffect(() => { setHasMounted(true); }, []);
 
   if (!hasMounted) {

@@ -33,7 +33,7 @@ export default function EditStorePage() {
     name:        '',
     subdomain:   '',
     description: '',
-    currency:    'USD',
+    currency:    'INR',
     is_active:   true,
   });
 
@@ -54,7 +54,7 @@ export default function EditStorePage() {
     } finally {
       setLoading(false);
     }
-  }, [storeId, router]);
+  }, [storeId, router, setFormData]);
 
   useEffect(() => {
     fetchStore();
@@ -157,11 +157,10 @@ export default function EditStorePage() {
                   value={formData.currency}
                   onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
                 >
-                  <option value="USD">USD — US Dollar</option>
-                  <option value="EUR">EUR — Euro</option>
-                  <option value="GBP">GBP — British Pound</option>
-                  <option value="INR">INR — Indian Rupee</option>
-                  <option value="JPY">JPY — Japanese Yen</option>
+                  <option value="INR">INR — Indian Rupee (₹)</option>
+                  <option value="USD">USD — US Dollar ($)</option>
+                  <option value="EUR">EUR — Euro (€)</option>
+                  <option value="GBP">GBP — British Pound (£)</option>
                 </select>
                 <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-gray-500 pointer-events-none" />
               </div>

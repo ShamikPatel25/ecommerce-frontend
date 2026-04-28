@@ -181,7 +181,6 @@ export default function CreateProductPage() {
   const [submitting,          setSubmitting]          = useState(false);
   const [images,              setImages]              = useState([]);
   const imagesRef = useRef([]);
-  const [dragOver,            setDragOver]            = useState(false);
   const fileInputRef = useRef(null);
 
   // Step 2: catalog variant builder
@@ -244,7 +243,7 @@ export default function CreateProductPage() {
   useEffect(() => {
     if (formData.product_type !== 'catalog' || selectedAttributes.length === 0 || attributes.length === 0) return;
     setImages((prev) => reclassifyImages(prev, selectedAttributes, attributes));
-  }, [selectedAttributes, attributes, formData.product_type]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [selectedAttributes, attributes, formData.product_type]);
 
   const addImageEntry = (result, file) => {
     const manual = selectedUploadAttr || null;
@@ -262,12 +261,6 @@ export default function CreateProductPage() {
       reader.onload = (e) => addImageEntry(e.target.result, file);
       reader.readAsDataURL(file);
     });
-  };
-
-  const handleDrop = (e) => {
-    e.preventDefault();
-    setDragOver(false);
-    addFiles(e.dataTransfer.files);
   };
 
   const removeImage = (idx) => {

@@ -4,11 +4,13 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
 import { storeAPI, categoryAPI, productAPI, orderAPI } from '@/lib/api';
+import { useStoreStore } from '@/store/storeStore';
+import { formatCurrency } from '@/lib/utils';
 import { toast } from 'sonner';
 import Link from 'next/link';
 import TopBar from '@/components/TopBar';
 import {
-  DollarSign, ShoppingBag, Package, Users,
+  TrendingUp, ShoppingBag, Package, Users,
   AlertTriangle, Plus, FolderPlus,
   Tags, ShoppingCart,
 } from 'lucide-react';
@@ -51,9 +53,9 @@ function getInitials(name) {
 export default function DashboardPage() {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
+  const { activeStore } = useStoreStore();
   const screenWidth = useWindowWidth();
   const isMobile = screenWidth < 640;
-  const isTablet = screenWidth < 1024;
 
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({});
@@ -133,7 +135,7 @@ export default function DashboardPage() {
       });
     }
     return days;
-  }, [allOrders]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [allOrders]);
 
   // Status distribution for pie (with fill colors embedded to avoid deprecated Cell)
   const statusData = useMemo(() => {
@@ -166,8 +168,8 @@ export default function DashboardPage() {
   const statCards = [
     {
       label: 'Total Sales',
-      value: loading ? '\u2014' : `$${Number.parseFloat(stats.revenue || 0).toLocaleString(undefined, { minimumFractionDigits: 0 })}`,
-      icon: <DollarSign size={22} />,
+      value: loading ? '\u2014' : formatCurrency(stats.revenue || 0, activeStore?.currency),
+      icon: <TrendingUp size={22} />,
       sub: 'Excluding cancelled orders',
       href: '/orders',
     },
@@ -251,7 +253,7 @@ export default function DashboardPage() {
                   {order.items?.length || 0} {(order.items?.length || 0) === 1 ? 'Item' : 'Items'}
                 </td>
                 <td className="px-6 py-4 text-sm font-bold text-slate-900 dark:text-white">
-                  ${Number.parseFloat(order.total_amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  {formatCurrency(order.total_amount || 0, activeStore?.currency)}
                 </td>
                 <td className="px-6 py-4">
                   <span className={`px-2.5 py-1 rounded-full text-xs font-bold uppercase ${STATUS_STYLES[order.status] || 'bg-gray-100 text-gray-600'}`}>
@@ -409,7 +411,7 @@ export default function DashboardPage() {
                         }}
                         formatter={(value, name) =>
                           name === 'Revenue'
-                            ? [`$${Number.parseFloat(value).toLocaleString(undefined, { minimumFractionDigits: 2 })}`, 'Revenue']
+                            ? [formatCurrency(value, activeStore?.currency), 'Revenue']
                             : [value, 'Orders']
                         }
                         cursor={{ stroke: '#ff6600', strokeWidth: 1, strokeDasharray: '4 4' }}
@@ -550,7 +552,7 @@ export default function DashboardPage() {
                         if (isMobile) {
                           return v >= 1000 ? `$${(v / 1000).toFixed(0)}k` : `$${v}`;
                         }
-                        return `$${v.toLocaleString()}`;
+                        return formatCurrency(v, activeStore?.currency);
                       }}
                       width={isMobile ? 40 : 60}
                       axisLine={false}
@@ -565,7 +567,7 @@ export default function DashboardPage() {
                           <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg px-3 py-2 sm:px-4 sm:py-3 text-xs sm:text-sm">
                             <p className="font-semibold text-slate-900 dark:text-white">{name}</p>
                             <p className="text-orange-600 font-bold mt-1">
-                              ${Number.parseFloat(revenue).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                              {formatCurrency(revenue, activeStore?.currency)}
                             </p>
                           </div>
                         );

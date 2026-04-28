@@ -44,7 +44,7 @@ export default function SettingsPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [setProfileData]);
 
   useEffect(() => {
     fetchProfile();

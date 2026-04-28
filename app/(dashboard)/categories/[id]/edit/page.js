@@ -46,7 +46,7 @@ export default function EditCategoryPage() {
     } finally {
       setLoading(false);
     }
-  }, [categoryId, router]);
+  }, [categoryId, router, setFormData]);
 
   useEffect(() => {
     fetchData();

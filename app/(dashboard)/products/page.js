@@ -7,6 +7,8 @@ import { toast } from 'sonner';
 import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
 import { Plus, Search, MoreHorizontal, Trash2, Eye, EyeOff } from 'lucide-react';
 import Pagination from '@/components/dashboard/Pagination';
+import { formatCurrency } from '@/lib/utils';
+import { useStoreStore } from '@/store/storeStore';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -16,6 +18,7 @@ import {
  
 export default function ProductsPage() {
   const router = useRouter();
+  const { activeStore } = useStoreStore();
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -297,7 +300,7 @@ export default function ProductsPage() {
                             {/* Price */}
                             <td className="px-4 py-4">
                               <span className="text-sm font-bold text-slate-900 dark:text-white">
-                                ${Number.parseFloat(product.price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                {formatCurrency(product.price, activeStore?.currency)}
                               </span>
                             </td>
 

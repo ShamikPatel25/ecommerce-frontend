@@ -9,6 +9,8 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import Pagination from '@/components/dashboard/Pagination';
+import { formatCurrency } from '@/lib/utils';
+import { useStoreStore } from '@/store/storeStore';
 
 const PER_PAGE = 10;
 
@@ -40,6 +42,7 @@ function statusLabel(s) {
 }
 
 export default function CustomersPage() {
+  const { activeStore } = useStoreStore();
   const [customers,      setCustomers]      = useState([]);
   const [loading,        setLoading]        = useState(true);
   const [searchQuery,    setSearchQuery]    = useState('');
@@ -205,7 +208,7 @@ export default function CustomersPage() {
                               </td>
                               <td className="px-4 py-4 text-right">
                                 <span className="text-sm font-bold text-slate-900 dark:text-white">
-                                  ${Number.parseFloat(customer.total_spent || 0).toLocaleString()}
+                                  {formatCurrency(customer.total_spent || 0, activeStore?.currency)}
                                 </span>
                               </td>
                               <td className="px-4 py-4 text-sm text-slate-400 dark:text-gray-500 text-right whitespace-nowrap">
@@ -263,7 +266,7 @@ export default function CustomersPage() {
                                               </div>
                                               <div className="flex items-center gap-4">
                                                 <span className="text-sm font-semibold text-slate-900 dark:text-white">
-                                                  ${Number.parseFloat(order.total_amount || 0).toLocaleString()}
+                                                  {formatCurrency(order.total_amount || 0, activeStore?.currency)}
                                                 </span>
                                                 <span className="text-xs text-slate-400 dark:text-gray-500">
                                                   {formatDate(order.created_at)}

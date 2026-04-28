@@ -9,7 +9,8 @@ import {
   Mail, Phone, MapPin, Save, CheckCircle2, Clock,
   ChevronDown, Loader2, Info, XCircle, RotateCcw,
 } from 'lucide-react';
-import { formatDateTime } from '@/lib/utils';
+import { formatDateTime, formatCurrency } from '@/lib/utils';
+import { useStoreStore } from '@/store/storeStore';
 
 const STATUS_STYLES = {
   pending:          'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 border-yellow-200',
@@ -58,6 +59,7 @@ const PROGRESS_STEPS = [
 export default function OrderDetailPage() {
   const router = useRouter();
   const { id }  = useParams();
+  const { activeStore } = useStoreStore();
 
   const [order,        setOrder]        = useState(null);
   const [loading,      setLoading]      = useState(true);
@@ -286,6 +288,7 @@ export default function OrderDetailPage() {
             <Printer className="w-4 h-4" />
             Print Invoice
           </button>
+          {(VALID_TRANSITIONS[order.status] || []).includes('shipped') && (
           <button
             onClick={() => { setNewStatus('shipped'); }}
             className="flex items-center gap-2 px-4 py-2 bg-[#ff6600] text-white rounded-lg text-sm font-bold shadow-lg shadow-orange-500/20 hover:bg-[#ff6600]/90 transition-all"
@@ -293,6 +296,7 @@ export default function OrderDetailPage() {
             <Truck className="w-4 h-4" />
             Fulfill Order
           </button>
+          )}
         </div>
       </div>
 
@@ -373,12 +377,12 @@ export default function OrderDetailPage() {
 
                           {/* Unit price */}
                           <td className="px-6 py-4 text-right text-sm text-slate-500 dark:text-gray-400">
-                            ${Number.parseFloat(item.unit_price).toLocaleString()}
+                            {formatCurrency(item.unit_price, activeStore?.currency)}
                           </td>
 
                           {/* Line total */}
                           <td className="px-6 py-4 text-right text-sm font-semibold text-slate-900 dark:text-white">
-                            ${(Number.parseFloat(item.unit_price) * item.quantity).toLocaleString()}
+                            {formatCurrency(Number.parseFloat(item.unit_price) * item.quantity, activeStore?.currency)}
                           </td>
 
                           {/* Stock */}
@@ -396,7 +400,7 @@ export default function OrderDetailPage() {
                       <tr>
                         <td colSpan={3} className="px-6 py-3 text-right text-sm text-slate-500 dark:text-gray-400">Subtotal</td>
                         <td className="px-6 py-3 text-right text-sm font-medium text-slate-700 dark:text-gray-300" colSpan={2}>
-                          ${Number.parseFloat(order.subtotal).toLocaleString()}
+                          {formatCurrency(order.subtotal, activeStore?.currency)}
                         </td>
                       </tr>
                     )}
@@ -404,14 +408,14 @@ export default function OrderDetailPage() {
                       <tr>
                         <td colSpan={3} className="px-6 py-3 text-right text-sm text-slate-500 dark:text-gray-400">Shipping</td>
                         <td className="px-6 py-3 text-right text-sm font-medium text-slate-700 dark:text-gray-300" colSpan={2}>
-                          ${Number.parseFloat(order.shipping_cost).toLocaleString()}
+                          {formatCurrency(order.shipping_cost, activeStore?.currency)}
                         </td>
                       </tr>
                     )}
                     <tr>
                       <td colSpan={3} className="px-6 py-4 text-right text-slate-900 dark:text-white font-bold">Total</td>
                       <td className="px-6 py-4 text-right text-xl font-black text-[#ff6600]" colSpan={2}>
-                        ${Number.parseFloat(order.total_amount).toLocaleString()}
+                        {formatCurrency(order.total_amount, activeStore?.currency)}
                       </td>
                     </tr>
                   </tfoot>

@@ -9,7 +9,6 @@ import { toast } from 'sonner';
 import {
   ArrowLeft, ChevronRight, ChevronDown, Loader2, Store,
 } from 'lucide-react';
-import { getStoreUrl } from '@/lib/subdomain';
 
 const INPUT_CLS =
   'w-full rounded-lg border border-[#ff6600]/20 bg-[#ff6600]/5 px-4 py-3 text-slate-900 ' +
@@ -27,7 +26,7 @@ export default function CreateStorePage() {
     name: '',
     subdomain: '',
     description: '',
-    currency: 'USD',
+    currency: 'INR',
   });
 
   const handleSubmit = async (e) => {
@@ -113,11 +112,10 @@ export default function CreateStorePage() {
                   value={formData.currency}
                   onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
                 >
-                  <option value="USD">USD — US Dollar</option>
-                  <option value="EUR">EUR — Euro</option>
-                  <option value="GBP">GBP — British Pound</option>
-                  <option value="INR">INR — Indian Rupee</option>
-                  <option value="JPY">JPY — Japanese Yen</option>
+                  <option value="INR">INR — Indian Rupee (₹)</option>
+                  <option value="USD">USD — US Dollar ($)</option>
+                  <option value="EUR">EUR — Euro (€)</option>
+                  <option value="GBP">GBP — British Pound (£)</option>
                 </select>
                 <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-gray-500 pointer-events-none" />
               </div>

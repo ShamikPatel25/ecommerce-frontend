@@ -160,7 +160,7 @@ export default function AuthModal({ open, onClose, initialTab = 'signin' }) {
 
                 <div className="text-center pt-4 border-t border-border mt-6">
                   <p className="text-sm text-muted-foreground">
-                    Don't have an account?{' '}
+                    Don&apos;t have an account?{' '}
                     <button type="button" className="text-primary font-bold hover:underline underline-offset-4" onClick={() => switchTab('signup')}>
                       Sign Up
                     </button>

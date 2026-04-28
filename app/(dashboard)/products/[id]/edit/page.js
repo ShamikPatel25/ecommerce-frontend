@@ -87,7 +87,7 @@ export default function EditProductPage() {
     } finally {
       setLoading(false);
     }
-  }, [productId, router]);
+  }, [productId, router, setFormData]);
 
   useEffect(() => {
     fetchData();

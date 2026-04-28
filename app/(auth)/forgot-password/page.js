@@ -1,31 +1,23 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { authAPI } from '@/lib/api';
 import { toast } from 'sonner';
 import { Mail, ArrowLeft, Loader2, CheckCircle } from 'lucide-react';
 
 export default function ForgotPasswordPage() {
-  const router = useRouter();
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
-  const [notFound, setNotFound] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setNotFound(false);
     try {
-      const res = await authAPI.forgotPassword(email.trim().toLowerCase());
-      if (res.data.found) {
-        // Email exists — go directly to reset password page
-        router.push(`/reset-password?uid=${res.data.uid}&token=${res.data.token}`);
-      } else {
-        // Email not in DB — show fake "sent" message
-        setNotFound(true);
-      }
+      await authAPI.forgotPassword(email.trim().toLowerCase());
+      // Always show success — backend returns the same message whether email exists or not
+      setSubmitted(true);
     } catch {
       toast.error('Something went wrong. Please try again.');
     } finally {
@@ -37,7 +29,7 @@ export default function ForgotPasswordPage() {
     <div className="flex min-h-screen w-full items-center justify-center p-4 bg-gradient-to-br from-slate-50 to-slate-200">
       <div className="w-full max-w-[440px] bg-white rounded-xl shadow-2xl p-8 md:p-10 border border-slate-100">
 
-        {notFound ? (
+        {submitted ? (
           /* ── Fake "sent" message (email not in DB — don't reveal it) ── */
           <div className="flex flex-col items-center text-center">
             <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mb-6">

@@ -1,15 +1,19 @@
 'use client';
 
 import Link from 'next/link';
-import { Star, ShoppingCart, Heart } from 'lucide-react';
+import Image from 'next/image';
+import { ShoppingCart, Heart } from 'lucide-react';
 import { useCartStore } from '@/store/cartStore';
 import { Button } from '@/components/ui/button';
-import { calcDiscountPercent } from '@/lib/utils';
+import { calcDiscountPercent, formatCurrency } from '@/lib/utils';
+import { useStoreInfo } from '@/lib/StorefrontContext';
 import { toast } from 'sonner';
 import PropTypes from 'prop-types';
 
 export function ProductCard({ product, href }) {
   const addItem = useCartStore((state) => state.addItem);
+  const storeInfo = useStoreInfo();
+  const currency = storeInfo?.currency;
 
   const hasDiscount = product.compare_at_price && Number.parseFloat(product.compare_at_price) > Number.parseFloat(product.price);
   const discount = calcDiscountPercent(product.price, product.compare_at_price);
@@ -41,10 +45,12 @@ export function ProductCard({ product, href }) {
       <Link href={href(`/products/${product.slug}`)}>
         <div className="relative aspect-square overflow-hidden rounded-xl bg-card border border-border mb-4 flex items-center justify-center">
           {product.thumbnail ? (
-             <img
+             <Image
               src={product.thumbnail}
               alt={product.name}
-              className="object-cover w-full h-full transition-transform duration-500 group-hover:scale-105"
+              fill
+              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+              className="object-cover transition-transform duration-500 group-hover:scale-105"
              />
           ) : (
             <div className="w-full h-full bg-zinc-800 flex items-center justify-center text-zinc-600 text-4xl font-bold uppercase transition-transform duration-500 group-hover:scale-105">
@@ -72,12 +78,7 @@ export function ProductCard({ product, href }) {
         </div>
         
         <div className="space-y-1 mt-4">
-          <div className="flex items-center gap-1.5 text-muted-foreground text-xs font-medium mb-2">
-            <Star className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400" />
-            <span>4.9</span>
-            <span className="text-muted-foreground">(24)</span>
-          </div>
-          
+
           <h3 className="font-semibold text-base leading-tight line-clamp-1 group-hover:text-primary transition-colors text-card-foreground">
             {product.name}
           </h3>
@@ -85,9 +86,9 @@ export function ProductCard({ product, href }) {
           
           <div className="flex items-center justify-between pt-3">
             <div className="flex items-center gap-2">
-               <p className="font-bold text-lg">${Number.parseFloat(product.price).toFixed(2)}</p>
+               <p className="font-bold text-lg">{formatCurrency(product.price, currency)}</p>
                {hasDiscount && (
-                 <p className="text-muted-foreground text-sm line-through">${Number.parseFloat(product.compare_at_price).toFixed(2)}</p>
+                 <p className="text-muted-foreground text-sm line-through">{formatCurrency(product.compare_at_price, currency)}</p>
                )}
             </div>
             {!isOutOfStock && (

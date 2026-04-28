@@ -1,15 +1,16 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
 import { productAPI } from '@/lib/api';
 import { toast } from 'sonner';
 import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
 import { Search, Trash2 } from 'lucide-react';
 import Pagination from '@/components/dashboard/Pagination';
+import { formatCurrency } from '@/lib/utils';
+import { useStoreStore } from '@/store/storeStore';
 
 export default function CatalogsPage() {
-  const router = useRouter();
+  const { activeStore } = useStoreStore();
   const [catalogs, setCatalogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -51,7 +52,7 @@ export default function CatalogsPage() {
 
   const handleDelete = async () => {
     if (!deleteModal.variant) return;
-    const { product_id, id, variant_name, sku } = deleteModal.variant;
+    const { product_id, id } = deleteModal.variant;
     try {
       await productAPI.deleteVariant(product_id, id);
       toast.success('Variant deleted!');
@@ -191,7 +192,7 @@ export default function CatalogsPage() {
                             {/* Price */}
                             <td className="px-6 py-4">
                               <span className="text-sm font-bold text-slate-900 dark:text-white">
-                                ${parseFloat(variant.price ?? variant.product_price ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                {formatCurrency(variant.price ?? variant.product_price ?? 0, activeStore?.currency)}
                               </span>
                             </td>
 

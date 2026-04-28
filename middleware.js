@@ -52,8 +52,15 @@ export function middleware(request) {
     if (isAdminPath) {
       const url = request.nextUrl.clone();
       url.hostname = baseHostname;
-      url.port = request.nextUrl.port || '3000';
-      url.host = `${url.hostname}${url.port ? ':' + url.port : ''}`;
+      // Use the original port — don't hardcode 3000 for production
+      const port = request.nextUrl.port;
+      if (port) {
+        url.port = port;
+        url.host = `${url.hostname}:${port}`;
+      } else {
+        url.port = '';
+        url.host = url.hostname;
+      }
       return NextResponse.redirect(url);
     }
 
@@ -81,6 +88,12 @@ export function middleware(request) {
 
     response.cookies.set('x-tenant', subdomain, {
       path: '/',
+      httpOnly: true,
+      sameSite: 'lax',
+    });
+    // Readable by client JS for API X-Tenant header (subdomain is not secret)
+    response.cookies.set('x-tenant-name', subdomain, {
+      path: '/',
       httpOnly: false,
       sameSite: 'lax',
     });
@@ -90,6 +103,7 @@ export function middleware(request) {
   // No subdomain → admin panel (existing behavior)
   const response = NextResponse.next();
   response.cookies.delete('x-tenant');
+  response.cookies.delete('x-tenant-name');
   return response;
 }
 
