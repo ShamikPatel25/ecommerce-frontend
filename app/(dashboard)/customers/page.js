@@ -27,14 +27,14 @@ function customerKey(c) {
 }
 
 const STATUS_BADGE = {
-  pending:          { dot: 'bg-slate-400',    pill: 'bg-slate-100  dark:bg-gray-700   text-slate-600 dark:text-gray-300' },
-  confirmed:        { dot: 'bg-blue-500',     pill: 'bg-blue-50    dark:bg-blue-900/30   text-blue-700 dark:text-blue-400' },
-  processing:       { dot: 'bg-orange-500',   pill: 'bg-orange-50  dark:bg-orange-900/30 text-orange-700 dark:text-orange-400' },
-  shipped:          { dot: 'bg-cyan-500',     pill: 'bg-cyan-50    dark:bg-cyan-900/30   text-cyan-700 dark:text-cyan-400' },
-  delivered:        { dot: 'bg-green-500',    pill: 'bg-green-50   dark:bg-green-900/30  text-green-700 dark:text-green-400' },
-  cancelled:        { dot: 'bg-red-500',      pill: 'bg-red-50     dark:bg-red-900/30    text-red-700 dark:text-red-400' },
-  return_requested: { dot: 'bg-amber-500',    pill: 'bg-amber-50   dark:bg-amber-900/30  text-amber-700 dark:text-amber-400' },
-  returned:         { dot: 'bg-purple-500',   pill: 'bg-purple-50  dark:bg-purple-900/30 text-purple-700 dark:text-purple-400' },
+  pending:          { dot: 'bg-yellow-500', pill: 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20' },
+  confirmed:        { dot: 'bg-blue-500',   pill: 'bg-blue-500/10 text-blue-400 border border-blue-500/20' },
+  processing:       { dot: 'bg-orange-500', pill: 'bg-orange-500/10 text-orange-400 border border-orange-500/20' },
+  shipped:          { dot: 'bg-emerald-500', pill: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' },
+  delivered:        { dot: 'bg-green-500',  pill: 'bg-green-500/10 text-green-400 border border-green-500/20' },
+  cancelled:        { dot: 'bg-red-500',    pill: 'bg-red-500/10 text-red-400 border border-red-500/20' },
+  return_requested: { dot: 'bg-amber-500',  pill: 'bg-amber-500/10 text-amber-400 border border-amber-500/20' },
+  returned:         { dot: 'bg-purple-500', pill: 'bg-purple-500/10 text-purple-400 border border-purple-500/20' },
 };
 
 function statusLabel(s) {
@@ -118,24 +118,24 @@ export default function CustomersPage() {
   );
 
   return (
-    <div className="p-4 md:p-8">
-      <div className="max-w-6xl mx-auto">
+    <div className="admin-page">
+      <div className="admin-container">
         {/* Page Header */}
-        <div className="flex flex-wrap justify-between items-end gap-4 mb-8">
+        <div className="admin-page-header">
           <div>
-            <h2 className="text-slate-900 dark:text-white text-3xl font-black leading-tight tracking-tight">Customers</h2>
-            <p className="text-slate-500 dark:text-gray-400 text-sm mt-1">View and manage your customer base and their order history.</p>
+            <h2 className="admin-title">Customers</h2>
+            <p className="admin-subtitle">View and manage your customer base and their order history.</p>
           </div>
         </div>
 
         {/* Search Bar */}
-        <div className="mb-6">
-          <div className="flex w-full items-stretch rounded-xl h-12 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden focus-within:ring-2 focus-within:ring-orange-500/20 transition-all">
-            <div className="text-slate-400 dark:text-gray-500 flex items-center justify-center px-4">
+        <div className="admin-search-wrapper">
+          <div className="admin-search-box">
+            <div className="admin-search-icon">
               <Search size={20} />
             </div>
             <input
-              className="flex-1 bg-transparent border-none focus:ring-0 focus:outline-none text-slate-900 dark:text-white text-base placeholder:text-slate-400 dark:placeholder:text-gray-500"
+              className="admin-search-input"
               placeholder="Search customers by name or email..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -144,10 +144,10 @@ export default function CustomersPage() {
         </div>
 
         {/* DataTable Container */}
-        <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden shadow-sm">
+        <div className="admin-table-card">
           {loading ? (
-            <div className="p-12 flex items-center justify-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div>
+            <div className="admin-loading">
+              <div className="admin-spinner"></div>
             </div>
           ) : (
             <>
@@ -161,19 +161,19 @@ export default function CustomersPage() {
                 </div>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse min-w-[800px]">
+                  <table className="admin-table min-w-[800px]">
                     <thead>
-                      <tr className="bg-slate-50 dark:bg-gray-700/50 text-slate-600 dark:text-gray-300">
-                        <th className="px-4 py-4 text-xs font-bold uppercase tracking-wider">Customer</th>
-                        <th className="px-4 py-4 text-xs font-bold uppercase tracking-wider">Email</th>
-                        <th className="px-4 py-4 text-xs font-bold uppercase tracking-wider">Phone</th>
-                        <th className="px-4 py-4 text-xs font-bold uppercase tracking-wider text-center">Orders</th>
-                        <th className="px-4 py-4 text-xs font-bold uppercase tracking-wider text-right">Total Spent</th>
-                        <th className="px-4 py-4 text-xs font-bold uppercase tracking-wider text-right">Last Order</th>
+                      <tr className="admin-thead-row">
+                        <th className="admin-th">Customer</th>
+                        <th className="admin-th">Email</th>
+                        <th className="admin-th">Phone</th>
+                        <th className="admin-th text-center">Orders</th>
+                        <th className="admin-th text-right">Total Spent</th>
+                        <th className="admin-th text-right">Last Order</th>
                         <th className="w-10" />
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100 dark:divide-gray-700">
+                    <tbody className="admin-tbody">
                       {paginatedCustomers.map((customer, idx) => {
                         const key = customerKey(customer);
                         const isExpanded = expandedKey === key;
@@ -181,40 +181,40 @@ export default function CustomersPage() {
                           <Fragment key={key + `-${idx}`}>
                             <tr
                               onClick={() => toggleExpand(customer)}
-                              className={`transition-colors cursor-pointer group ${isExpanded ? 'bg-orange-50/50 dark:bg-orange-900/10' : 'hover:bg-slate-50/50 dark:hover:bg-gray-700'}`}
+                              className={`admin-tr group ${isExpanded ? 'bg-orange-50/50 dark:bg-orange-900/10' : ''}`}
                             >
-                              <td className="px-4 py-4">
+                              <td className="admin-td">
                                 <div className="flex items-center gap-3">
-                                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-500 to-orange-400 flex items-center justify-center text-white font-bold text-xs shrink-0">
+                                  <div className="w-8 h-8 rounded-full bg-indigo-500/10 flex items-center justify-center text-indigo-400 font-bold text-xs shrink-0">
                                     {customer.customer_name?.charAt(0)?.toUpperCase() || '?'}
                                   </div>
                                   <p className="text-sm font-semibold text-slate-900 dark:text-white">{customer.customer_name}</p>
                                 </div>
                               </td>
-                              <td className="px-4 py-4">
+                              <td className="admin-td">
                                 <span className="text-sm text-slate-500 dark:text-gray-400">
                                   {customer.customer_email || <span className="text-slate-300 dark:text-gray-600 italic">Not provided</span>}
                                 </span>
                               </td>
-                              <td className="px-4 py-4">
+                              <td className="admin-td">
                                 <span className="text-sm text-slate-500 dark:text-gray-400">
                                   {customer.customer_phone || <span className="text-slate-300 dark:text-gray-600 italic">Not provided</span>}
                                 </span>
                               </td>
-                              <td className="px-4 py-4 text-center">
+                              <td className="admin-td text-center">
                                 <span className="inline-flex items-center justify-center min-w-[28px] px-2 py-0.5 rounded-full bg-slate-100 dark:bg-gray-700 text-sm font-bold text-slate-700 dark:text-gray-300">
                                   {customer.total_orders ?? 0}
                                 </span>
                               </td>
-                              <td className="px-4 py-4 text-right">
+                              <td className="admin-td text-right">
                                 <span className="text-sm font-bold text-slate-900 dark:text-white">
                                   {formatCurrency(customer.total_spent || 0, activeStore?.currency)}
                                 </span>
                               </td>
-                              <td className="px-4 py-4 text-sm text-slate-400 dark:text-gray-500 text-right whitespace-nowrap">
+                              <td className="admin-td text-sm text-slate-400 dark:text-gray-500 text-right whitespace-nowrap">
                                 {formatDate(customer.last_order)}
                               </td>
-                              <td className="px-4 py-4 text-slate-400 dark:text-gray-500">
+                              <td className="admin-td text-slate-400 dark:text-gray-500">
                                 {isExpanded
                                   ? <ChevronUp   className="w-4 h-4" />
                                   : <ChevronDown className="w-4 h-4" />

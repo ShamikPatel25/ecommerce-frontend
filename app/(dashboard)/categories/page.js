@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { categoryAPI } from '@/lib/api';
 import { toast } from 'sonner';
@@ -9,6 +9,7 @@ import {
   Plus, Search,
   Trash2, MoreHorizontal,
   Tag, Eye, EyeOff,
+  SlidersHorizontal,
 } from 'lucide-react';
 import Pagination from '@/components/dashboard/Pagination';
 import {
@@ -55,6 +56,19 @@ export default function CategoriesPage() {
   const [page,         setPage]         = useState(1);
   const [deleteModal,  setDeleteModal]  = useState(null);
   const [deleting,     setDeleting]     = useState(false);
+  const [filterOpen,   setFilterOpen]   = useState(false);
+  const filterRef = useRef(null);
+
+  useEffect(() => {
+    if (!filterOpen) return;
+    const handleClick = (e) => {
+      if (filterRef.current && !filterRef.current.contains(e.target)) setFilterOpen(false);
+    };
+    document.addEventListener('pointerdown', handleClick);
+    return () => {
+      document.removeEventListener('pointerdown', handleClick);
+    };
+  }, [filterOpen]);
 
   /* ── fetch ── */
   const fetchCategories = useCallback(async () => {
@@ -97,7 +111,7 @@ export default function CategoriesPage() {
   const handleToggleActive = async (cat) => {
     try {
       await categoryAPI.toggleActive(cat.id);
-      toast.success(cat.is_active ? 'Category and its products deactivated' : 'Category and its products activated');
+      toast.success(cat.is_active ? 'Category, subcategories and products deactivated' : 'Category, subcategories and products activated');
       fetchCategories();
     } catch (err) {
       const detail = err.response?.data;
@@ -111,9 +125,9 @@ export default function CategoriesPage() {
     categories.find((c) => c.id === parentId)?.name || '—';
 
   const getLevelBadge = (level) => {
-    if (level === 0) return { cls: 'bg-blue-100 text-blue-700',   label: 'Main' };
-    if (level === 1) return { cls: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400', label: 'Sub' };
-    return               { cls: 'bg-orange-100 text-orange-700 dark:text-orange-400', label: 'Sub-sub' };
+    if (level === 0) return { cls: 'bg-blue-500/10 text-blue-400 border border-blue-500/20', label: 'Main' };
+    if (level === 1) return { cls: 'bg-green-500/10 text-green-400 border border-green-500/20', label: 'Sub' };
+    return               { cls: 'bg-orange-500/10 text-orange-400 border border-orange-500/20', label: 'Sub-sub' };
   };
 
   /* ── filter + paginate ── */
@@ -137,18 +151,18 @@ export default function CategoriesPage() {
   const paginated  = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
 
   return (
-    <div className="p-4 md:p-8">
-      <div className="max-w-6xl mx-auto">
+    <div className="admin-page">
+      <div className="admin-container">
 
       {/* ── Page Header ── */}
-      <div className="flex flex-wrap justify-between items-end gap-4 mb-8">
+      <div className="admin-page-header">
         <div>
-          <h2 className="text-slate-900 dark:text-white text-3xl font-black leading-tight tracking-tight">Categories</h2>
-          <p className="text-slate-500 dark:text-gray-400 text-sm mt-1">Organize your store hierarchy for better customer navigation.</p>
+          <h2 className="admin-title">Categories</h2>
+          <p className="admin-subtitle">Organize your store hierarchy for better customer navigation.</p>
         </div>
         <button
           onClick={() => router.push('/categories/create')}
-          className="flex items-center gap-2 cursor-pointer rounded-lg h-11 px-6 bg-orange-500 text-white text-sm font-bold shadow-lg shadow-orange-500/20 hover:bg-orange-600 transition-all"
+          className="admin-btn-primary"
         >
           <Plus size={20} />
           <span>Add Category</span>
@@ -156,31 +170,47 @@ export default function CategoriesPage() {
       </div>
 
       {/* ── Search Bar ── */}
-      <div className="mb-6">
-        <div className="flex w-full items-stretch rounded-xl h-12 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden focus-within:ring-2 focus-within:ring-orange-500/20 transition-all">
-          <div className="text-slate-400 dark:text-gray-500 flex items-center justify-center px-4">
+      <div className="admin-search-wrapper" ref={filterRef}>
+        <div className="admin-search-box">
+          <div className="admin-search-icon">
             <Search size={20} />
           </div>
           <input
-            className="flex-1 bg-transparent border-none focus:ring-0 focus:outline-none text-slate-900 dark:text-white text-base placeholder:text-slate-400 dark:text-gray-500"
+            className="admin-search-input"
             placeholder="Search categories by name or slug..."
             value={searchQuery}
             onChange={(e) => { setSearchQuery(e.target.value); setPage(1); }}
           />
+          <button
+            onClick={() => setFilterOpen(!filterOpen)}
+            className={activeTab !== 'All' ? 'admin-filter-toggle-active' : 'admin-filter-toggle'}
+          >
+            <SlidersHorizontal size={18} />
+          </button>
         </div>
+
+        {filterOpen && (
+          <div className="admin-filters-mobile">
+            {TABS.map(({ key, label }) => (
+              <button
+                key={key}
+                onClick={() => { setActiveTab(key); setPage(1); setFilterOpen(false); }}
+                className={activeTab === key ? 'admin-filter-mobile-item-active' : 'admin-filter-mobile-item'}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
-      {/* ── Tabs ── */}
-      <div className="flex border-b border-slate-200 dark:border-gray-700 mb-6 gap-6 overflow-x-auto whitespace-nowrap">
+      {/* ── Filter Tabs ── */}
+      <div className="admin-filters">
         {TABS.map(({ key, label }) => (
           <button
             key={key}
             onClick={() => { setActiveTab(key); setPage(1); }}
-            className={`px-1 pb-4 text-sm border-b-2 transition-colors ${
-              activeTab === key
-                ? 'border-orange-500 text-orange-500 font-bold'
-                : 'border-transparent text-slate-500 dark:text-gray-400 font-medium hover:text-slate-700 dark:text-gray-300 hover:border-slate-300'
-            }`}
+            className={activeTab === key ? 'admin-filter-btn-active' : 'admin-filter-btn'}
           >
             {label}
           </button>
@@ -188,88 +218,93 @@ export default function CategoriesPage() {
       </div>
 
       {/* ── Table Card ── */}
-      <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden shadow-sm">
+      <div className="admin-table-card">
 
         {loading ? (
-          <div className="p-12 flex items-center justify-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div>
+          <div className="admin-loading">
+            <div className="admin-spinner"></div>
           </div>
 
         ) : paginated.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-slate-400 dark:text-gray-500">
+          <div className="admin-empty admin-empty-text flex flex-col items-center justify-center">
             <Tag className="w-10 h-10 mb-3 opacity-40" />
             <p className="text-sm font-medium">No categories found.</p>
           </div>
 
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+            <table className="admin-table min-w-[800px]">
               <thead>
-                <tr className="bg-slate-50 dark:bg-gray-700/50 border-b border-slate-200 dark:border-gray-700">
-                  <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-gray-400 uppercase tracking-wider">Category Name</th>
-                  <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-gray-400 uppercase tracking-wider">Slug</th>
-                  <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-gray-400 uppercase tracking-wider">Level</th>
-                  <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-gray-400 uppercase tracking-wider">Parent</th>
-                  <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-gray-400 uppercase tracking-wider text-center">Products</th>
-                  <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
-                  <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-gray-400 uppercase tracking-wider text-right w-20">Actions</th>
+                <tr className="admin-thead-row">
+                  <th className="admin-th">Category Name</th>
+                  <th className="admin-th">Slug</th>
+                  <th className="admin-th">Parent</th>
+                  <th className="admin-th text-center">Products</th>
+                  <th className="admin-th">Status</th>
+                  <th className="admin-th text-right w-20">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-gray-700">
+              <tbody className="admin-tbody">
                 {paginated.map((cat) => {
                   const { cls, label } = getLevelBadge(cat.level);
                   return (
                     <tr
                       key={cat.id}
-                      className={`hover:bg-slate-50 dark:bg-gray-700/50 dark:hover:bg-gray-700/70 transition-colors group cursor-pointer ${!cat.is_active ? 'opacity-60' : ''}`}
+                      className={`admin-tr group ${!cat.is_active ? 'opacity-60' : ''}`}
                       onClick={() => router.push(`/categories/${cat.id}/edit`)}
                     >
                       {/* Name */}
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="font-semibold text-sm text-slate-900 dark:text-white">
-                          {cat.name}
-                        </span>
+                      <td className="admin-td whitespace-nowrap">
+                        <div className="flex items-center gap-3">
+                          <span className="font-medium text-sm text-slate-900 dark:text-white">
+                            {cat.name}
+                          </span>
+                        </div>
                       </td>
 
                       {/* Slug */}
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <code className={`text-xs font-mono bg-slate-100 dark:bg-gray-700 px-2 py-1 rounded ${cat.level === 0 ? 'text-[#ff6600]' : 'text-slate-500 dark:text-gray-400'}`}>
+                      <td className="admin-td whitespace-nowrap">
+                        <code className="text-xs font-mono bg-slate-100 dark:bg-gray-700 px-2 py-1 rounded text-slate-500 dark:text-gray-400">
                           /{cat.slug}
                         </code>
                       </td>
 
-                      {/* Level badge */}
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${cls}`}>
-                          {label}
-                        </span>
-                      </td>
-
                       {/* Parent */}
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-gray-400">
-                        {cat.parent ? getParentName(cat.parent) : (
-                          <span className="text-slate-300">—</span>
+                      <td className="admin-td whitespace-nowrap text-sm text-slate-500 dark:text-gray-400">
+                        {cat.parent ? (
+                          <span className="inline-block px-2.5 py-1 rounded-md bg-slate-100 dark:bg-gray-700 text-xs font-medium text-slate-600 dark:text-gray-300">
+                            {getParentName(cat.parent)}
+                          </span>
+                        ) : (
+                          <span className="text-slate-300 dark:text-gray-600">—</span>
                         )}
                       </td>
 
                       {/* Products */}
-                      <td className="px-6 py-4 whitespace-nowrap text-center text-sm font-semibold text-slate-700 dark:text-gray-300">
-                        {(cat.product_count ?? 0).toLocaleString()}
+                      <td className="admin-td whitespace-nowrap text-center">
+                        <span className="inline-block px-2.5 py-1 rounded-md bg-orange-500/10 text-orange-500 border border-orange-500/20 text-xs font-bold">
+                          {(cat.product_count ?? 0).toLocaleString()}
+                        </span>
                       </td>
 
                       {/* Status */}
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-block w-[72px] text-center px-3 py-1 rounded-full text-xs font-semibold ${cat.is_active ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'}`}>
+                      <td className="admin-td whitespace-nowrap">
+                        <span className={`inline-flex items-center justify-center gap-1.5 min-w-[5.5rem] px-3 py-1 rounded-full text-xs font-bold ${
+                          cat.is_active
+                            ? 'bg-green-500/10 text-green-400 border border-green-500/20'
+                            : 'bg-red-500/10 text-red-400 border border-red-500/20'
+                        }`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${cat.is_active ? 'bg-green-500' : 'bg-red-500'}`} />
                           {cat.is_active ? 'Active' : 'Inactive'}
                         </span>
                       </td>
 
                       {/* Actions */}
-                      <td className="px-6 py-4 whitespace-nowrap text-right">
+                      <td className="admin-td whitespace-nowrap text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger
                             onClick={(e) => e.stopPropagation()}
-                            className="inline-flex items-center justify-center size-8 rounded-lg text-slate-400 dark:text-gray-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-gray-700 transition-all opacity-40 group-hover:opacity-100"
+                            className="inline-flex items-center justify-center size-8 rounded-lg text-slate-400 dark:text-gray-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-gray-700 transition-all opacity-100 lg:opacity-40 lg:group-hover:opacity-100"
                           >
                             <MoreHorizontal size={18} />
                           </DropdownMenuTrigger>
@@ -279,7 +314,7 @@ export default function CategoriesPage() {
                                 e.stopPropagation();
                                 handleToggleActive(cat);
                               }}
-                              className="cursor-pointer flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-700 dark:text-gray-300 hover:bg-slate-50 dark:bg-gray-700/50 dark:hover:bg-gray-700"
+                              className="cursor-pointer flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-700 dark:text-gray-300 hover:bg-slate-50 dark:hover:bg-gray-700"
                             >
                               {cat.is_active ? <EyeOff size={16} className="text-slate-400 dark:text-gray-500" /> : <Eye size={16} className="text-slate-400 dark:text-gray-500" />}
                               <span>{cat.is_active ? 'Deactivate' : 'Activate'}</span>
@@ -289,7 +324,7 @@ export default function CategoriesPage() {
                                 e.stopPropagation();
                                 setDeleteModal({ id: cat.id, name: cat.name });
                               }}
-                              className="cursor-pointer flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50"
+                              className="cursor-pointer flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30"
                             >
                               <Trash2 size={16} />
                               <span>Delete</span>

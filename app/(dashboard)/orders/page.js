@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { orderAPI } from '@/lib/api';
 import { toast } from 'sonner';
 import {
-  Download, Search, ShoppingBag,
+  Download, Search, ShoppingBag, SlidersHorizontal,
 } from 'lucide-react';
 import Pagination from '@/components/dashboard/Pagination';
 import { formatDate, formatCurrency } from '@/lib/utils';
@@ -27,14 +27,14 @@ const STATUS_TABS = [
 
 /* dot color + pill color per status */
 const STATUS_BADGE = {
-  pending:          { dot: 'bg-slate-500',   pill: 'bg-slate-100 dark:bg-gray-700   text-slate-700 dark:text-gray-300'  },
-  confirmed:        { dot: 'bg-blue-500',    pill: 'bg-blue-100 dark:bg-blue-900/30    text-blue-700 dark:text-blue-400'   },
-  processing:       { dot: 'bg-orange-500',  pill: 'bg-orange-100 dark:bg-orange-900/30  text-orange-700 dark:text-orange-400' },
-  shipped:          { dot: 'bg-emerald-500', pill: 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400'},
-  delivered:        { dot: 'bg-green-500',   pill: 'bg-green-100 dark:bg-green-900/30   text-green-700 dark:text-green-400'  },
-  cancelled:        { dot: 'bg-red-500',     pill: 'bg-red-100 dark:bg-red-900/30     text-red-700 dark:text-red-400'    },
-  return_requested: { dot: 'bg-amber-500',   pill: 'bg-amber-100 dark:bg-amber-900/30   text-amber-700 dark:text-amber-400'  },
-  returned:         { dot: 'bg-rose-500',    pill: 'bg-rose-100 dark:bg-rose-900/30    text-rose-600 dark:text-rose-400'   },
+  pending:          { dot: 'bg-yellow-500', pill: 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20' },
+  confirmed:        { dot: 'bg-blue-500',   pill: 'bg-blue-500/10 text-blue-400 border border-blue-500/20' },
+  processing:       { dot: 'bg-orange-500', pill: 'bg-orange-500/10 text-orange-400 border border-orange-500/20' },
+  shipped:          { dot: 'bg-emerald-500', pill: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' },
+  delivered:        { dot: 'bg-green-500',  pill: 'bg-green-500/10 text-green-400 border border-green-500/20' },
+  cancelled:        { dot: 'bg-red-500',    pill: 'bg-red-500/10 text-red-400 border border-red-500/20' },
+  return_requested: { dot: 'bg-amber-500',  pill: 'bg-amber-500/10 text-amber-400 border border-amber-500/20' },
+  returned:         { dot: 'bg-rose-500',   pill: 'bg-rose-500/10 text-rose-400 border border-rose-500/20' },
 };
 
 export default function OrdersPage() {
@@ -46,6 +46,19 @@ export default function OrdersPage() {
   const [activeStatus, setActiveStatus] = useState('');
   const [searchQuery,  setSearchQuery]  = useState('');
   const [page,         setPage]         = useState(1);
+  const [filterOpen,   setFilterOpen]   = useState(false);
+  const filterRef = useRef(null);
+
+  useEffect(() => {
+    if (!filterOpen) return;
+    const handleClick = (e) => {
+      if (filterRef.current && !filterRef.current.contains(e.target)) setFilterOpen(false);
+    };
+    document.addEventListener('pointerdown', handleClick);
+    return () => {
+      document.removeEventListener('pointerdown', handleClick);
+    };
+  }, [filterOpen]);
 
   /* ── fetch ── */
   const fetchOrders = useCallback(async () => {
@@ -118,17 +131,17 @@ export default function OrdersPage() {
   };
 
   return (
-    <div className="p-4 md:p-8">
-      <div className="max-w-6xl mx-auto">
+    <div className="admin-page">
+      <div className="admin-container">
         {/* Page Header */}
-        <div className="flex flex-wrap justify-between items-end gap-4 mb-8">
+        <div className="admin-page-header">
           <div>
-            <h2 className="text-slate-900 dark:text-white text-3xl font-black leading-tight tracking-tight">Orders</h2>
-            <p className="text-slate-500 dark:text-gray-400 text-sm mt-1">Manage and track all customer transactions and delivery status.</p>
+            <h2 className="admin-title">Orders</h2>
+            <p className="admin-subtitle">Manage and track all customer transactions and delivery status.</p>
           </div>
           <button
             onClick={exportCSV}
-            className="flex items-center gap-2 cursor-pointer rounded-lg h-11 px-6 bg-orange-500 text-white text-sm font-bold shadow-lg shadow-orange-500/20 hover:bg-orange-600 transition-all"
+            className="admin-btn-primary"
           >
             <Download size={20} />
             <span>Export CSV</span>
@@ -136,50 +149,64 @@ export default function OrdersPage() {
         </div>
 
         {/* Search Bar */}
-        <div className="mb-6">
-          <div className="flex w-full items-stretch rounded-xl h-12 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden focus-within:ring-2 focus-within:ring-orange-500/20 transition-all">
-            <div className="text-slate-400 dark:text-gray-500 flex items-center justify-center px-4">
+        <div className="admin-search-wrapper" ref={filterRef}>
+          <div className="admin-search-box">
+            <div className="admin-search-icon">
               <Search size={20} />
             </div>
             <input
-              className="flex-1 bg-transparent border-none focus:ring-0 focus:outline-none text-slate-900 dark:text-white text-base placeholder:text-slate-400 dark:placeholder:text-gray-500"
+              className="admin-search-input"
               placeholder="Search orders by customer name or order #..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
+            <button
+              onClick={() => setFilterOpen(!filterOpen)}
+              className={activeStatus !== 'all' ? 'admin-filter-toggle-active' : 'admin-filter-toggle'}
+            >
+              <SlidersHorizontal size={18} />
+            </button>
           </div>
-        </div>
 
-        {/* DataTable Container */}
-        <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden shadow-sm">
-          {/* Status Tabs */}
-          <div className="border-b border-slate-200 dark:border-gray-700 px-6 overflow-x-auto">
-            <div className="flex gap-6 whitespace-nowrap">
+          {filterOpen && (
+            <div className="admin-filters-mobile">
               {STATUS_TABS.map((tab) => (
                 <button
                   key={tab.value}
-                  onClick={() => switchTab(tab.value)}
-                  className={`py-4 text-sm border-b-2 transition-colors ${
-                    activeStatus === tab.value
-                      ? 'border-orange-500 text-orange-500 font-bold'
-                      : 'border-transparent text-slate-500 dark:text-gray-400 font-semibold hover:text-slate-700 dark:hover:text-gray-300'
-                  }`}
+                  onClick={() => { switchTab(tab.value); setFilterOpen(false); }}
+                  className={activeStatus === tab.value ? 'admin-filter-mobile-item-active' : 'admin-filter-mobile-item'}
                 >
                   {tab.label}
                 </button>
               ))}
             </div>
-          </div>
+          )}
+        </div>
 
+        {/* Status Filter Pills */}
+        <div className="admin-filters">
+          {STATUS_TABS.map((tab) => (
+            <button
+              key={tab.value}
+              onClick={() => switchTab(tab.value)}
+              className={activeStatus === tab.value ? 'admin-filter-btn-active' : 'admin-filter-btn'}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* DataTable Container */}
+        <div className="admin-table-card">
           {loading ? (
-            <div className="p-12 flex items-center justify-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div>
+            <div className="admin-loading">
+              <div className="admin-spinner"></div>
             </div>
           ) : (
             <>
               {paginated.length === 0 ? (
-                <div className="px-6 py-16 text-center">
-                  <div className="text-slate-400 dark:text-gray-500">
+                <div className="admin-empty">
+                  <div className="admin-empty-text">
                     <ShoppingBag className="w-10 h-10 mx-auto mb-3 opacity-40" />
                     <p className="text-sm font-medium">No orders found</p>
                     <p className="text-xs text-slate-400 dark:text-gray-500 mt-1">Try adjusting your search or filters.</p>
@@ -187,20 +214,20 @@ export default function OrdersPage() {
                 </div>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse table-fixed">
+                  <table className="admin-table min-w-[800px]">
                     <thead>
-                      <tr className="bg-slate-50 dark:bg-gray-700/50 text-slate-600 dark:text-gray-300">
-                        <th className="px-4 py-4 text-xs font-bold uppercase tracking-wider w-[12%]">Order #</th>
-                        <th className="px-4 py-4 text-xs font-bold uppercase tracking-wider w-[25%]">Customer</th>
-                        <th className="px-4 py-4 text-xs font-bold uppercase tracking-wider w-[12%]">Items</th>
-                        <th className="px-4 py-4 text-xs font-bold uppercase tracking-wider w-[15%]">Total Price</th>
-                        <th className="px-4 py-4 text-xs font-bold uppercase tracking-wider w-[20%]">Status</th>
-                        <th className="px-4 py-4 text-xs font-bold uppercase tracking-wider w-[16%] text-right">Date</th>
+                      <tr className="admin-thead-row">
+                        <th className="admin-th lg:w-[12%]">Order #</th>
+                        <th className="admin-th lg:w-[25%]">Customer</th>
+                        <th className="admin-th lg:w-[12%]">Items</th>
+                        <th className="admin-th lg:w-[15%]">Total Price</th>
+                        <th className="admin-th lg:w-[20%]">Status</th>
+                        <th className="admin-th lg:w-[16%] text-right">Date</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100 dark:divide-gray-700">
+                    <tbody className="admin-tbody">
                       {paginated.map((order) => {
-                        const badge = STATUS_BADGE[order.status] || { dot: 'bg-slate-400', pill: 'bg-slate-100 dark:bg-gray-700 text-slate-600 dark:text-gray-300' };
+                        const badge = STATUS_BADGE[order.status] || { dot: 'bg-slate-400', pill: 'bg-slate-500/10 text-slate-400 border border-slate-500/20' };
 
                         let statusText;
                         if (order.status === 'return_requested') statusText = 'Return Requested';
@@ -211,32 +238,39 @@ export default function OrdersPage() {
                           <tr
                             key={order.id}
                             onClick={() => router.push(`/orders/${order.id}`)}
-                            className="hover:bg-slate-50/50 dark:hover:bg-gray-700 transition-colors group cursor-pointer"
+                            className="admin-tr group"
                           >
-                            <td className="px-4 py-4 font-mono font-bold text-slate-900 dark:text-white text-sm whitespace-nowrap">
+                            <td className="admin-td font-mono font-bold text-slate-900 dark:text-white text-sm whitespace-nowrap">
                               #{order.id}
                             </td>
-                            <td className="px-4 py-4">
-                              <p className="text-sm font-semibold text-slate-900 dark:text-white">{order.customer_name}</p>
-                              {order.customer_email && (
-                                <p className="text-xs text-slate-400 dark:text-gray-500">{order.customer_email}</p>
-                              )}
+                            <td className="admin-td max-w-0">
+                              <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 rounded-full bg-indigo-500/10 flex items-center justify-center text-xs font-bold text-indigo-400 flex-shrink-0">
+                                  {(order.customer_name || '?').charAt(0).toUpperCase()}
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="text-sm font-medium text-slate-900 dark:text-white truncate">{order.customer_name}</p>
+                                  {order.customer_email && (
+                                    <p className="text-xs text-slate-400 dark:text-gray-500 truncate">{order.customer_email}</p>
+                                  )}
+                                </div>
+                              </div>
                             </td>
-                            <td className="px-4 py-4 text-sm text-slate-500 dark:text-gray-400 whitespace-nowrap">
+                            <td className="admin-td text-sm text-slate-500 dark:text-gray-400 whitespace-nowrap">
                               {order.items_count ?? 0} item{(order.items_count ?? 0) === 1 ? '' : 's'}
                             </td>
-                            <td className="px-4 py-4">
+                            <td className="admin-td">
                               <span className="text-sm font-bold text-slate-900 dark:text-white">
                                 {formatCurrency(order.total_amount || 0, activeStore?.currency)}
                               </span>
                             </td>
-                            <td className="px-4 py-4 whitespace-nowrap">
+                            <td className="admin-td whitespace-nowrap">
                               <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${badge.pill}`}>
                                 <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${badge.dot}`} />
                                 {statusText}
                               </span>
                             </td>
-                            <td className="px-4 py-4 text-sm text-slate-400 dark:text-gray-500 text-right whitespace-nowrap">
+                            <td className="admin-td text-sm text-slate-400 dark:text-gray-500 text-right whitespace-nowrap">
                               {formatDate(order.created_at)}
                             </td>
                           </tr>

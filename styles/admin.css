@@ -1,0 +1,148 @@
+/* ─── Admin Panel Global Styles ─── */
+/* Single source of truth for all admin page UI patterns */
+
+/* ── Page Layout ── */
+.admin-page {
+  @apply p-4 md:p-8;
+}
+
+.admin-container {
+  @apply max-w-6xl mx-auto;
+}
+
+/* ── Page Header ── */
+.admin-page-header {
+  @apply flex flex-wrap justify-between items-end gap-4 mb-8;
+}
+
+.admin-title {
+  @apply text-slate-900 dark:text-white text-3xl font-black leading-tight tracking-tight;
+}
+
+.admin-subtitle {
+  @apply text-slate-500 dark:text-gray-400 text-sm mt-1;
+}
+
+.admin-btn-primary {
+  @apply flex items-center gap-2 cursor-pointer rounded-lg h-11 px-6 bg-orange-500 text-white text-sm font-bold shadow-lg shadow-orange-500/20 hover:bg-orange-600 transition-all whitespace-nowrap;
+}
+
+/* ── Search Bar ── */
+.admin-search-wrapper {
+  @apply mb-6 relative;
+}
+
+.admin-search-box {
+  @apply flex w-full items-stretch rounded-xl h-12 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden transition-all;
+}
+
+.admin-search-box:focus-within {
+  @apply ring-2 ring-orange-500/20;
+}
+
+.admin-search-icon {
+  @apply text-slate-400 dark:text-gray-500 flex items-center justify-center px-4;
+}
+
+.admin-search-input {
+  @apply flex-1 bg-transparent border-none focus:ring-0 focus:outline-none text-slate-900 dark:text-white text-base;
+}
+
+.admin-search-input::placeholder {
+  @apply text-slate-400 dark:text-gray-500;
+}
+
+/* ── Table ── */
+.admin-table-card {
+  @apply rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden shadow-sm;
+}
+
+.admin-table {
+  @apply w-full text-left border-collapse;
+}
+
+.admin-th {
+  @apply px-3 lg:px-6 py-3 text-[11px] font-semibold uppercase tracking-wider text-orange-500 whitespace-nowrap;
+}
+
+.admin-thead-row {
+  @apply border-b border-gray-200 dark:border-gray-700;
+}
+
+.admin-tbody {
+  @apply divide-y divide-slate-100 dark:divide-gray-700/50;
+}
+
+.admin-tr {
+  @apply hover:bg-slate-50/50 dark:hover:bg-gray-700/30 transition-colors cursor-pointer;
+}
+
+.admin-td {
+  @apply px-3 lg:px-6 py-3 lg:py-4;
+}
+
+/* ── Filter Buttons ── */
+.admin-filter-btn {
+  @apply px-4 py-2 rounded-lg text-sm font-semibold transition-all bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-slate-500 dark:text-gray-400 hover:bg-slate-50 dark:hover:bg-gray-700;
+}
+
+.admin-filter-btn-active {
+  @apply px-4 py-2 rounded-lg text-sm font-semibold transition-all bg-orange-500 text-white shadow-sm;
+}
+
+/* ── Loading & Empty States ── */
+.admin-loading {
+  @apply p-12 flex items-center justify-center;
+}
+
+.admin-spinner {
+  @apply animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500;
+}
+
+.admin-empty {
+  @apply px-6 py-16 text-center;
+}
+
+.admin-empty-text {
+  @apply text-slate-400 dark:text-gray-500;
+}
+
+/* ── Mobile Responsive ── */
+
+/* Filter icon button inside search bar — visible below lg, hidden on lg+ */
+.admin-filter-toggle {
+  @apply flex lg:hidden items-center justify-center px-3 border-l border-gray-200 dark:border-gray-700 text-slate-400 dark:text-gray-500 hover:text-orange-500 transition-colors;
+}
+
+.admin-filter-toggle-active {
+  @apply flex lg:hidden items-center justify-center px-3 border-l border-gray-200 dark:border-gray-700 text-orange-500 hover:text-orange-600 transition-colors;
+}
+
+/* Desktop filter pills — hidden below lg, visible on lg+ */
+.admin-filters {
+  @apply hidden lg:flex flex-wrap gap-2 mb-6;
+}
+
+/* Mobile filter dropdown — vertical list below search bar */
+.admin-filters-mobile {
+  @apply lg:hidden flex flex-col gap-1 p-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg absolute left-0 right-0 top-full mt-1 z-50;
+}
+
+/* Mobile filter dropdown items */
+.admin-filter-mobile-item {
+  @apply w-full text-left px-4 py-2.5 rounded-lg text-sm font-medium text-slate-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors;
+}
+
+.admin-filter-mobile-item-active {
+  @apply w-full text-left px-4 py-2.5 rounded-lg text-sm font-semibold bg-orange-500/10 text-orange-500 transition-colors;
+}
+
+/* Hide column below lg, show on lg+ */
+.admin-col-hide-mobile {
+  @apply hidden lg:table-cell;
+}
+
+/* Action button: always visible below lg, hover-reveal on lg+ */
+.admin-action-btn {
+  @apply opacity-100 lg:opacity-0;
+}

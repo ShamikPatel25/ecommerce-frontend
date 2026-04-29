@@ -8,6 +8,7 @@ import { useThemeStore } from '@/store/themeStore';
 import { storeAPI } from '@/lib/api';
 import { getSubdomain } from '@/lib/subdomain';
 import Sidebar from '@/components/Sidebar';
+import TopBar from '@/components/TopBar';
 import { useNotificationSocket } from '@/lib/useNotificationSocket';
 
 export default function DashboardLayout({ children }) {
@@ -97,7 +98,8 @@ export default function DashboardLayout({ children }) {
     return (
       <div className="flex min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors">
         <Sidebar />
-        <main className="flex-1 pt-14 md:pt-0 md:ml-64 min-w-0 flex items-center justify-center">
+        <div className="flex-1 pt-14 md:pt-0 md:ml-64 min-w-0 flex flex-col">
+          <main className="flex-1 min-w-0 flex items-center justify-center">
           <div className="text-center max-w-md px-6">
             <div className="w-20 h-20 bg-orange-500/10 rounded-2xl flex items-center justify-center mx-auto mb-6">
               <span className="text-4xl">🏪</span>
@@ -111,7 +113,8 @@ export default function DashboardLayout({ children }) {
               Create Store
             </button>
           </div>
-        </main>
+          </main>
+        </div>
       </div>
     );
   }
@@ -120,6 +123,7 @@ export default function DashboardLayout({ children }) {
     <div className="flex min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors">
       <Sidebar />
       <main className="flex-1 pt-14 md:pt-0 md:ml-64 min-w-0">
+        <TopBar />
         {children}
       </main>
     </div>

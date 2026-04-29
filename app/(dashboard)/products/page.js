@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { productAPI, categoryAPI } from '@/lib/api';
 import { toast } from 'sonner';
 import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
-import { Plus, Search, MoreHorizontal, Trash2, Eye, EyeOff } from 'lucide-react';
+import { Plus, Search, MoreHorizontal, Trash2, Eye, EyeOff, Star, SlidersHorizontal } from 'lucide-react';
 import Pagination from '@/components/dashboard/Pagination';
 import { formatCurrency } from '@/lib/utils';
 import { useStoreStore } from '@/store/storeStore';
@@ -15,7 +15,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from '@/components/ui/dropdown-menu';
- 
+
 export default function ProductsPage() {
   const router = useRouter();
   const { activeStore } = useStoreStore();
@@ -24,7 +24,21 @@ export default function ProductsPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [activeFilter, setActiveFilter] = useState('all');
   const [deleteModal, setDeleteModal] = useState({ open: false, product: null });
+  const [filterOpen, setFilterOpen] = useState(false);
+  const filterRef = useRef(null);
+
+  useEffect(() => {
+    if (!filterOpen) return;
+    const handleClick = (e) => {
+      if (filterRef.current && !filterRef.current.contains(e.target)) setFilterOpen(false);
+    };
+    document.addEventListener('pointerdown', handleClick);
+    return () => {
+      document.removeEventListener('pointerdown', handleClick);
+    };
+  }, [filterOpen]);
   const itemsPerPage = 10;
 
   const fetchData = useCallback(async () => {
@@ -61,17 +75,8 @@ export default function ProductsPage() {
 
   const handleToggleActive = async (product) => {
     try {
-      await productAPI.update(product.id, {
-        name: product.name,
-        sku: product.sku,
-        product_type: product.product_type,
-        price: product.price,
-        stock: product.stock,
-        category: product.category,
-        is_active: !product.is_active,
-        is_featured: product.is_featured,
-      });
-      toast.success(product.is_active ? 'Product deactivated' : 'Product activated');
+      await productAPI.toggleActive(product.id);
+      toast.success(product.is_active ? 'Product and its variants deactivated' : 'Product and its variants activated');
       fetchData();
     } catch (err) {
       const detail = err.response?.data;
@@ -91,33 +96,6 @@ export default function ProductsPage() {
     const cat = categories.find(c => c.id === catId);
     return cat?.name || '';
   };
-
-  const lowerQuery = searchQuery.toLowerCase().trim();
-  const filteredProducts = products.filter(p =>
-    p.name.toLowerCase().includes(lowerQuery) ||
-    p.sku.toLowerCase().includes(lowerQuery)
-  );
-
-  // Pagination
-  const totalPages = Math.max(1, Math.ceil(filteredProducts.length / itemsPerPage));
-  const safeCurrentPage = Math.min(currentPage, totalPages);
-  const paginatedProducts = filteredProducts.slice(
-    (safeCurrentPage - 1) * itemsPerPage,
-    safeCurrentPage * itemsPerPage
-  );
-
-  const getStockColor = (stock) => {
-    if (stock <= 15) return 'bg-red-500';
-    if (stock <= 30) return 'bg-orange-400';
-    return 'bg-orange-500';
-  };
-
-  const getStockTextColor = (stock) => {
-    if (stock <= 15) return 'text-red-500';
-    return 'text-slate-700 dark:text-gray-300';
-  };
-
-  const getStockPercent = (stock) => Math.min((stock / 150) * 100, 100);
 
   const getTotalStock = (product) => {
     if (product.product_type === 'catalog') {
@@ -144,23 +122,71 @@ export default function ProductsPage() {
     return 0;
   };
 
-  // Reset to page 1 when search changes
+  // Filter + search
+  const lowerQuery = searchQuery.toLowerCase().trim();
+  const filteredProducts = useMemo(() => {
+    let filtered = products;
+    switch (activeFilter) {
+      case 'active': filtered = products.filter(p => p.is_active); break;
+      case 'inactive': filtered = products.filter(p => !p.is_active); break;
+      case 'featured': filtered = products.filter(p => p.is_featured); break;
+      case 'low_stock': filtered = products.filter(p => getTotalStock(p) <= 15); break;
+    }
+    if (lowerQuery) {
+      filtered = filtered.filter(p =>
+        p.name.toLowerCase().includes(lowerQuery) ||
+        p.sku.toLowerCase().includes(lowerQuery)
+      );
+    }
+    return filtered;
+  }, [products, activeFilter, lowerQuery]);
+
+  // Pagination
+  const totalPages = Math.max(1, Math.ceil(filteredProducts.length / itemsPerPage));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const paginatedProducts = filteredProducts.slice(
+    (safeCurrentPage - 1) * itemsPerPage,
+    safeCurrentPage * itemsPerPage
+  );
+
+  const getStockColor = (stock) => {
+    if (stock <= 15) return 'bg-red-500';
+    if (stock <= 30) return 'bg-orange-400';
+    return 'bg-orange-500';
+  };
+
+  const getStockTextColor = (stock) => {
+    if (stock <= 15) return 'text-red-500';
+    return 'text-slate-700 dark:text-gray-300';
+  };
+
+  const getStockPercent = (stock) => Math.min((stock / 150) * 100, 100);
+
+  // Reset to page 1 when search or filter changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery]);
+  }, [searchQuery, activeFilter]);
+
+  const filterTabs = [
+    { key: 'all', label: 'All' },
+    { key: 'active', label: 'Active' },
+    { key: 'inactive', label: 'Inactive' },
+    { key: 'featured', label: 'Featured' },
+    { key: 'low_stock', label: 'Low Stock' },
+  ];
 
   return (
-    <div className="p-4 md:p-8">
-      <div className="max-w-6xl mx-auto">
+    <div className="admin-page">
+      <div className="admin-container">
         {/* Page Header */}
-        <div className="flex flex-wrap justify-between items-end gap-4 mb-8">
+        <div className="admin-page-header">
           <div>
-            <h2 className="text-slate-900 dark:text-white text-3xl font-black leading-tight tracking-tight">Products</h2>
-            <p className="text-slate-500 dark:text-gray-400 text-sm mt-1">Manage your catalog, stock levels, and pricing.</p>
+            <h2 className="admin-title">Products</h2>
+            <p className="admin-subtitle">Manage your catalog, stock levels, and pricing.</p>
           </div>
           <button
             onClick={() => router.push('/products/create')}
-            className="flex items-center gap-2 cursor-pointer rounded-lg h-11 px-6 bg-orange-500 text-white text-sm font-bold shadow-lg shadow-orange-500/20 hover:bg-orange-600 transition-all"
+            className="admin-btn-primary"
           >
             <Plus size={20} />
             <span>Add Product</span>
@@ -168,45 +194,78 @@ export default function ProductsPage() {
         </div>
 
         {/* Search Bar */}
-        <div className="mb-6">
-          <div className="flex w-full items-stretch rounded-xl h-12 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden focus-within:ring-2 focus-within:ring-orange-500/20 transition-all">
-            <div className="text-slate-400 dark:text-gray-500 flex items-center justify-center px-4">
+        <div className="admin-search-wrapper" ref={filterRef}>
+          <div className="admin-search-box">
+            <div className="admin-search-icon">
               <Search size={20} />
             </div>
             <input
-              className="flex-1 bg-transparent border-none focus:ring-0 focus:outline-none text-slate-900 dark:text-white text-base placeholder:text-slate-400 dark:placeholder:text-gray-500"
+              className="admin-search-input"
               placeholder="Search products by name, SKU or category..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
+            <button
+              onClick={() => setFilterOpen(!filterOpen)}
+              className={activeFilter !== 'all' ? 'admin-filter-toggle-active' : 'admin-filter-toggle'}
+            >
+              <SlidersHorizontal size={18} />
+            </button>
           </div>
+
+          {filterOpen && (
+            <div className="admin-filters-mobile">
+              {filterTabs.map((tab) => (
+                <button
+                  key={tab.key}
+                  onClick={() => { setActiveFilter(tab.key); setFilterOpen(false); }}
+                  className={activeFilter === tab.key ? 'admin-filter-mobile-item-active' : 'admin-filter-mobile-item'}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Filter Tabs */}
+        <div className="admin-filters">
+          {filterTabs.map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => setActiveFilter(tab.key)}
+              className={activeFilter === tab.key ? 'admin-filter-btn-active' : 'admin-filter-btn'}
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
 
         {/* DataTable Container */}
-        <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden shadow-sm">
+        <div className="admin-table-card">
           {loading ? (
-            <div className="p-12 flex items-center justify-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div>
+            <div className="admin-loading">
+              <div className="admin-spinner"></div>
             </div>
           ) : (
             <>
               <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse table-fixed">
+                <table className="admin-table min-w-[900px]">
                   <thead>
-                    <tr className="bg-slate-50 dark:bg-gray-700/50 text-slate-600 dark:text-gray-300">
-                      <th className="px-4 py-4 text-xs font-bold uppercase tracking-wider w-[30%]">Product</th>
-                      <th className="px-4 py-4 text-xs font-bold uppercase tracking-wider w-[14%]">SKU</th>
-                      <th className="px-4 py-4 text-xs font-bold uppercase tracking-wider w-[14%]">Stock Level</th>
-                      <th className="px-4 py-4 text-xs font-bold uppercase tracking-wider w-[14%] text-center">Catalog</th>
-                      <th className="px-4 py-4 text-xs font-bold uppercase tracking-wider w-[14%]">Price</th>
-                      <th className="px-4 py-4 text-xs font-bold uppercase tracking-wider w-[14%] text-right">Actions</th>
+                    <tr className="admin-thead-row">
+                      <th className="admin-th lg:w-[28%]">Product</th>
+                      <th className="admin-th lg:w-[12%]">SKU</th>
+                      <th className="admin-th lg:w-[14%]">Stock Level</th>
+                      <th className="admin-th lg:w-[10%] text-center">Catalog</th>
+                      <th className="admin-th lg:w-[12%]">Price</th>
+                      <th className="admin-th lg:w-[14%] text-right">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100 dark:divide-gray-700">
+                  <tbody className="admin-tbody">
                     {paginatedProducts.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="px-6 py-16 text-center">
-                          <div className="text-slate-400 dark:text-gray-500">
+                        <td colSpan={6} className="admin-empty">
+                          <div className="admin-empty-text">
                             <p className="text-4xl mb-3">📦</p>
                             <p className="text-sm font-medium">No products found</p>
                             <p className="text-xs text-slate-400 dark:text-gray-500 mt-1">Try adjusting your search or add a new product.</p>
@@ -224,13 +283,13 @@ export default function ProductsPage() {
                         return (
                           <tr
                             key={product.id}
-                            className={`hover:bg-slate-50/50 dark:hover:bg-gray-700 transition-colors group cursor-pointer ${product.is_active ? '' : 'opacity-60'}`}
+                            className={`admin-tr group ${product.is_active ? '' : 'opacity-60'}`}
                             onClick={() => router.push(`/products/${product.id}/edit`)}
                           >
                             {/* Product */}
-                            <td className="px-4 py-4">
-                              <div className="flex items-center gap-4">
-                                <div className="size-12 rounded-lg bg-slate-100 dark:bg-gray-700 overflow-hidden border border-slate-200 dark:border-gray-700 flex items-center justify-center flex-shrink-0">
+                            <td className="admin-td">
+                              <div className="flex items-center gap-3">
+                                <div className="size-10 rounded-lg bg-slate-100 dark:bg-gray-700 overflow-hidden border border-slate-200 dark:border-gray-600 flex items-center justify-center flex-shrink-0">
                                   {mediaUrl ? (
                                     // eslint-disable-next-line @next/next/no-img-element
                                     <img
@@ -239,57 +298,51 @@ export default function ProductsPage() {
                                       className="object-cover w-full h-full"
                                     />
                                   ) : (
-                                    <span className="text-xl">
+                                    <span className="text-lg">
                                       {product.product_type === 'catalog' ? '📚' : '📦'}
                                     </span>
                                   )}
                                 </div>
-                                <div>
+                                <div className="min-w-0">
                                   <div className="flex items-center gap-2">
-                                    <p className={`text-sm font-semibold ${product.is_active ? 'text-slate-900 dark:text-white' : 'text-slate-400 dark:text-gray-500'}`}>{product.name}</p>
-                                    {!product.is_active && (
-                                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-50 dark:bg-red-900/30 text-red-500 text-[10px] font-bold uppercase tracking-wide">
-                                        <EyeOff size={10} />
-                                        Inactive
-                                      </span>
+                                    <p className={`text-sm font-medium truncate ${product.is_active ? 'text-slate-900 dark:text-white' : 'text-slate-400 dark:text-gray-500'}`}>{product.name}</p>
+                                    {product.is_featured && (
+                                      <Star className="w-3.5 h-3.5 text-orange-500 fill-orange-500 flex-shrink-0" />
                                     )}
                                   </div>
-                                  <p className="text-slate-500 dark:text-gray-400 text-xs">{getCategoryName(product.category)}</p>
+                                  <p className="text-slate-500 dark:text-gray-400 text-xs truncate">{getCategoryName(product.category)}</p>
                                 </div>
                               </div>
                             </td>
 
                             {/* SKU */}
-                            <td className="px-4 py-4">
+                            <td className="admin-td">
                               <span className="font-mono text-xs bg-slate-100 dark:bg-gray-700 px-2 py-1 rounded text-slate-600 dark:text-gray-300">
                                 {product.sku}
                               </span>
                             </td>
 
                             {/* Stock Level */}
-                            <td className="px-4 py-4">
+                            <td className="admin-td">
                               <div className="flex items-center gap-3">
-                                <div className="w-24 h-2 rounded-full bg-slate-100 dark:bg-gray-700 overflow-hidden">
+                                <div className="w-20 h-1.5 rounded-full bg-slate-100 dark:bg-gray-700 overflow-hidden">
                                   <div
                                     className={`h-full ${getStockColor(stock)} rounded-full transition-all`}
                                     style={{ width: `${getStockPercent(stock)}%` }}
                                   />
                                 </div>
-                                <span className={`text-xs font-bold ${getStockTextColor(stock)}`}>
-                                  {stock}
-                                </span>
+                                <span className={`text-xs font-bold ${getStockTextColor(stock)}`}>{stock}</span>
                               </div>
                               {reserved > 0 && (
-                                <p className="text-[11px] font-semibold text-orange-500 mt-1">
-                                  {reserved} reserved
-                                </p>
+                                <p className="text-[11px] font-semibold text-orange-500 mt-1">{reserved} reserved</p>
                               )}
                             </td>
 
+
                             {/* Catalog */}
-                            <td className="px-4 py-4 text-center">
+                            <td className="admin-td text-center">
                               {variantCount > 0 ? (
-                                <span className="inline-flex items-center justify-center size-7 rounded-full bg-orange-100 dark:bg-orange-900/30 text-orange-600 text-xs font-bold">
+                                <span className="inline-flex items-center justify-center size-7 rounded-full bg-orange-500/10 text-orange-500 border border-orange-500/20 text-xs font-bold">
                                   {variantCount}
                                 </span>
                               ) : (
@@ -298,18 +351,18 @@ export default function ProductsPage() {
                             </td>
 
                             {/* Price */}
-                            <td className="px-4 py-4">
+                            <td className="admin-td">
                               <span className="text-sm font-bold text-slate-900 dark:text-white">
                                 {formatCurrency(product.price, activeStore?.currency)}
                               </span>
                             </td>
 
                             {/* Actions */}
-                            <td className="px-4 py-4 text-right">
+                            <td className="admin-td text-right">
                               <DropdownMenu>
                                 <DropdownMenuTrigger
                                   onClick={(e) => e.stopPropagation()}
-                                  className="inline-flex items-center justify-center size-8 rounded-lg text-slate-400 dark:text-gray-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-gray-700 transition-all opacity-40 group-hover:opacity-100"
+                                  className="inline-flex items-center justify-center size-8 rounded-lg text-slate-400 dark:text-gray-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-gray-700 transition-all opacity-100 lg:opacity-40 lg:group-hover:opacity-100"
                                 >
                                   <MoreHorizontal size={18} />
                                 </DropdownMenuTrigger>

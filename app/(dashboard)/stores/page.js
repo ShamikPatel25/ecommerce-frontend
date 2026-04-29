@@ -127,17 +127,17 @@ export default function StoresPage() {
   }, [searchQuery]);
 
   return (
-    <div className="p-4 md:p-8">
-      <div className="max-w-6xl mx-auto">
+    <div className="admin-page">
+      <div className="admin-container">
         {/* Page Header */}
-        <div className="flex flex-wrap justify-between items-end gap-4 mb-8">
+        <div className="admin-page-header">
           <div>
-            <h2 className="text-slate-900 dark:text-white text-3xl font-black leading-tight tracking-tight">Stores</h2>
-            <p className="text-slate-500 dark:text-gray-400 text-sm mt-1">Manage your stores, domains, and settings.</p>
+            <h2 className="admin-title">Stores</h2>
+            <p className="admin-subtitle">Manage your stores, domains, and settings.</p>
           </div>
           <button
             onClick={() => router.push('/stores/create')}
-            className="flex items-center gap-2 cursor-pointer rounded-lg h-11 px-6 bg-orange-500 text-white text-sm font-bold shadow-lg shadow-orange-500/20 hover:bg-orange-600 transition-all"
+            className="admin-btn-primary"
           >
             <Plus size={20} />
             <span>Create Store</span>
@@ -145,13 +145,13 @@ export default function StoresPage() {
         </div>
 
         {/* Search Bar */}
-        <div className="mb-6">
-          <div className="flex w-full items-stretch rounded-xl h-12 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden focus-within:ring-2 focus-within:ring-orange-500/20 transition-all">
-            <div className="text-slate-400 dark:text-gray-500 flex items-center justify-center px-4">
+        <div className="admin-search-wrapper">
+          <div className="admin-search-box">
+            <div className="admin-search-icon">
               <Search size={20} />
             </div>
             <input
-              className="flex-1 bg-transparent border-none focus:ring-0 focus:outline-none text-slate-900 dark:text-white text-base placeholder:text-slate-400 dark:text-gray-500"
+              className="admin-search-input"
               placeholder="Search by store name or subdomain..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -160,29 +160,29 @@ export default function StoresPage() {
         </div>
 
         {/* DataTable Container */}
-        <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden shadow-sm">
+        <div className="admin-table-card">
           {loading ? (
-            <div className="p-12 flex items-center justify-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div>
+            <div className="admin-loading">
+              <div className="admin-spinner"></div>
             </div>
           ) : (
             <>
               <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
+                <table className="admin-table min-w-[800px]">
                   <thead>
-                    <tr className="bg-slate-50 dark:bg-gray-700/50 text-slate-600 dark:text-gray-300">
-                      <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider">Store</th>
-                      <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider">Description</th>
-                      <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider">Currency</th>
-                      <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider">Status</th>
-                      <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-right w-20">Actions</th>
+                    <tr className="admin-thead-row">
+                      <th className="admin-th">Store</th>
+                      <th className="admin-th">Description</th>
+                      <th className="admin-th">Currency</th>
+                      <th className="admin-th">Status</th>
+                      <th className="admin-th text-right w-20">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100 dark:divide-gray-700">
+                  <tbody className="admin-tbody">
                     {paginatedStores.length === 0 ? (
                       <tr>
-                        <td colSpan={5} className="px-6 py-16 text-center">
-                          <div className="text-slate-400 dark:text-gray-500">
+                        <td colSpan={5} className="admin-empty">
+                          <div className="admin-empty-text">
                             <p className="text-4xl mb-3">🏪</p>
                             <p className="text-sm font-medium">No stores found</p>
                             <p className="text-xs text-slate-400 dark:text-gray-500 mt-1">Try adjusting your search or create a new store.</p>
@@ -193,43 +193,48 @@ export default function StoresPage() {
                       paginatedStores.map((store) => (
                         <tr
                           key={store.id}
-                          className="hover:bg-slate-50 dark:hover:bg-gray-700/50 transition-colors group cursor-pointer"
+                          className="admin-tr group"
                           onClick={() => router.push(`/stores/${store.id}/edit`)}
                         >
                           {/* Store Name */}
-                          <td className="px-6 py-4">
+                          <td className="admin-td">
                             <div className="flex items-center gap-3">
-                              <div className="size-10 bg-blue-100 rounded-lg flex items-center justify-center text-lg flex-shrink-0">🏪</div>
+                              <div className="size-10 bg-slate-100 dark:bg-gray-700 rounded-lg flex items-center justify-center text-lg flex-shrink-0">🏪</div>
                               <div className="min-w-0">
                                 <p className="text-sm font-semibold truncate text-slate-900 dark:text-white">{store.name}</p>
-                                <p className="text-xs text-blue-600">{store.full_domain || `${store.subdomain}.localhost:3000`}</p>
+                                <p className="text-xs text-orange-500">{store.full_domain || `${store.subdomain}.localhost:3000`}</p>
                               </div>
                             </div>
                           </td>
 
                           {/* Description */}
-                          <td className="px-6 py-4">
+                          <td className="admin-td">
                             <span className="text-slate-500 dark:text-gray-400 text-sm">{store.description || '—'}</span>
                           </td>
 
                           {/* Currency */}
-                          <td className="px-6 py-4">
+                          <td className="admin-td">
                             <span className="font-mono text-xs bg-slate-100 dark:bg-gray-700 px-2 py-1 rounded text-slate-600 dark:text-gray-300 font-semibold">{store.currency}</span>
                           </td>
 
                           {/* Status */}
-                          <td className="px-6 py-4">
-                            <span className={`inline-block w-[72px] text-center px-3 py-1 rounded-full text-xs font-semibold ${store.is_active ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'}`}>
+                          <td className="admin-td">
+                            <span className={`inline-flex items-center justify-center gap-1.5 min-w-[5.5rem] px-3 py-1 rounded-full text-xs font-bold ${
+                              store.is_active
+                                ? 'bg-green-500/10 text-green-400 border border-green-500/20'
+                                : 'bg-red-500/10 text-red-400 border border-red-500/20'
+                            }`}>
+                              <span className={`w-1.5 h-1.5 rounded-full ${store.is_active ? 'bg-green-500' : 'bg-red-500'}`} />
                               {store.is_active ? 'Active' : 'Inactive'}
                             </span>
                           </td>
 
                           {/* Actions */}
-                          <td className="px-6 py-4 text-right">
+                          <td className="admin-td text-right">
                             <DropdownMenu>
                               <DropdownMenuTrigger
                                 onClick={(e) => e.stopPropagation()}
-                                className="inline-flex items-center justify-center size-8 rounded-lg text-slate-400 dark:text-gray-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-gray-700 transition-all opacity-40 group-hover:opacity-100"
+                                className="inline-flex items-center justify-center size-8 rounded-lg text-slate-400 dark:text-gray-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-gray-700 transition-all opacity-100 lg:opacity-40 lg:group-hover:opacity-100"
                               >
                                 <MoreHorizontal size={18} />
                               </DropdownMenuTrigger>

@@ -13,9 +13,9 @@ import {
 } from 'lucide-react';
 
 const INPUT_CLS =
-  'w-full rounded-lg border border-[#ff6600]/20 bg-[#ff6600]/5 px-4 py-3 text-slate-900 dark:text-white ' +
-  'placeholder:text-slate-400 focus:outline-none focus:border-[#ff6600] ' +
-  'focus:ring-2 focus:ring-[#ff6600]/20 transition-all ' +
+  'w-full rounded-lg border border-orange-500/20 bg-orange-500/5 px-4 py-3 text-slate-900 dark:text-white ' +
+  'placeholder:text-slate-400 focus:outline-none focus:border-orange-500 ' +
+  'focus:ring-2 focus:ring-orange-500/20 transition-all ' +
   'dark:bg-gray-700 dark:border-gray-600 dark:placeholder:text-gray-500';
 
 const SELECT_CLS = INPUT_CLS + ' appearance-none pr-10';
@@ -253,7 +253,7 @@ export default function EditProductPage() {
 
   if (loading) return (
     <div className="min-h-[60vh] flex items-center justify-center">
-      <Loader2 className="w-10 h-10 text-[#ff6600] animate-spin" />
+      <Loader2 className="w-10 h-10 text-orange-500 animate-spin" />
     </div>
   );
 
@@ -265,11 +265,12 @@ export default function EditProductPage() {
     : 'Save Changes';
 
   return (
-    <div className="p-4 md:p-8 max-w-5xl">
+    <div className="admin-page">
+      <div className="admin-container">
 
       {/* Breadcrumbs */}
       <nav className="flex items-center gap-1.5 text-sm text-slate-500 dark:text-gray-400 mb-4">
-        <button onClick={() => router.push('/products')} className="hover:text-[#ff6600] transition-colors">
+        <button onClick={() => router.push('/products')} className="hover:text-orange-500 transition-colors">
           Products
         </button>
         <ChevronRight className="w-3.5 h-3.5" />
@@ -282,7 +283,7 @@ export default function EditProductPage() {
         <button
           type="button"
           onClick={() => router.push('/products')}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg border border-[#ff6600]/20 bg-white dark:bg-gray-800 hover:bg-[#ff6600]/5 transition-colors text-sm font-bold self-start md:self-auto"
+          className="flex items-center gap-2 px-4 py-2 rounded-lg border border-orange-500/20 bg-white dark:bg-gray-800 hover:bg-orange-500/5 transition-colors text-sm font-bold self-start md:self-auto"
         >
           <ArrowLeft className="w-4 h-4" />
           Back to Products
@@ -291,9 +292,9 @@ export default function EditProductPage() {
 
       {/* ── PRODUCT DETAILS FORM ── */}
       <form id="edit-product-form" onSubmit={handleSave} className="space-y-8 mb-8">
-        <section className="bg-white dark:bg-gray-800 rounded-xl border border-[#ff6600]/10 p-6 md:p-8 shadow-sm">
-          <div className="flex items-center gap-2 mb-6 pb-4 border-b border-[#ff6600]/5">
-            <Info className="w-5 h-5 text-[#ff6600]" />
+        <section className="bg-white dark:bg-gray-800 rounded-xl border border-orange-500/10 p-6 md:p-8 shadow-sm">
+          <div className="flex items-center gap-2 mb-6 pb-4 border-b border-orange-500/5">
+            <Info className="w-5 h-5 text-orange-500" />
             <h2 className="text-xl font-bold text-slate-900 dark:text-white">Basic Information</h2>
           </div>
 
@@ -301,7 +302,7 @@ export default function EditProductPage() {
             {/* Name */}
             <div className="space-y-1.5">
               <label htmlFor="product-name" className="text-sm font-semibold text-slate-700 dark:text-gray-300">
-                Product Name <span className="text-[#ff6600]">*</span>
+                Product Name <span className="text-orange-500">*</span>
               </label>
               <input id="product-name" type="text" required className={INPUT_CLS}
                 value={formData.name}
@@ -312,7 +313,7 @@ export default function EditProductPage() {
             {/* SKU */}
             <div className="space-y-1.5">
               <label htmlFor="product-sku" className="text-sm font-semibold text-slate-700 dark:text-gray-300">
-                SKU <span className="text-[#ff6600]">*</span>
+                SKU <span className="text-orange-500">*</span>
               </label>
               <input id="product-sku" type="text" required className={INPUT_CLS}
                 value={formData.sku}
@@ -323,7 +324,7 @@ export default function EditProductPage() {
             {/* Price */}
             <div className="space-y-1.5">
               <label htmlFor="product-price" className="text-sm font-semibold text-slate-700 dark:text-gray-300">
-                Price <span className="text-[#ff6600]">*</span>
+                Price <span className="text-orange-500">*</span>
               </label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-gray-500 font-medium">$</span>
@@ -394,18 +395,18 @@ export default function EditProductPage() {
           </div>
 
           {/* Toggles */}
-          <div className="flex gap-6 pt-4 mt-4 border-t border-[#ff6600]/5">
+          <div className="flex gap-6 pt-4 mt-4 border-t border-orange-500/5">
             <label className="flex items-center gap-2 cursor-pointer">
               <input type="checkbox" checked={formData.is_active}
                 onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
-                className="w-5 h-5 rounded accent-[#ff6600]"
+                className="w-5 h-5 rounded accent-orange-500"
               />
               <span className="text-sm font-semibold text-slate-700 dark:text-gray-300">Active</span>
             </label>
             <label className="flex items-center gap-2 cursor-pointer">
               <input type="checkbox" checked={formData.is_featured}
                 onChange={(e) => setFormData({ ...formData, is_featured: e.target.checked })}
-                className="w-5 h-5 rounded accent-[#ff6600]"
+                className="w-5 h-5 rounded accent-orange-500"
               />
               <span className="text-sm font-semibold text-slate-700 dark:text-gray-300">Featured</span>
             </label>
@@ -417,10 +418,10 @@ export default function EditProductPage() {
       {product.product_type === 'catalog' && attributes.length > 0 && (
         <div className="space-y-8 mb-8">
           {/* Select Attribute Value */}
-          <section className="bg-white dark:bg-gray-800 rounded-xl border border-[#ff6600]/10 p-6 md:p-8 shadow-sm">
-            <div className="flex items-center justify-between mb-6 pb-4 border-b border-[#ff6600]/5">
+          <section className="bg-white dark:bg-gray-800 rounded-xl border border-orange-500/10 p-6 md:p-8 shadow-sm">
+            <div className="flex items-center justify-between mb-6 pb-4 border-b border-orange-500/5">
               <div className="flex items-center gap-2">
-                <Sliders className="w-5 h-5 text-[#ff6600]" />
+                <Sliders className="w-5 h-5 text-orange-500" />
                 <h2 className="text-xl font-bold text-slate-900 dark:text-white">Select Attribute Value</h2>
               </div>
               <div className="flex items-center gap-3">
@@ -428,7 +429,7 @@ export default function EditProductPage() {
                 <button
                   type="button"
                   onClick={() => setSingleCatalogMode(!singleCatalogMode)}
-                  className={`relative w-11 h-6 rounded-full transition-colors ${singleCatalogMode ? 'bg-[#ff6600]' : 'bg-slate-300'}`}
+                  className={`relative w-11 h-6 rounded-full transition-colors ${singleCatalogMode ? 'bg-orange-500' : 'bg-slate-300'}`}
                 >
                   <span className={`absolute top-0.5 w-5 h-5 bg-white dark:bg-gray-800 rounded-full shadow transition-transform ${singleCatalogMode ? 'left-[22px]' : 'left-0.5'}`} />
                 </button>
@@ -446,20 +447,20 @@ export default function EditProductPage() {
                         <label
                           key={val.id}
                           className={`flex items-center gap-2.5 px-5 py-2.5 rounded-full cursor-pointer transition-all border ${
-                            isSelected ? 'border-[#ff6600] bg-[#ff6600]/5' : 'border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-slate-300'
+                            isSelected ? 'border-orange-500 bg-orange-500/5' : 'border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-slate-300'
                           }`}
                         >
                           {singleCatalogMode ? (
                             /* Radio circle */
                             <span className={`w-[18px] h-[18px] rounded-full border flex items-center justify-center flex-shrink-0 transition-colors ${
-                              isSelected ? 'border-[#ff6600]' : 'border-slate-300'
+                              isSelected ? 'border-orange-500' : 'border-slate-300'
                             }`}>
-                              {isSelected && <span className="w-2 h-2 rounded-full bg-[#ff6600]" />}
+                              {isSelected && <span className="w-2 h-2 rounded-full bg-orange-500" />}
                             </span>
                           ) : (
                             /* Checkbox square */
                             <span className={`w-[18px] h-[18px] rounded flex items-center justify-center flex-shrink-0 transition-colors border ${
-                              isSelected ? 'border-[#ff6600] bg-[#ff6600]' : 'border-slate-300'
+                              isSelected ? 'border-orange-500 bg-orange-500' : 'border-slate-300'
                             }`}>
                               {isSelected && (
                                 <svg className="w-2.5 h-2.5 text-white" viewBox="0 0 12 12" fill="none">
@@ -487,7 +488,7 @@ export default function EditProductPage() {
             <div className="flex justify-end mt-6 pt-4 border-t border-slate-100 dark:border-gray-700">
               <button
                 onClick={handleAddCatalog}
-                className="px-6 py-2.5 rounded-lg font-semibold border border-[#ff6600] text-[#ff6600] hover:bg-[#ff6600]/5 active:scale-95 transition-all text-sm"
+                className="px-6 py-2.5 rounded-lg font-semibold border border-orange-500 text-orange-500 hover:bg-orange-500/5 active:scale-95 transition-all text-sm"
               >
                 Add
               </button>
@@ -495,9 +496,9 @@ export default function EditProductPage() {
           </section>
 
           {/* Added Catalogs */}
-          <section className="bg-white dark:bg-gray-800 rounded-xl border border-[#ff6600]/10 p-6 md:p-8 shadow-sm">
-            <div className="flex items-center gap-2 mb-4 pb-4 border-b border-[#ff6600]/5">
-              <Package className="w-5 h-5 text-[#ff6600]" />
+          <section className="bg-white dark:bg-gray-800 rounded-xl border border-orange-500/10 p-6 md:p-8 shadow-sm">
+            <div className="flex items-center gap-2 mb-4 pb-4 border-b border-orange-500/5">
+              <Package className="w-5 h-5 text-orange-500" />
               <h2 className="text-xl font-bold text-slate-900 dark:text-white">Added Catalogs</h2>
             </div>
             <p className="text-sm text-slate-500 dark:text-gray-400 mb-6">
@@ -511,7 +512,7 @@ export default function EditProductPage() {
             ) : (
               <div className="overflow-x-auto -mx-4 md:mx-0">
                 <table className="w-full min-w-[600px]">
-                  <thead className="bg-slate-50 dark:bg-gray-700/50 border-b border-[#ff6600]/5">
+                  <thead className="bg-slate-50 dark:bg-gray-700/50 border-b border-orange-500/5">
                     <tr>
                       <th className="px-4 py-3 text-left text-xs font-bold text-slate-400 dark:text-gray-500 uppercase tracking-wider">Attributes</th>
                       <th className="px-4 py-3 text-left text-xs font-bold text-slate-400 dark:text-gray-500 uppercase tracking-wider">Name / SKU</th>
@@ -529,7 +530,7 @@ export default function EditProductPage() {
 
                       let rowBg = '';
                       if (isPendingDelete) rowBg = 'bg-red-50 opacity-60';
-                      else if (isNew) rowBg = 'bg-[#ff6600]/5';
+                      else if (isNew) rowBg = 'bg-orange-500/5';
                       else if (isOutOfStock) rowBg = 'bg-red-50';
 
                       return (
@@ -557,7 +558,7 @@ export default function EditProductPage() {
 
                           <td className={`px-4 py-3 text-sm text-slate-900 dark:text-white font-mono ${isPendingDelete ? 'line-through text-slate-400 dark:text-gray-500' : ''}`}>
                             {catalog.variant_name || catalog.sku || (
-                              isNew ? <span className="text-[#ff6600] text-xs italic">New</span> : '—'
+                              isNew ? <span className="text-orange-500 text-xs italic">New</span> : '—'
                             )}
                           </td>
 
@@ -568,7 +569,7 @@ export default function EditProductPage() {
                               disabled={isPendingDelete}
                               onChange={(e) => updateCatalogField(catalog.id, 'stock', e.target.value)}
                               onFocus={() => !isNew && updateCatalogField(catalog.id, 'isDirty', true)}
-                              className="w-24 h-10 px-2 border border-[#ff6600]/20 bg-[#ff6600]/5 rounded-lg text-sm focus:outline-none focus:border-[#ff6600] focus:ring-2 focus:ring-[#ff6600]/20 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                              className="w-24 h-10 px-2 border border-orange-500/20 bg-orange-500/5 rounded-lg text-sm focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                               placeholder="0"
                             />
                             {(catalog.reserved ?? 0) > 0 && (
@@ -585,7 +586,7 @@ export default function EditProductPage() {
                                 updateCatalogField(catalog.id, 'price', e.target.value);
                                 if (!isNew) updateCatalogField(catalog.id, 'isDirty', true);
                               }}
-                              className="w-28 h-10 px-2 border border-[#ff6600]/20 bg-[#ff6600]/5 rounded-lg text-sm focus:outline-none focus:border-[#ff6600] focus:ring-2 focus:ring-[#ff6600]/20 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                              className="w-28 h-10 px-2 border border-orange-500/20 bg-orange-500/5 rounded-lg text-sm focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                               placeholder={product.price}
                             />
                           </td>
@@ -604,7 +605,7 @@ export default function EditProductPage() {
                                 <button
                                   onClick={() => undoPendingVariantDelete(catalog.id)}
                                   title="Restore this variant"
-                                  className="flex items-center gap-1 px-3 py-1 text-[#ff6600] hover:text-[#ff6600]/80 text-sm font-medium border border-[#ff6600]/20 rounded-lg hover:bg-[#ff6600]/5"
+                                  className="flex items-center gap-1 px-3 py-1 text-orange-500 hover:text-orange-500/80 text-sm font-medium border border-orange-500/20 rounded-lg hover:bg-orange-500/5"
                                 >
                                   <Undo2 className="w-3.5 h-3.5" /> Restore
                                 </button>
@@ -614,7 +615,7 @@ export default function EditProductPage() {
                                   {catalog.isDirty && (
                                     <button
                                       onClick={() => handleSaveVariant(catalog)}
-                                      className="px-3 py-1 text-white bg-[#ff6600] hover:bg-[#ff6600]/90 text-sm font-bold rounded-lg shadow-sm"
+                                      className="px-3 py-1 text-white bg-orange-500 hover:bg-orange-500/90 text-sm font-bold rounded-lg shadow-sm"
                                     >
                                       Save
                                     </button>
@@ -642,7 +643,7 @@ export default function EditProductPage() {
                 <button
                   onClick={handleGenerateCatalog}
                   disabled={submitting}
-                  className="px-8 py-3 bg-[#ff6600] text-white font-bold rounded-lg shadow-lg shadow-orange-500/20 hover:bg-[#ff6600]/90 active:scale-95 transition-all disabled:opacity-50"
+                  className="px-8 py-3 bg-orange-500 text-white font-bold rounded-lg shadow-lg shadow-orange-500/20 hover:bg-orange-500/90 active:scale-95 transition-all disabled:opacity-50"
                 >
                   {submitting ? (
                     <span className="flex items-center gap-2">
@@ -694,7 +695,7 @@ export default function EditProductPage() {
           type="submit"
           form="edit-product-form"
           disabled={saving}
-          className="px-12 py-3 rounded-lg font-bold bg-[#ff6600] text-white shadow-lg shadow-orange-500/30 hover:bg-[#ff6600]/90 active:scale-95 transition-all disabled:opacity-50"
+          className="px-12 py-3 rounded-lg font-bold bg-orange-500 text-white shadow-lg shadow-orange-500/30 hover:bg-orange-500/90 active:scale-95 transition-all disabled:opacity-50"
         >
           {saving ? (
             <span className="flex items-center gap-2">
@@ -713,6 +714,7 @@ export default function EditProductPage() {
         onCancel={() => setConfirmVariantDialog(null)}
         onConfirm={confirmVariantDelete}
       />
+      </div>
     </div>
   );
 }

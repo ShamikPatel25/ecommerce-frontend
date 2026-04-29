@@ -1,22 +1,25 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { productAPI } from '@/lib/api';
 import { toast } from 'sonner';
 import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
-import { Search, Trash2 } from 'lucide-react';
+import { Search, Trash2, Package } from 'lucide-react';
 import Pagination from '@/components/dashboard/Pagination';
 import { formatCurrency } from '@/lib/utils';
 import { useStoreStore } from '@/store/storeStore';
 
+const PER_PAGE = 10;
+
 export default function CatalogsPage() {
+  const router = useRouter();
   const { activeStore } = useStoreStore();
   const [catalogs, setCatalogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [deleteModal, setDeleteModal] = useState({ open: false, variant: null });
-  const itemsPerPage = 10;
 
   const fetchCatalogs = useCallback(async () => {
     try {
@@ -84,11 +87,11 @@ export default function CatalogsPage() {
   );
 
   // Pagination
-  const totalPages = Math.max(1, Math.ceil(filteredCatalogs.length / itemsPerPage));
+  const totalPages = Math.max(1, Math.ceil(filteredCatalogs.length / PER_PAGE));
   const safeCurrentPage = Math.min(currentPage, totalPages);
   const paginatedCatalogs = filteredCatalogs.slice(
-    (safeCurrentPage - 1) * itemsPerPage,
-    safeCurrentPage * itemsPerPage
+    (safeCurrentPage - 1) * PER_PAGE,
+    safeCurrentPage * PER_PAGE
   );
 
   useEffect(() => {
@@ -96,24 +99,24 @@ export default function CatalogsPage() {
   }, [searchQuery]);
 
   return (
-    <div className="p-4 md:p-8">
-      <div className="max-w-6xl mx-auto">
+    <div className="admin-page">
+      <div className="admin-container">
         {/* Page Header */}
-        <div className="flex flex-wrap justify-between items-end gap-4 mb-8">
+        <div className="admin-page-header">
           <div>
-            <h2 className="text-slate-900 dark:text-white text-3xl font-black leading-tight tracking-tight">Catalogs</h2>
-            <p className="text-slate-500 dark:text-gray-400 text-sm mt-1">Manage product variants and catalog items.</p>
+            <h2 className="admin-title">Catalogs</h2>
+            <p className="admin-subtitle">Manage product variants and catalog items.</p>
           </div>
         </div>
 
         {/* Search Bar */}
-        <div className="mb-6">
-          <div className="flex w-full items-stretch rounded-xl h-12 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden focus-within:ring-2 focus-within:ring-orange-500/20 transition-all">
-            <div className="text-slate-400 dark:text-gray-500 flex items-center justify-center px-4">
+        <div className="admin-search-wrapper">
+          <div className="admin-search-box">
+            <div className="admin-search-icon">
               <Search size={20} />
             </div>
             <input
-              className="flex-1 bg-transparent border-none focus:ring-0 focus:outline-none text-slate-900 dark:text-white text-base placeholder:text-slate-400 dark:placeholder:text-gray-500"
+              className="admin-search-input"
               placeholder="Search by variant name, SKU or product..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -122,30 +125,30 @@ export default function CatalogsPage() {
         </div>
 
         {/* DataTable Container */}
-        <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden shadow-sm">
+        <div className="admin-table-card">
           {loading ? (
-            <div className="p-12 flex items-center justify-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div>
+            <div className="admin-loading">
+              <div className="admin-spinner"></div>
             </div>
           ) : (
             <>
               <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
+                <table className="admin-table min-w-[750px]">
                   <thead>
-                    <tr className="bg-slate-50 dark:bg-gray-700/50 text-slate-600 dark:text-gray-300">
-                      <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider">Variant Name</th>
-                      <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider">Product</th>
-                      <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider">Stock</th>
-                      <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider">Price</th>
-                      <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-right w-20">Actions</th>
+                    <tr className="admin-thead-row">
+                      <th className="admin-th">Variant Name</th>
+                      <th className="admin-th">Product</th>
+                      <th className="admin-th">Stock</th>
+                      <th className="admin-th">Price</th>
+                      <th className="admin-th text-right w-20">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100 dark:divide-gray-700">
+                  <tbody className="admin-tbody">
                     {paginatedCatalogs.length === 0 ? (
                       <tr>
-                        <td colSpan={5} className="px-6 py-16 text-center">
-                          <div className="text-slate-400 dark:text-gray-500">
-                            <p className="text-4xl mb-3">📚</p>
+                        <td colSpan={5} className="admin-empty">
+                          <div className="admin-empty-text">
+                            <Package className="w-10 h-10 mx-auto mb-3 opacity-40" />
                             <p className="text-sm font-medium">No catalogs found</p>
                             <p className="text-xs text-slate-400 dark:text-gray-500 mt-1">Try adjusting your search or create catalog products.</p>
                           </div>
@@ -157,27 +160,23 @@ export default function CatalogsPage() {
                         return (
                           <tr
                             key={`${variant.product_id}-${variant.id}`}
-                            className="hover:bg-slate-50/50 dark:hover:bg-gray-700 transition-colors group"
+                            onClick={() => router.push(`/products/${variant.product_id}/edit`)}
+                            className="admin-tr group"
                           >
-                            {/* Variant Name */}
-                            <td className="px-6 py-4">
-                              <p className="text-slate-900 dark:text-white text-sm font-semibold">
+                            <td className="admin-td">
+                              <p className="text-slate-900 dark:text-white text-sm font-medium">
                                 {variant.variant_name || variant.sku}
                               </p>
                               <span className="font-mono text-xs bg-slate-100 dark:bg-gray-700 px-2 py-0.5 rounded text-slate-500 dark:text-gray-400">
                                 {variant.sku}
                               </span>
                             </td>
-
-                            {/* Product */}
-                            <td className="px-6 py-4">
+                            <td className="admin-td">
                               <span className="text-slate-600 dark:text-gray-300 text-sm">{variant.product_name}</span>
                             </td>
-
-                            {/* Stock */}
-                            <td className="px-6 py-4">
+                            <td className="admin-td">
                               <div className="flex items-center gap-3">
-                                <div className="w-24 h-2 rounded-full bg-slate-100 dark:bg-gray-700 overflow-hidden">
+                                <div className="w-20 h-1.5 rounded-full bg-slate-100 dark:bg-gray-700 overflow-hidden">
                                   <div
                                     className={`h-full ${getStockColor(stock)} rounded-full transition-all`}
                                     style={{ width: `${getStockPercent(stock)}%` }}
@@ -188,22 +187,18 @@ export default function CatalogsPage() {
                                 </span>
                               </div>
                             </td>
-
-                            {/* Price */}
-                            <td className="px-6 py-4">
+                            <td className="admin-td">
                               <span className="text-sm font-bold text-slate-900 dark:text-white">
                                 {formatCurrency(variant.price ?? variant.product_price ?? 0, activeStore?.currency)}
                               </span>
                             </td>
-
-                            {/* Actions - visible on hover */}
-                            <td className="px-6 py-4 text-right">
+                            <td className="admin-td text-right">
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   setDeleteModal({ open: true, variant });
                                 }}
-                                className="inline-flex items-center justify-center size-8 rounded-lg text-red-400 hover:text-red-600 hover:bg-red-50 transition-all opacity-0 group-hover:opacity-100"
+                                className="inline-flex items-center justify-center size-8 rounded-lg text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all opacity-100 lg:opacity-0 lg:group-hover:opacity-100"
                               >
                                 <Trash2 size={16} />
                               </button>
@@ -223,7 +218,7 @@ export default function CatalogsPage() {
                   totalPages={totalPages}
                   onPageChange={setCurrentPage}
                   totalItems={filteredCatalogs.length}
-                  perPage={itemsPerPage}
+                  perPage={PER_PAGE}
                   itemLabel="catalogs"
                 />
               )}

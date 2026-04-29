@@ -112,7 +112,7 @@ export default function ProductDetailPage() {
   if (loading) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
-        <Loader2 className="w-10 h-10 text-[#ff6600] animate-spin" />
+        <Loader2 className="w-10 h-10 text-orange-500 animate-spin" />
       </div>
     );
   }
@@ -136,7 +136,7 @@ export default function ProductDetailPage() {
     <div className="p-4 md:p-8 max-w-6xl">
       {/* Breadcrumbs */}
       <nav className="flex items-center gap-1.5 text-sm text-slate-500 dark:text-gray-400 mb-4">
-        <Link href="/products" className="hover:text-[#ff6600] transition-colors">Products</Link>
+        <Link href="/products" className="hover:text-orange-500 transition-colors">Products</Link>
         <ChevronRight className="w-3.5 h-3.5" />
         <span className="font-semibold text-slate-900 dark:text-white truncate max-w-xs">{product.name}</span>
       </nav>
@@ -156,7 +156,7 @@ export default function ProductDetailPage() {
           <button onClick={() => router.push('/products')} className="flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:bg-slate-50 dark:hover:bg-gray-700 transition-colors text-sm font-bold">
             <ArrowLeft className="w-4 h-4" /> Back
           </button>
-          <Link href={`/products/${productId}/edit`} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#ff6600] text-white hover:bg-[#ff6600]/90 transition-colors text-sm font-bold shadow-sm">
+          <Link href={`/products/${productId}/edit`} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-orange-500 text-white hover:bg-orange-500/90 transition-colors text-sm font-bold shadow-sm">
             <Edit className="w-4 h-4" /> Edit Product
           </Link>
         </div>
@@ -193,8 +193,8 @@ export default function ProductDetailPage() {
                     onClick={() => setSelectedImage(img)}
                     className={`flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 transition-all ${
                       selectedImage?.id === img.id
-                        ? 'border-[#ff6600] ring-2 ring-[#ff6600]/20'
-                        : 'border-slate-200 dark:border-gray-700 hover:border-[#ff6600]/40'
+                        ? 'border-orange-500 ring-2 ring-orange-500/20'
+                        : 'border-slate-200 dark:border-gray-700 hover:border-orange-500/40'
                     }`}
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -215,7 +215,7 @@ export default function ProductDetailPage() {
             <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
               <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">{product.name}</h2>
               <div className="flex items-baseline gap-3 mb-4">
-                <span className="text-2xl font-black text-[#ff6600]">${parseFloat(product.price).toFixed(2)}</span>
+                <span className="text-2xl font-black text-orange-500">${parseFloat(product.price).toFixed(2)}</span>
                 {product.compare_at_price && (
                   <span className="text-lg text-slate-400 line-through">${parseFloat(product.compare_at_price).toFixed(2)}</span>
                 )}
@@ -228,7 +228,7 @@ export default function ProductDetailPage() {
               </div>
               {product.category_name && (
                 <p className="text-sm text-slate-500 dark:text-gray-400 mt-2 flex items-center gap-1.5">
-                  <Tag className="w-3.5 h-3.5 text-[#ff6600]" /> {product.category_name}
+                  <Tag className="w-3.5 h-3.5 text-orange-500" /> {product.category_name}
                 </p>
               )}
               {product.description && (
@@ -255,7 +255,7 @@ export default function ProductDetailPage() {
                   <h3 className="text-sm font-bold text-slate-800 dark:text-gray-200 mb-3 uppercase tracking-wider">
                     {group.attribute_name}
                     {selectedValues[group.attribute_name] && (
-                      <span className="ml-2 text-[#ff6600] normal-case">
+                      <span className="ml-2 text-orange-500 normal-case">
                         : {isPrimary
                           ? group.values.find(v => v.value_id === selectedValues[group.attribute_name])?.value
                           : uniqueValues.find(v => v.value_id === selectedValues[group.attribute_name])?.value
@@ -280,10 +280,10 @@ export default function ProductDetailPage() {
                           disabled={isOutOfStock}
                           className={`px-4 py-2 rounded-lg border-2 text-sm font-semibold transition-all ${
                             isSelected
-                              ? 'border-[#ff6600] bg-[#ff6600]/10 text-[#ff6600]'
+                              ? 'border-orange-500 bg-orange-500/10 text-orange-500'
                               : isOutOfStock
                                 ? 'border-slate-200 dark:border-gray-700 bg-slate-100 dark:bg-gray-700 text-slate-400 dark:text-gray-500 cursor-not-allowed line-through'
-                                : 'border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-slate-700 dark:text-gray-300 hover:border-[#ff6600]/40'
+                                : 'border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-slate-700 dark:text-gray-300 hover:border-orange-500/40'
                           }`}
                         >
                           {valueName}
@@ -333,7 +333,7 @@ export default function ProductDetailPage() {
                     <div>
                       <p className="text-xs font-medium text-slate-400 dark:text-gray-500 uppercase tracking-wider">Type</p>
                       <p className="text-sm font-semibold text-slate-900 dark:text-white mt-1 capitalize flex items-center gap-1.5">
-                        {isCatalog ? <Layers className="w-3.5 h-3.5 text-[#ff6600]" /> : <Package className="w-3.5 h-3.5 text-[#ff6600]" />}
+                        {isCatalog ? <Layers className="w-3.5 h-3.5 text-orange-500" /> : <Package className="w-3.5 h-3.5 text-orange-500" />}
                         {product.product_type}
                       </p>
                     </div>
@@ -358,7 +358,7 @@ export default function ProductDetailPage() {
                     <div>
                       <p className="text-xs font-medium text-slate-400 dark:text-gray-500 uppercase tracking-wider">Category</p>
                       <p className="text-sm text-slate-700 dark:text-gray-300 mt-1 flex items-center gap-1.5">
-                        <Tag className="w-3.5 h-3.5 text-[#ff6600]" /> {product.category_name}
+                        <Tag className="w-3.5 h-3.5 text-orange-500" /> {product.category_name}
                       </p>
                     </div>
                   )}
@@ -416,7 +416,7 @@ export default function ProductDetailPage() {
                 {isCatalog && (
                   <div className="flex justify-between">
                     <dt className="text-sm text-slate-500 dark:text-gray-400">Variants</dt>
-                    <dd className="text-sm font-bold text-[#ff6600]">{product.variants_count || (product.variants || []).length}</dd>
+                    <dd className="text-sm font-bold text-orange-500">{product.variants_count || (product.variants || []).length}</dd>
                   </div>
                 )}
                 <div className="flex justify-between">

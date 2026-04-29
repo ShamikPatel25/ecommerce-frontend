@@ -58,11 +58,11 @@ export default function NotificationBell({ variant = 'sidebar' }) {
   };
 
   const buttonCls = variant === 'topbar'
-    ? 'relative p-2.5 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all shadow-sm'
+    ? 'relative p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors'
     : 'p-2 rounded-lg hover:bg-gray-800 transition relative text-gray-400 hover:text-white';
 
   const iconCls = variant === 'topbar'
-    ? 'w-5 h-5 text-slate-600 dark:text-gray-300'
+    ? 'w-5 h-5 text-gray-500 dark:text-gray-400'
     : 'w-5 h-5';
 
   // All unread + max 10 read

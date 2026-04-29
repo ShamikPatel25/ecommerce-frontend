@@ -10,9 +10,9 @@ import {
 } from 'lucide-react';
 
 const INPUT_CLS =
-  'w-full rounded-lg border border-[#ff6600]/20 bg-[#ff6600]/5 px-4 py-3 text-slate-900 dark:text-white ' +
-  'placeholder:text-slate-400 dark:placeholder:text-gray-500 focus:outline-none focus:border-[#ff6600] ' +
-  'focus:ring-2 focus:ring-[#ff6600]/20 transition-all dark:bg-gray-700 dark:border-gray-600';
+  'w-full rounded-lg border border-orange-500/20 bg-orange-500/5 px-4 py-3 text-slate-900 dark:text-white ' +
+  'placeholder:text-slate-400 dark:placeholder:text-gray-500 focus:outline-none focus:border-orange-500 ' +
+  'focus:ring-2 focus:ring-orange-500/20 transition-all dark:bg-gray-700 dark:border-gray-600';
 
 const SELECT_CLS = INPUT_CLS + ' appearance-none pr-10';
 
@@ -74,18 +74,19 @@ export default function EditCategoryPage() {
 
   if (loading) return (
     <div className="min-h-[60vh] flex items-center justify-center">
-      <Loader2 className="w-10 h-10 text-[#ff6600] animate-spin" />
+      <Loader2 className="w-10 h-10 text-orange-500 animate-spin" />
     </div>
   );
 
   const parentOptions = categories.filter(c => String(c.id) !== categoryId && c.level < 2);
 
   return (
-    <div className="p-4 md:p-8 max-w-5xl">
+    <div className="admin-page">
+      <div className="admin-container">
 
       {/* Breadcrumbs */}
       <nav className="flex items-center gap-1.5 text-sm text-slate-500 dark:text-gray-400 mb-4">
-        <button onClick={() => router.push('/categories')} className="hover:text-[#ff6600] transition-colors">
+        <button onClick={() => router.push('/categories')} className="hover:text-orange-500 transition-colors">
           Categories
         </button>
         <ChevronRight className="w-3.5 h-3.5" />
@@ -98,7 +99,7 @@ export default function EditCategoryPage() {
         <button
           type="button"
           onClick={() => router.push('/categories')}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg border border-[#ff6600]/20 bg-white dark:bg-gray-800 hover:bg-[#ff6600]/5 transition-colors text-sm font-bold self-start md:self-auto"
+          className="flex items-center gap-2 px-4 py-2 rounded-lg border border-orange-500/20 bg-white dark:bg-gray-800 hover:bg-orange-500/5 transition-colors text-sm font-bold self-start md:self-auto"
         >
           <ArrowLeft className="w-4 h-4" />
           Back to Categories
@@ -106,9 +107,9 @@ export default function EditCategoryPage() {
       </div>
 
       <form id="edit-category-form" onSubmit={handleSubmit} className="space-y-8">
-        <section className="bg-white dark:bg-gray-800 rounded-xl border border-[#ff6600]/10 dark:border-gray-700 p-6 md:p-8 shadow-sm">
-          <div className="flex items-center gap-2 mb-6 pb-4 border-b border-[#ff6600]/5 dark:border-gray-700">
-            <Info className="w-5 h-5 text-[#ff6600]" />
+        <section className="bg-white dark:bg-gray-800 rounded-xl border border-orange-500/10 dark:border-gray-700 p-6 md:p-8 shadow-sm">
+          <div className="flex items-center gap-2 mb-6 pb-4 border-b border-orange-500/5 dark:border-gray-700">
+            <Info className="w-5 h-5 text-orange-500" />
             <h2 className="text-xl font-bold text-slate-900 dark:text-white">Category Information</h2>
           </div>
 
@@ -116,7 +117,7 @@ export default function EditCategoryPage() {
             {/* Name */}
             <div className="space-y-1.5">
               <label className="text-sm font-semibold text-slate-700 dark:text-gray-300">
-                Name <span className="text-[#ff6600]">*</span>
+                Name <span className="text-orange-500">*</span>
               </label>
               <input
                 type="text"
@@ -130,7 +131,7 @@ export default function EditCategoryPage() {
             {/* Slug */}
             <div className="space-y-1.5">
               <label className="text-sm font-semibold text-slate-700 dark:text-gray-300">
-                Slug <span className="text-[#ff6600]">*</span>
+                Slug <span className="text-orange-500">*</span>
               </label>
               <input
                 type="text"
@@ -166,8 +167,8 @@ export default function EditCategoryPage() {
 
           {/* Level preview */}
           {formData.parent && (
-            <div className="mt-4 p-4 bg-[#ff6600]/5 border border-[#ff6600]/20 rounded-xl flex items-start gap-2">
-              <FolderTree className="w-4 h-4 text-[#ff6600] mt-0.5 shrink-0" />
+            <div className="mt-4 p-4 bg-orange-500/5 border border-orange-500/20 rounded-xl flex items-start gap-2">
+              <FolderTree className="w-4 h-4 text-orange-500 mt-0.5 shrink-0" />
               <p className="text-sm text-slate-700 dark:text-gray-300">
                 This will be a <strong>sub-category</strong> of <strong>{categories.find(c => String(c.id) === String(formData.parent))?.name}</strong>
               </p>
@@ -187,7 +188,7 @@ export default function EditCategoryPage() {
           <button
             type="submit"
             disabled={saving}
-            className="px-12 py-3 rounded-lg font-bold bg-[#ff6600] text-white shadow-lg shadow-orange-500/30 hover:bg-[#ff6600]/90 active:scale-95 transition-all disabled:opacity-50"
+            className="px-12 py-3 rounded-lg font-bold bg-orange-500 text-white shadow-lg shadow-orange-500/30 hover:bg-orange-500/90 active:scale-95 transition-all disabled:opacity-50"
           >
             {saving ? (
               <span className="flex items-center gap-2">
@@ -197,6 +198,7 @@ export default function EditCategoryPage() {
           </button>
         </div>
       </form>
+      </div>
     </div>
   );
 }
