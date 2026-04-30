@@ -396,7 +396,6 @@ export default function StorefrontOrdersPage() {
         setError(null);
       })
       .catch((err) => {
-        console.error('Failed to fetch orders:', err.response?.status, err.response?.data);
         setError(err.response?.data?.error || err.response?.data?.detail || 'Failed to load orders. Please try again.');
       })
       .finally(() => {
