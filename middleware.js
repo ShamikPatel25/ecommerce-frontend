@@ -15,7 +15,21 @@ export function middleware(request) {
   let baseHostname = hostname;
 
   // 1. Determine subdomain and base hostname
-  if (hostname.endsWith('.localhost')) {
+  const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN;
+
+  if (rootDomain && hostname.endsWith(rootDomain)) {
+    if (hostname === rootDomain || hostname === `www.${rootDomain}`) {
+      subdomain = '';
+      baseHostname = rootDomain;
+    } else {
+      subdomain = hostname.replace(`.${rootDomain}`, '');
+      baseHostname = rootDomain;
+    }
+  } else if (hostname.endsWith('.vercel.app')) {
+    // Vercel default domains are treated as the main admin panel
+    subdomain = '';
+    baseHostname = hostname;
+  } else if (hostname.endsWith('.localhost')) {
     subdomain = hostname.replace('.localhost', '');
     baseHostname = 'localhost';
   } else if (hostname.endsWith('.nip.io')) {
