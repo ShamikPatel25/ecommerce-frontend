@@ -1,0 +1,176 @@
+/* ─── StoreScale Landing Page Styles ─── */
+/* Premium design tokens & utilities for the marketing site */
+
+/* ── Gradient Utilities ── */
+.landing-gradient-bg {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.landing-gradient-text {
+  background: linear-gradient(90deg, #667eea, #764ba2);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ── Shadow System ── */
+.landing-shadow-soft {
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+}
+
+.landing-shadow-hard {
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+}
+
+/* ── Hover Lift Animation ── */
+.landing-hover-lift {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.landing-hover-lift:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.12);
+}
+
+/* ── Floating Animation ── */
+.landing-float {
+  animation: landingFloat 6s ease-in-out infinite;
+}
+
+@keyframes landingFloat {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-15px);
+  }
+}
+
+/* ── Pulse Ring Animation ── */
+.landing-pulse-ring {
+  animation: landingPulse 2s infinite;
+}
+
+@keyframes landingPulse {
+  0% {
+    transform: scale(0.95);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.95);
+    opacity: 0.8;
+  }
+}
+
+/* ── Tab Active State ── */
+.landing-tab-active {
+  border-bottom: 3px solid #764ba2;
+  color: #764ba2;
+  font-weight: 600;
+}
+
+/* ── Fade In Up Animation ── */
+.landing-fade-in-up {
+  animation: landingFadeInUp 0.6s ease-out both;
+}
+
+@keyframes landingFadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ── Staggered Delay Helpers ── */
+.landing-delay-100 { animation-delay: 100ms; }
+.landing-delay-200 { animation-delay: 200ms; }
+.landing-delay-300 { animation-delay: 300ms; }
+.landing-delay-400 { animation-delay: 400ms; }
+.landing-delay-500 { animation-delay: 500ms; }
+
+/* ── Glassmorphism Nav ── */
+.landing-nav-glass {
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+/* ── Section Background Variants ── */
+.landing-bg-mesh {
+  background-color: #f8fafc;
+  background-image:
+    radial-gradient(at 40% 20%, rgba(102, 126, 234, 0.06) 0px, transparent 50%),
+    radial-gradient(at 80% 0%, rgba(118, 75, 162, 0.04) 0px, transparent 50%),
+    radial-gradient(at 0% 50%, rgba(102, 126, 234, 0.05) 0px, transparent 50%);
+}
+
+/* ── CTA Glow Effect ── */
+.landing-glow-btn {
+  position: relative;
+  overflow: hidden;
+}
+
+.landing-glow-btn::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  z-index: -1;
+  border-radius: inherit;
+  filter: blur(12px);
+  opacity: 0.4;
+  transition: opacity 0.3s ease;
+}
+
+.landing-glow-btn:hover::before {
+  opacity: 0.7;
+}
+
+/* ── Smooth Scroll Offset for Sticky Nav ── */
+.landing-section {
+  scroll-margin-top: 80px;
+}
+
+/* ── Dashboard Slider ── */
+.landing-slider {
+  transition: transform 0.5s ease-in-out;
+}
+
+/* ── Gradient Border Card ── */
+.landing-gradient-border {
+  position: relative;
+  background: white;
+  border-radius: 1rem;
+}
+
+.landing-gradient-border::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  z-index: -1;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  padding: 2px;
+}
+
+/* ── Counter Animation ── */
+.landing-counter {
+  font-variant-numeric: tabular-nums;
+}
