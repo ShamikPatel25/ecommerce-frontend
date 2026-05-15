@@ -16,7 +16,7 @@ export default function StoreDeactivatedModal({ open, onClose }) {
       >
         <div className="p-8 text-center">
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-orange-100 dark:bg-orange-900/30 mb-6">
-            <AlertTriangle className="w-8 h-8 text-orange-500" />
+            <AlertTriangle className="w-8 h-8 text-violet-500" />
           </div>
           <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Store Deactivated</h3>
           <p className="text-slate-500 dark:text-gray-400 text-base leading-relaxed">
@@ -28,7 +28,7 @@ export default function StoreDeactivatedModal({ open, onClose }) {
           <button
             type="button"
             onClick={onClose}
-            className="w-full px-4 py-3 rounded-lg bg-orange-500 text-white font-bold hover:bg-orange-600 transition-colors shadow-lg shadow-orange-500/20"
+            className="w-full px-4 py-3 rounded-lg bg-violet-500 text-white font-bold hover:bg-violet-600 transition-colors shadow-lg shadow-violet-500/20"
           >
             OK
           </button>

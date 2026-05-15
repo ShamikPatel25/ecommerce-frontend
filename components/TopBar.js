@@ -84,7 +84,7 @@ export default function TopBar() {
             onClick={() => setSettingsOpen(!settingsOpen)}
             className={`p-2 rounded-lg transition-colors ${
               settingsOpen
-                ? 'bg-gray-100 dark:bg-gray-800 text-orange-500'
+                ? 'bg-gray-100 dark:bg-gray-800 text-violet-500'
                 : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400'
             }`}
           >

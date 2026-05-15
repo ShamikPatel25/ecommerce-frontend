@@ -22,8 +22,8 @@ export default function DashboardLayout({ children }) {
   const [ready, setReady] = useState(false);
   const [storeResolved, setStoreResolved] = useState(false);
 
-  // Connect to notification WebSocket
-  useNotificationSocket();
+  // Connect to notification WebSocket (only after store is resolved)
+  useNotificationSocket(storeResolved);
 
   // Apply dark class to <html>
   useEffect(() => {
@@ -85,7 +85,7 @@ export default function DashboardLayout({ children }) {
   if (!ready || !storeResolved) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-violet-500"></div>
       </div>
     );
   }
@@ -101,14 +101,14 @@ export default function DashboardLayout({ children }) {
         <div className="flex-1 pt-14 md:pt-0 md:ml-64 min-w-0 flex flex-col">
           <main className="flex-1 min-w-0 flex items-center justify-center">
           <div className="text-center max-w-md px-6">
-            <div className="w-20 h-20 bg-orange-500/10 rounded-2xl flex items-center justify-center mx-auto mb-6">
+            <div className="w-20 h-20 bg-violet-500/10 rounded-2xl flex items-center justify-center mx-auto mb-6">
               <span className="text-4xl">🏪</span>
             </div>
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Create Your Store First</h2>
             <p className="text-gray-500 dark:text-gray-400 mb-8">You need to create a store before you can manage products, orders, and more.</p>
             <button
               onClick={() => router.push('/stores/create')}
-              className="px-8 py-3 bg-orange-500 text-white rounded-xl font-bold shadow-lg shadow-orange-500/20 hover:bg-orange-600 transition-all"
+              className="px-8 py-3 bg-violet-500 text-white rounded-xl font-bold shadow-lg shadow-violet-500/20 hover:bg-violet-600 transition-all"
             >
               Create Store
             </button>

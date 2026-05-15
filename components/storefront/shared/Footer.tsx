@@ -1,88 +1,146 @@
 import Link from 'next/link';
-import { Facebook, Twitter, Instagram, ArrowRight } from 'lucide-react';
+import { Mail, Phone, ArrowRight, CreditCard, Truck, Shield, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 export function Footer({ store, categories, href }) {
-  const storeName = store?.name || 'Provision';
-  
+  const storeName = store?.name || 'Store';
+  const currentYear = new Date().getFullYear();
+
+  const features = [
+    { icon: Truck, title: 'Free Shipping', desc: 'On orders over $50' },
+    { icon: Shield, title: 'Secure Payment', desc: '100% protected' },
+    { icon: RotateCcw, title: 'Easy Returns', desc: '30-day policy' },
+    { icon: CreditCard, title: 'Flexible Payment', desc: 'Multiple options' },
+  ];
+
   return (
-    <footer className="bg-card border-t border-border pt-20 pb-10">
-      <div className="container mx-auto px-4 md:px-8">
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-12 mb-16">
-          <div className="md:col-span-4">
-            <Link href={href('/')} className="font-black text-3xl tracking-tighter mb-6 inline-block text-foreground">
-              {storeName}<span className="text-primary">.</span>
+    <footer className="bg-muted/30 border-t border-border">
+      <div className="container mx-auto px-4 md:px-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 py-8 border-b border-border/50">
+          {features.map((feature, idx) => (
+            <div key={idx} className="flex items-center gap-3 p-3">
+              <div className="flex-shrink-0 w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                <feature.icon className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <h4 className="text-sm font-semibold text-foreground">{feature.title}</h4>
+                <p className="text-xs text-muted-foreground">{feature.desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-8 lg:gap-12 py-12 lg:py-16">
+          <div className="sm:col-span-2 lg:col-span-4">
+            <Link href={href('/')} className="inline-flex items-center gap-2 font-bold text-xl tracking-tight mb-4">
+              <span className="bg-primary text-primary-foreground w-9 h-9 rounded-lg flex items-center justify-center text-lg font-black">
+                {storeName.charAt(0).toUpperCase()}
+              </span>
+              {storeName}
             </Link>
-            <p className="text-muted-foreground text-sm leading-relaxed mb-8 max-w-sm">
-              {store?.description || 'We design and curate premium products for modern professionals. Minimalist, functional, and built to last. Experience luxury in everyday essentials.'}
+            <p className="text-muted-foreground text-sm leading-relaxed mb-6 max-w-sm">
+              {store?.description || 'Discover quality products curated for you. We bring the best selection with exceptional service and fast delivery.'}
             </p>
-            <div className="flex gap-5">
-              <a href="#" className="w-10 h-10 rounded-full bg-background border border-border flex items-center justify-center text-muted-foreground hover:text-primary hover:border-primary/50 transition-all">
-                <Facebook className="w-4 h-4" />
-              </a>
-              <a href="#" className="w-10 h-10 rounded-full bg-background border border-border flex items-center justify-center text-muted-foreground hover:text-primary hover:border-primary/50 transition-all">
-                <Twitter className="w-4 h-4" />
-              </a>
-              <a href="#" className="w-10 h-10 rounded-full bg-background border border-border flex items-center justify-center text-muted-foreground hover:text-primary hover:border-primary/50 transition-all">
-                <Instagram className="w-4 h-4" />
-              </a>
+            <div className="flex gap-2">
+              {['facebook', 'twitter', 'instagram', 'youtube'].map((social) => (
+                <a
+                  key={social}
+                  href="#"
+                  className="w-9 h-9 rounded-full bg-background border border-border flex items-center justify-center text-muted-foreground hover:text-primary hover:border-primary hover:bg-primary/5 transition-all text-xs font-bold uppercase"
+                >
+                  {social.charAt(0)}
+                </a>
+              ))}
             </div>
           </div>
 
-          <div className="md:col-span-2">
-            <h4 className="font-bold mb-6 text-sm tracking-widest uppercase text-foreground flex items-center gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-primary"></span>
-              Shop
-            </h4>
-            <ul className="space-y-4 text-sm">
-              <li><Link href={href('/products')} className="text-muted-foreground hover:text-primary transition-colors">All Products</Link></li>
+          <div className="lg:col-span-2">
+            <h4 className="font-semibold text-sm text-foreground mb-4">Shop</h4>
+            <ul className="space-y-3">
+              <li>
+                <Link href={href('/products')} className="text-sm text-muted-foreground hover:text-primary transition-colors">
+                  All Products
+                </Link>
+              </li>
               {categories?.slice(0, 4).map((cat) => (
-                <li key={cat.id}><Link href={href(`/products?category=${cat.slug}`)} className="text-muted-foreground hover:text-primary transition-colors">{cat.name}</Link></li>
+                <li key={cat.id}>
+                  <Link
+                    href={href(`/products?category=${cat.slug}`)}
+                    className="text-sm text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    {cat.name}
+                  </Link>
+                </li>
               ))}
             </ul>
           </div>
 
-          <div className="md:col-span-2">
-            <h4 className="font-bold mb-6 text-sm tracking-widest uppercase text-foreground flex items-center gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-primary"></span>
-              Account
-            </h4>
-            <ul className="space-y-4 text-sm">
-              <li><Link href={href('/account/orders')} className="text-muted-foreground hover:text-primary transition-colors">My Orders</Link></li>
-              <li><Link href={href('/cart')} className="text-muted-foreground hover:text-primary transition-colors">Cart</Link></li>
-              <li><Link href={href('/checkout')} className="text-muted-foreground hover:text-primary transition-colors">Checkout</Link></li>
-              <li><button className="text-muted-foreground hover:text-primary transition-colors">Sign In</button></li>
+          <div className="lg:col-span-2">
+            <h4 className="font-semibold text-sm text-foreground mb-4">Account</h4>
+            <ul className="space-y-3">
+              <li>
+                <Link href={href('/account')} className="text-sm text-muted-foreground hover:text-primary transition-colors">
+                  My Account
+                </Link>
+              </li>
+              <li>
+                <Link href={href('/account/orders')} className="text-sm text-muted-foreground hover:text-primary transition-colors">
+                  Order History
+                </Link>
+              </li>
+              <li>
+                <Link href={href('/cart')} className="text-sm text-muted-foreground hover:text-primary transition-colors">
+                  Shopping Cart
+                </Link>
+              </li>
+              <li>
+                <Link href={href('/checkout')} className="text-sm text-muted-foreground hover:text-primary transition-colors">
+                  Checkout
+                </Link>
+              </li>
             </ul>
           </div>
 
-          <div className="md:col-span-4">
-            <h4 className="font-bold mb-6 text-sm tracking-widest uppercase text-foreground flex items-center gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-primary"></span>
-              Newsletter
-            </h4>
-            <p className="text-muted-foreground text-sm mb-4">
-              Subscribe to get special offers, free giveaways, and once-in-a-lifetime deals.
+          <div className="sm:col-span-2 lg:col-span-4">
+            <h4 className="font-semibold text-sm text-foreground mb-4">Stay Updated</h4>
+            <p className="text-sm text-muted-foreground mb-4">
+              Subscribe for exclusive deals, new arrivals, and insider-only discounts.
             </p>
-            <form className="flex mt-2 relative">
-              <input 
-                type="email" 
-                placeholder="Enter your email" 
-                className="w-full h-12 bg-background border border-border text-foreground px-4 rounded-xl focus:outline-none focus:border-primary transition-colors"
-                required
-              />
-              <Button type="button" size="icon" className="absolute right-1 top-1 h-10 w-10 rounded-lg">
+            <form className="flex gap-2 mb-6">
+              <div className="relative flex-grow">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <input
+                  type="email"
+                  placeholder="Enter your email"
+                  className="w-full h-11 bg-background border border-border text-foreground pl-10 pr-4 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                  required
+                />
+              </div>
+              <Button type="submit" size="icon" className="h-11 w-11 rounded-xl flex-shrink-0">
                 <ArrowRight className="w-4 h-4" />
               </Button>
             </form>
+
+            <div className="space-y-2 text-sm text-muted-foreground">
+              <div className="flex items-center gap-2">
+                <Phone className="w-4 h-4" />
+                <span>+1 (800) 123-4567</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Mail className="w-4 h-4" />
+                <span>support@{storeName.toLowerCase().replace(/\s+/g, '')}.com</span>
+              </div>
+            </div>
           </div>
         </div>
 
-        <div className="flex flex-col md:flex-row justify-between items-center pt-8 border-t border-border text-xs font-medium text-muted-foreground">
-          <p>© {new Date().getFullYear()} {storeName}. All rights reserved.</p>
-          <div className="flex gap-6 mt-4 md:mt-0">
-            <span className="cursor-pointer hover:text-primary transition-colors">Shipping & Returns</span>
-            <span className="cursor-pointer hover:text-primary transition-colors">Terms of Service</span>
+        <div className="flex flex-col md:flex-row justify-between items-center gap-4 py-6 border-t border-border/50 text-sm text-muted-foreground">
+          <p>&copy; {currentYear} {storeName}. All rights reserved.</p>
+          <div className="flex flex-wrap justify-center gap-4 md:gap-6">
             <span className="cursor-pointer hover:text-primary transition-colors">Privacy Policy</span>
+            <span className="cursor-pointer hover:text-primary transition-colors">Terms of Service</span>
+            <span className="cursor-pointer hover:text-primary transition-colors">Shipping Info</span>
+            <span className="cursor-pointer hover:text-primary transition-colors">Returns</span>
           </div>
         </div>
       </div>

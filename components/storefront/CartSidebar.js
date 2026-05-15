@@ -5,7 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useCartStore } from '@/store/cartStore';
 import { useStorefrontPath } from '@/lib/useStorefrontPath';
-import { storefrontAPI } from '@/lib/storefrontApi';
+import { validateCartStock } from '@/lib/stockValidation';
 import { X, ShoppingBag, Minus, Plus, Image as ImageIcon, AlertTriangle, Loader2 } from 'lucide-react';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { formatCurrency } from '@/lib/utils';
@@ -24,65 +24,17 @@ export default function CartSidebar({ open, onClose }) {
   const [validating, setValidating] = useState(false);
   const lastValidatedRef = useRef(null);
 
-  // Validate live stock from API whenever cart opens
-  /* eslint-disable react-hooks/set-state-in-effect -- async validation */
   useEffect(() => {
     if (!open || items.length === 0) return;
 
-    // Build a fingerprint of current items to avoid redundant fetches
     const fingerprint = items.map((i) => `${i.product}-${i.variant}`).join(',');
     if (lastValidatedRef.current === fingerprint) return;
     lastValidatedRef.current = fingerprint;
 
     setValidating(true);
-
-    // Fetch each unique product (by slug) in parallel
-    const uniqueSlugs = [...new Set(items.filter((i) => i.slug).map((i) => i.slug))];
-
-    Promise.allSettled(uniqueSlugs.map((slug) => storefrontAPI.getProduct(slug)))
-      .then((results) => {
-        results.forEach((result, idx) => {
-          if (result.status !== 'fulfilled') return;
-          const product = result.value.data;
-          const slug = uniqueSlugs[idx];
-
-          // Update maxStock for all cart items that match this product
-          items.forEach((cartItem) => {
-            if (cartItem.slug !== slug) return;
-
-            let liveStock;
-            if (cartItem.variant && product.attribute_groups?.length > 0) {
-              // Find variant stock from attribute_groups structure
-              liveStock = 0;
-              for (const group of product.attribute_groups) {
-                for (const val of group.values || []) {
-                  // Check direct variant (single-attribute products)
-                  if (val.variant?.variant_id === cartItem.variant) {
-                    liveStock = val.variant.stock ?? 0;
-                  }
-                  // Check available_variants (multi-attribute products)
-                  for (const av of val.available_variants || []) {
-                    for (const v of av.available_values || []) {
-                      if (v.variant_id === cartItem.variant) {
-                        liveStock = v.stock ?? 0;
-                      }
-                    }
-                  }
-                }
-              }
-            } else {
-              liveStock = product.stock ?? 0;
-            }
-
-            updateItemStock(cartItem.product, cartItem.variant, liveStock);
-          });
-        });
-      })
-      .finally(() => setValidating(false));
+    validateCartStock(items, updateItemStock).finally(() => setValidating(false));
   }, [open, items.length]); // eslint-disable-line react-hooks/exhaustive-deps
-  /* eslint-enable react-hooks/set-state-in-effect */
 
-  // Only count in-stock items toward total
   const total = items.reduce((sum, item) => {
     if ((item.maxStock ?? 1) <= 0) return sum;
     return sum + (item.unitPrice || item.price) * item.quantity;

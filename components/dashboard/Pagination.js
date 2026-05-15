@@ -51,7 +51,7 @@ export default function Pagination({
               onClick={() => onPageChange(slot)}
               className={`w-8 h-7 flex items-center justify-center rounded text-xs font-medium transition-colors ${
                 slot === currentPage
-                  ? 'bg-orange-500 text-white font-bold'
+                  ? 'bg-violet-500 text-white font-bold'
                   : 'hover:bg-white dark:hover:bg-gray-700 text-slate-600 dark:text-gray-300'
               }`}
             >

@@ -7,9 +7,9 @@ import { Lock, Loader2, Eye, EyeOff, ArrowLeft, ChevronRight } from 'lucide-reac
 import { useRouter } from 'next/navigation';
 
 const INPUT_CLS =
-  'w-full rounded-lg border border-orange-500/20 bg-orange-500/5 dark:bg-gray-700 dark:border-gray-600 px-4 py-3 text-slate-900 dark:text-white ' +
-  'placeholder:text-slate-400 dark:placeholder:text-gray-500 focus:outline-none focus:border-orange-500 ' +
-  'focus:ring-2 focus:ring-orange-500/20 transition-all';
+  'w-full rounded-lg border border-violet-500/20 bg-violet-500/5 dark:bg-gray-700 dark:border-gray-600 px-4 py-3 text-slate-900 dark:text-white ' +
+  'placeholder:text-slate-400 dark:placeholder:text-gray-500 focus:outline-none focus:border-violet-500 ' +
+  'focus:ring-2 focus:ring-violet-500/20 transition-all';
 
 export default function ChangePasswordPage() {
   const router = useRouter();
@@ -29,7 +29,7 @@ export default function ChangePasswordPage() {
     setSavingPassword(true);
     setPasswordErrors({});
 
-    if (passwordData.new_password !== passwordData.new_password2) {
+    if (passwordData.new_password.trim() !== passwordData.new_password2.trim()) {
       setPasswordErrors({ new_password2: ['Passwords do not match'] });
       toast.error('Passwords do not match');
       setSavingPassword(false);
@@ -38,9 +38,9 @@ export default function ChangePasswordPage() {
 
     try {
       const res = await authAPI.changePassword({
-        old_password: passwordData.old_password,
-        new_password: passwordData.new_password,
-        new_password2: passwordData.new_password2,
+        old_password: passwordData.old_password.trim(),
+        new_password: passwordData.new_password.trim(),
+        new_password2: passwordData.new_password2.trim(),
       });
 
       toast.success(res.data?.message || 'Password changed successfully');
@@ -81,7 +81,7 @@ export default function ChangePasswordPage() {
       <div className="admin-container">
       {/* Breadcrumbs */}
       <nav className="flex items-center gap-1.5 text-sm text-slate-500 dark:text-gray-400 mb-4">
-        <button onClick={() => router.push('/dashboard')} className="hover:text-orange-500 transition-colors">
+        <button onClick={() => router.push('/dashboard')} className="hover:text-violet-500 transition-colors">
           Dashboard
         </button>
         <ChevronRight className="w-3.5 h-3.5" />
@@ -94,7 +94,7 @@ export default function ChangePasswordPage() {
         <button
           type="button"
           onClick={() => router.push('/dashboard')}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg border border-orange-500/20 bg-white dark:bg-gray-800 hover:bg-orange-500/5 transition-colors text-sm font-bold self-start md:self-auto"
+          className="flex items-center gap-2 px-4 py-2 rounded-lg border border-violet-500/20 bg-white dark:bg-gray-800 hover:bg-violet-500/5 transition-colors text-sm font-bold self-start md:self-auto"
         >
           <ArrowLeft className="w-4 h-4" />
           Back to Dashboard
@@ -103,7 +103,7 @@ export default function ChangePasswordPage() {
 
         <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden shadow-sm">
           <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2">
-            <Lock className="w-5 h-5 text-orange-500" />
+            <Lock className="w-5 h-5 text-violet-500" />
             <h2 className="text-lg font-bold text-slate-900 dark:text-white">Change Password</h2>
           </div>
 
@@ -120,7 +120,7 @@ export default function ChangePasswordPage() {
                       placeholder="Enter current password"
                       className={INPUT_CLS + ' pr-12'}
                       value={passwordData.old_password}
-                      onChange={(e) => setPasswordData({ ...passwordData, old_password: e.target.value })}
+                      onChange={(e) => setPasswordData({ ...passwordData, old_password: e.target.value.replace(/\s/g, '') })}
                     />
                     <button
                       type="button"
@@ -143,7 +143,7 @@ export default function ChangePasswordPage() {
                       placeholder="Enter new password"
                       className={INPUT_CLS + ' pr-12'}
                       value={passwordData.new_password}
-                      onChange={(e) => setPasswordData({ ...passwordData, new_password: e.target.value })}
+                      onChange={(e) => setPasswordData({ ...passwordData, new_password: e.target.value.replace(/\s/g, '') })}
                     />
                     <button
                       type="button"
@@ -166,7 +166,7 @@ export default function ChangePasswordPage() {
                       placeholder="Confirm new password"
                       className={INPUT_CLS + ' pr-12'}
                       value={passwordData.new_password2}
-                      onChange={(e) => setPasswordData({ ...passwordData, new_password2: e.target.value })}
+                      onChange={(e) => setPasswordData({ ...passwordData, new_password2: e.target.value.replace(/\s/g, '') })}
                     />
                     <button
                       type="button"
@@ -199,7 +199,7 @@ export default function ChangePasswordPage() {
                 <button
                   type="submit"
                   disabled={savingPassword}
-                  className="flex items-center gap-2 bg-orange-500 text-white font-bold rounded-lg px-8 py-3 shadow-lg shadow-orange-500/30 hover:bg-orange-500/90 active:scale-95 transition-all disabled:opacity-50"
+                  className="flex items-center gap-2 bg-violet-500 text-white font-bold rounded-lg px-8 py-3 shadow-lg shadow-violet-500/30 hover:bg-violet-500/90 active:scale-95 transition-all disabled:opacity-50"
                 >
                   {savingPassword ? (
                     <>

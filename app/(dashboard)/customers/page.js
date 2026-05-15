@@ -29,11 +29,10 @@ function customerKey(c) {
 const STATUS_BADGE = {
   pending:          { dot: 'bg-yellow-500', pill: 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20' },
   confirmed:        { dot: 'bg-blue-500',   pill: 'bg-blue-500/10 text-blue-400 border border-blue-500/20' },
-  processing:       { dot: 'bg-orange-500', pill: 'bg-orange-500/10 text-orange-400 border border-orange-500/20' },
+  processing:       { dot: 'bg-violet-500', pill: 'bg-violet-500/10 text-violet-400 border border-violet-500/20' },
   shipped:          { dot: 'bg-emerald-500', pill: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' },
   delivered:        { dot: 'bg-green-500',  pill: 'bg-green-500/10 text-green-400 border border-green-500/20' },
   cancelled:        { dot: 'bg-red-500',    pill: 'bg-red-500/10 text-red-400 border border-red-500/20' },
-  return_requested: { dot: 'bg-amber-500',  pill: 'bg-amber-500/10 text-amber-400 border border-amber-500/20' },
   returned:         { dot: 'bg-purple-500', pill: 'bg-purple-500/10 text-purple-400 border border-purple-500/20' },
 };
 
@@ -164,12 +163,12 @@ export default function CustomersPage() {
                   <table className="admin-table min-w-[800px]">
                     <thead>
                       <tr className="admin-thead-row">
-                        <th className="admin-th">Customer</th>
-                        <th className="admin-th">Email</th>
+                        <th className="admin-th text-left">Customer</th>
+                        <th className="admin-th text-left">Email</th>
                         <th className="admin-th">Phone</th>
-                        <th className="admin-th text-center">Orders</th>
-                        <th className="admin-th text-right">Total Spent</th>
-                        <th className="admin-th text-right">Last Order</th>
+                        <th className="admin-th">Orders</th>
+                        <th className="admin-th">Total Spent</th>
+                        <th className="admin-th">Last Order</th>
                         <th className="w-10" />
                       </tr>
                     </thead>
@@ -183,15 +182,15 @@ export default function CustomersPage() {
                               onClick={() => toggleExpand(customer)}
                               className={`admin-tr group ${isExpanded ? 'bg-orange-50/50 dark:bg-orange-900/10' : ''}`}
                             >
-                              <td className="admin-td">
-                                <div className="flex items-center gap-3">
+                              <td className="admin-td text-left">
+                                <div className="flex items-center justify-start gap-3">
                                   <div className="w-8 h-8 rounded-full bg-indigo-500/10 flex items-center justify-center text-indigo-400 font-bold text-xs shrink-0">
                                     {customer.customer_name?.charAt(0)?.toUpperCase() || '?'}
                                   </div>
                                   <p className="text-sm font-semibold text-slate-900 dark:text-white">{customer.customer_name}</p>
                                 </div>
                               </td>
-                              <td className="admin-td">
+                              <td className="admin-td text-left">
                                 <span className="text-sm text-slate-500 dark:text-gray-400">
                                   {customer.customer_email || <span className="text-slate-300 dark:text-gray-600 italic">Not provided</span>}
                                 </span>
@@ -201,17 +200,17 @@ export default function CustomersPage() {
                                   {customer.customer_phone || <span className="text-slate-300 dark:text-gray-600 italic">Not provided</span>}
                                 </span>
                               </td>
-                              <td className="admin-td text-center">
+                              <td className="admin-td">
                                 <span className="inline-flex items-center justify-center min-w-[28px] px-2 py-0.5 rounded-full bg-slate-100 dark:bg-gray-700 text-sm font-bold text-slate-700 dark:text-gray-300">
                                   {customer.total_orders ?? 0}
                                 </span>
                               </td>
-                              <td className="admin-td text-right">
+                              <td className="admin-td">
                                 <span className="text-sm font-bold text-slate-900 dark:text-white">
                                   {formatCurrency(customer.total_spent || 0, activeStore?.currency)}
                                 </span>
                               </td>
-                              <td className="admin-td text-sm text-slate-400 dark:text-gray-500 text-right whitespace-nowrap">
+                              <td className="admin-td text-sm text-slate-400 dark:text-gray-500 whitespace-nowrap">
                                 {formatDate(customer.last_order)}
                               </td>
                               <td className="admin-td text-slate-400 dark:text-gray-500">
@@ -228,7 +227,7 @@ export default function CustomersPage() {
                                 <td colSpan={7} className="bg-slate-50/80 dark:bg-gray-900/40 px-6 py-5">
                                   {loadingOrders && (
                                     <div className="flex items-center justify-center py-8">
-                                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-orange-500"></div>
+                                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-violet-500"></div>
                                     </div>
                                   )}
                                   {!loadingOrders && customerOrders.length === 0 && (
@@ -250,7 +249,7 @@ export default function CustomersPage() {
                                               key={order.id}
                                               href={`/orders/${order.id}`}
                                               onClick={(e) => e.stopPropagation()}
-                                              className="flex items-center justify-between bg-white dark:bg-gray-800 rounded-lg border border-slate-200 dark:border-gray-700 px-4 py-3 hover:border-orange-500/30 hover:shadow-sm transition-all group"
+                                              className="flex items-center justify-between bg-white dark:bg-gray-800 rounded-lg border border-slate-200 dark:border-gray-700 px-4 py-3 hover:border-violet-500/30 hover:shadow-sm transition-all group"
                                             >
                                               <div className="flex items-center gap-4">
                                                 <span className="font-mono font-bold text-sm text-slate-900 dark:text-white">
@@ -271,7 +270,7 @@ export default function CustomersPage() {
                                                 <span className="text-xs text-slate-400 dark:text-gray-500">
                                                   {formatDate(order.created_at)}
                                                 </span>
-                                                <ExternalLink className="w-3.5 h-3.5 text-slate-300 dark:text-gray-600 group-hover:text-orange-500 transition-colors" />
+                                                <ExternalLink className="w-3.5 h-3.5 text-slate-300 dark:text-gray-600 group-hover:text-violet-500 transition-colors" />
                                               </div>
                                             </Link>
                                           );

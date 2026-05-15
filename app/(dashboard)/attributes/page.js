@@ -7,32 +7,47 @@ import { toast } from 'sonner';
 import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
 import { Plus, Search, Trash2, Tag } from 'lucide-react';
 import Pagination from '@/components/dashboard/Pagination';
+import { useSharedDataStore } from '@/store/sharedDataStore';
 
 const PER_PAGE = 10;
 
 export default function AttributesPage() {
   const router = useRouter();
+  const { fetchCategories, categories } = useSharedDataStore();
   const [attributes, setAttributes] = useState([]);
-  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [deleteModal, setDeleteModal] = useState({ open: false, attr: null });
 
-  const fetchData = useCallback(async () => {
+  const fetchAttributes = useCallback(async () => {
     try {
-      const [attrRes, catRes] = await Promise.all([attributeAPI.list(), categoryAPI.list()]);
+      const attrRes = await attributeAPI.list();
       const attrData = attrRes.data;
       setAttributes(Array.isArray(attrData) ? attrData : (attrData?.results || []));
-      const catData = catRes.data;
-      setCategories(Array.isArray(catData) ? catData : (catData?.results || []));
+    } catch {
+      toast.error('Failed to load attributes');
+      setAttributes([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const fetchData = useCallback(async () => {
+    try {
+      const [attrRes] = await Promise.all([
+        attributeAPI.list(),
+        fetchCategories(), // reads from cache if fresh
+      ]);
+      const attrData = attrRes.data;
+      setAttributes(Array.isArray(attrData) ? attrData : (attrData?.results || []));
     } catch {
       toast.error('Failed to load data');
       setAttributes([]);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [fetchCategories]);
 
   useEffect(() => {
     fetchData();
@@ -44,7 +59,7 @@ export default function AttributesPage() {
       await attributeAPI.delete(deleteModal.attr.id);
       toast.success('Attribute deleted!');
       setDeleteModal({ open: false, attr: null });
-      fetchData();
+      fetchAttributes(); // only re-fetch attributes, categories unchanged
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Failed to delete');
     }
@@ -116,11 +131,11 @@ export default function AttributesPage() {
                 <table className="admin-table min-w-[800px]">
                   <thead>
                     <tr className="admin-thead-row">
-                      <th className="admin-th">Attribute</th>
-                      <th className="admin-th">Category</th>
-                      <th className="admin-th">Values</th>
-                      <th className="admin-th text-center">Count</th>
-                      <th className="admin-th text-right w-20">Actions</th>
+                      <th className="admin-th text-left">Attribute</th>
+                      <th className="admin-th text-left">Category</th>
+                      <th className="admin-th text-left">Values</th>
+                      <th className="admin-th">Count</th>
+                      <th className="admin-th w-20">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="admin-tbody">
@@ -142,22 +157,22 @@ export default function AttributesPage() {
                           onClick={() => router.push(`/attributes/${attr.id}/edit`)}
                         >
                           {/* Attribute Name */}
-                          <td className="admin-td">
-                            <div className="flex items-center gap-3">
+                          <td className="admin-td text-left">
+                            <div className="flex items-center justify-start gap-3">
                               <span className="text-slate-900 dark:text-white text-sm font-medium">{attr.name}</span>
                             </div>
                           </td>
 
                           {/* Category */}
-                          <td className="admin-td">
-                            <span className="text-sm font-medium text-orange-500">
+                          <td className="admin-td text-left">
+                            <span className="text-sm font-medium text-violet-500">
                               {getCategoryName(attr.category)}
                             </span>
                           </td>
 
                           {/* Values */}
-                          <td className="admin-td">
-                            <div className="flex flex-wrap gap-1.5">
+                          <td className="admin-td text-left">
+                            <div className="flex flex-wrap justify-start gap-1.5">
                               {attr.values?.length > 0 ? (
                                 <>
                                   {attr.values.slice(0, 5).map((v) => (
@@ -181,14 +196,14 @@ export default function AttributesPage() {
                           </td>
 
                           {/* Count */}
-                          <td className="admin-td text-center">
-                            <span className="inline-block px-2.5 py-1 rounded-md bg-orange-500/10 text-orange-500 border border-orange-500/20 text-xs font-bold">
+                          <td className="admin-td">
+                            <span className="inline-block px-2.5 py-1 rounded-md bg-violet-500/10 text-violet-500 border border-violet-500/20 text-xs font-bold">
                               {attr.values?.length ?? 0}
                             </span>
                           </td>
 
                           {/* Actions */}
-                          <td className="admin-td text-right">
+                          <td className="admin-td">
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();

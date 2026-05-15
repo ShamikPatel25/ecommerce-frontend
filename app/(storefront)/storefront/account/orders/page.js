@@ -10,34 +10,35 @@ import { useStorefrontPath } from '@/lib/useStorefrontPath';
 import {
   User, PackageX, Package, Calendar, ChevronDown, ChevronUp,
   Box, ShoppingBag, Truck, CheckCircle2, Clock, XCircle,
-  RotateCcw, AlertCircle, RefreshCw, ArrowRight,
+  RotateCcw, AlertCircle, RefreshCw, ArrowRight, Loader2,
 } from 'lucide-react';
+import ConfirmActionModal from '@/components/storefront/ConfirmActionModal';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
 
 /* ─────────────────────────────────────── */
 /*  Status metadata                        */
 /* ─────────────────────────────────────── */
 const STATUS_META = {
-  pending:          { label: 'Pending',          color: 'bg-yellow-500/15 text-yellow-400 border-yellow-500/30',  dot: 'bg-yellow-400'  },
-  confirmed:        { label: 'Confirmed',        color: 'bg-blue-500/15 text-blue-400 border-blue-500/30',        dot: 'bg-blue-400'    },
-  processing:       { label: 'Processing',       color: 'bg-indigo-500/15 text-indigo-400 border-indigo-500/30',  dot: 'bg-indigo-400'  },
-  shipped:          { label: 'Shipped',          color: 'bg-cyan-500/15 text-cyan-400 border-cyan-500/30',        dot: 'bg-cyan-400'    },
-  delivered:        { label: 'Delivered',        color: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30', dot: 'bg-emerald-400' },
-  cancelled:        { label: 'Cancelled',        color: 'bg-red-500/15 text-red-400 border-red-500/30',           dot: 'bg-red-400'     },
-  return_requested: { label: 'Return Requested', color: 'bg-orange-500/15 text-orange-400 border-orange-500/30',  dot: 'bg-orange-400'  },
-  returned:         { label: 'Returned',         color: 'bg-gray-500/15 text-gray-400 border-gray-500/30',        dot: 'bg-gray-400'    },
+  pending: { label: 'Pending', color: 'bg-yellow-500/15 text-yellow-400 border-yellow-500/30', dot: 'bg-yellow-400' },
+  confirmed: { label: 'Confirmed', color: 'bg-blue-500/15 text-blue-400 border-blue-500/30', dot: 'bg-blue-400' },
+  processing: { label: 'Processing', color: 'bg-indigo-500/15 text-indigo-400 border-indigo-500/30', dot: 'bg-indigo-400' },
+  shipped: { label: 'Shipped', color: 'bg-cyan-500/15 text-cyan-400 border-cyan-500/30', dot: 'bg-cyan-400' },
+  delivered: { label: 'Delivered', color: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30', dot: 'bg-emerald-400' },
+  cancelled: { label: 'Cancelled', color: 'bg-red-500/15 text-red-400 border-red-500/30', dot: 'bg-red-400' },
+  returned: { label: 'Returned', color: 'bg-gray-500/15 text-gray-400 border-gray-500/30', dot: 'bg-gray-400' },
 };
 
 /* ─────────────────────────────────────── */
 /*  Order-progress steps                   */
 /* ─────────────────────────────────────── */
 const PROGRESS_STEPS = [
-  { key: 'pending',    label: 'Order Placed',  Icon: Package      },
-  { key: 'confirmed',  label: 'Confirmed',     Icon: CheckCircle2 },
-  { key: 'processing', label: 'Processing',    Icon: Clock        },
-  { key: 'shipped',    label: 'Shipped',       Icon: Truck        },
-  { key: 'delivered',  label: 'Delivered',     Icon: CheckCircle2 },
+  { key: 'pending', label: 'Order Placed', Icon: Package },
+  { key: 'confirmed', label: 'Confirmed', Icon: CheckCircle2 },
+  { key: 'processing', label: 'Processing', Icon: Clock },
+  { key: 'shipped', label: 'Shipped', Icon: Truck },
+  { key: 'delivered', label: 'Delivered', Icon: CheckCircle2 },
 ];
 const STEP_ORDER = PROGRESS_STEPS.map((s) => s.key);
 
@@ -62,11 +63,11 @@ function StatusBadge({ status }) {
 
 function OrderProgressTracker({ status }) {
   const activeIdx = getActiveStepIndex(status);
-  const isCancelled = status === 'cancelled' || status === 'returned' || status === 'return_requested';
+  const isCancelled = status === 'cancelled' || status === 'returned';
 
   if (isCancelled) {
     const meta = STATUS_META[status];
-    const Icon = status === 'return_requested' || status === 'returned' ? RotateCcw : XCircle;
+    const Icon = status === 'returned' ? RotateCcw : XCircle;
     return (
       <div className="flex items-center gap-3 py-3">
         <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${meta.color} border`}>
@@ -88,7 +89,7 @@ function OrderProgressTracker({ status }) {
           and the line runs perfectly through all icon centers.      */}
       <div className="flex items-center w-full">
         {PROGRESS_STEPS.map((step, idx) => {
-          const done   = idx < activeIdx;
+          const done = idx < activeIdx;
           const active = idx === activeIdx;
           const isLast = idx === PROGRESS_STEPS.length - 1;
           const { Icon } = step;
@@ -100,13 +101,12 @@ function OrderProgressTracker({ status }) {
             >
               {/* Circle */}
               <motion.div
-                className={`w-10 h-10 shrink-0 rounded-full flex items-center justify-center border-2 transition-colors ${
-                  done
+                className={`w-10 h-10 shrink-0 rounded-full flex items-center justify-center border-2 transition-colors ${done
                     ? 'bg-primary border-primary text-primary-foreground shadow-[0_0_14px_rgba(212,175,55,0.45)]'
                     : active
-                    ? 'bg-primary/15 border-primary text-primary'
-                    : 'bg-background border-border text-muted-foreground'
-                }`}
+                      ? 'bg-primary/15 border-primary text-primary'
+                      : 'bg-background border-border text-muted-foreground'
+                  }`}
                 initial={false}
                 animate={{ scale: active ? 1.1 : 1 }}
                 transition={{ type: 'spring', stiffness: 300, damping: 22 }}
@@ -137,7 +137,7 @@ function OrderProgressTracker({ status }) {
       {/* ── Row 2: Labels only (same flex structure) ── */}
       <div className="flex items-start mt-2 w-full">
         {PROGRESS_STEPS.map((step, idx) => {
-          const done   = idx < activeIdx;
+          const done = idx < activeIdx;
           const active = idx === activeIdx;
           const isLast = idx === PROGRESS_STEPS.length - 1;
 
@@ -149,9 +149,8 @@ function OrderProgressTracker({ status }) {
               {/* Label centered under the 40px (w-10) icon */}
               <div className="w-10 shrink-0 flex justify-center">
                 <span
-                  className={`text-[10px] font-bold text-center leading-tight w-14 -mx-2 ${
-                    done || active ? 'text-foreground' : 'text-muted-foreground'
-                  }`}
+                  className={`text-[10px] font-bold text-center leading-tight w-14 -mx-2 ${done || active ? 'text-foreground' : 'text-muted-foreground'
+                    }`}
                 >
                   {step.label}
                 </span>
@@ -170,7 +169,11 @@ function OrderProgressTracker({ status }) {
 /* ─────────────────────────────────────── */
 /*  Single order card                      */
 /* ─────────────────────────────────────── */
-function OrderCard({ order, isExpanded, onToggle, href }) {
+function OrderCard({ order, isExpanded, onToggle, href, onRefresh }) {
+  const [submitting, setSubmitting] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalConfig, setModalConfig] = useState({ type: null, itemId: null, itemName: null });
+
   const statusKey = order.status || 'pending';
   const dateStr = new Date(order.created_at).toLocaleDateString('en-IN', {
     year: 'numeric', month: 'short', day: 'numeric',
@@ -178,6 +181,46 @@ function OrderCard({ order, isExpanded, onToggle, href }) {
   const timeStr = new Date(order.created_at).toLocaleTimeString('en-IN', {
     hour: '2-digit', minute: '2-digit',
   });
+
+  const openModal = (actionType, itemId = null, itemName = null) => {
+    setModalConfig({ type: actionType, itemId, itemName });
+    setModalOpen(true);
+  };
+
+  const closeModal = () => {
+    if (!submitting) {
+      setModalOpen(false);
+      setModalConfig({ type: null, itemId: null, itemName: null });
+    }
+  };
+
+  const handleConfirmAction = async () => {
+    const { type, itemId } = modalConfig;
+    setSubmitting(true);
+
+    try {
+      if (type === 'cancel_order') {
+        await storefrontAPI.cancelOrder(order.id);
+        toast.success('Order cancelled successfully! Refund will be processed shortly.');
+      } else if (type === 'return_order') {
+        await storefrontAPI.requestReturn(order.id);
+        toast.success('Return request submitted! We will contact you within 24-48 hours.');
+      } else if (type === 'cancel_item') {
+        await storefrontAPI.cancelOrderItem(itemId);
+        toast.success('Item cancelled successfully! Partial refund will be processed.');
+      } else if (type === 'return_item') {
+        await storefrontAPI.requestReturnItem(itemId);
+        toast.success('Return request submitted for this item!');
+      }
+      setModalOpen(false);
+      setModalConfig({ type: null, itemId: null, itemName: null });
+      if (onRefresh) onRefresh(true);
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Action failed. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <motion.div
@@ -191,38 +234,38 @@ function OrderCard({ order, isExpanded, onToggle, href }) {
         onClick={onToggle}
         aria-expanded={isExpanded}
       >
-        <div className="flex flex-col sm:flex-row sm:items-start gap-4">
+        <div className="flex flex-row items-start gap-3 sm:gap-4 w-full text-left">
           {/* Package icon */}
-          <div className="w-14 h-14 rounded-2xl bg-background border border-border flex items-center justify-center text-primary shadow-[0_0_12px_rgba(212,175,55,0.08)] shrink-0 group-hover:scale-105 transition-transform">
-            <Package className="w-6 h-6" />
+          <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-2xl bg-background border border-border flex items-center justify-center text-primary shadow-[0_0_12px_rgba(212,175,55,0.08)] shrink-0 group-hover:scale-105 transition-transform">
+            <Package className="w-5 h-5 sm:w-6 sm:h-6" />
           </div>
 
           {/* Order info */}
           <div className="flex-1 min-w-0">
-            <div className="flex flex-wrap items-center gap-3 mb-2">
-              <h3 className="text-lg sm:text-xl font-black text-card-foreground">
+            <div className="flex flex-wrap items-center gap-2 mb-1 sm:mb-2">
+              <h3 className="text-base sm:text-xl font-black text-card-foreground">
                 Order #{order.id}
               </h3>
               <StatusBadge status={statusKey} />
             </div>
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:gap-x-4 gap-y-0.5 text-xs sm:text-sm text-muted-foreground mb-1">
               <span className="flex items-center gap-1.5 font-medium">
-                <Calendar className="w-3.5 h-3.5" />
-                {dateStr} · {timeStr}
+                <Calendar className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">{dateStr} · {timeStr}</span>
               </span>
               <span className="font-medium">
                 {order.items_count ?? order.items?.length ?? 0} item{(order.items_count ?? order.items?.length ?? 0) !== 1 ? 's' : ''}
               </span>
             </div>
-          </div>
-
-          {/* Amount + toggle */}
-          <div className="flex items-center gap-4 sm:flex-col sm:items-end shrink-0">
-            <p className="font-black text-foreground text-2xl">
+            <p className="font-black text-foreground text-lg sm:text-2xl mt-1">
               ₹{Number.parseFloat(order.total_amount).toFixed(2)}
             </p>
+          </div>
+
+          {/* Toggle */}
+          <div className="shrink-0 flex items-start">
             <div
-              className="w-9 h-9 rounded-full bg-background border border-border flex items-center justify-center text-muted-foreground group-hover:text-primary transition-colors shrink-0"
+              className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-background border border-border flex items-center justify-center text-muted-foreground group-hover:text-primary transition-colors shrink-0"
             >
               {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
             </div>
@@ -230,7 +273,7 @@ function OrderCard({ order, isExpanded, onToggle, href }) {
         </div>
 
         {/* Progress bar (always visible in header) */}
-        {!['cancelled', 'returned', 'return_requested'].includes(statusKey) && (
+        {!['cancelled', 'returned'].includes(statusKey) && (
           <div className="mt-5 sm:mt-4">
             <OrderProgressTracker status={statusKey} />
           </div>
@@ -250,7 +293,7 @@ function OrderCard({ order, isExpanded, onToggle, href }) {
           >
             <div className="border-t border-border bg-background/40 p-5 sm:p-7">
               {/* Cancelled / Return status banner */}
-              {['cancelled', 'returned', 'return_requested'].includes(statusKey) && (
+              {['cancelled', 'returned'].includes(statusKey) && (
                 <div className="mb-6">
                   <OrderProgressTracker status={statusKey} />
                 </div>
@@ -265,57 +308,93 @@ function OrderCard({ order, isExpanded, onToggle, href }) {
                 {order.items?.map((item) => {
                   const productLink = item.product_slug ? href(`/products/${item.product_slug}`) : null;
                   return (
-                  <div
-                    key={item.id}
-                    className="flex items-center gap-4 py-3 border-b border-border/40 last:border-0 last:pb-0"
-                  >
-                    {/* Thumbnail */}
-                    {productLink ? (
-                      <Link href={productLink} className="relative w-16 h-16 rounded-xl bg-card border border-border overflow-hidden shrink-0 flex items-center justify-center hover:ring-2 hover:ring-primary/30 transition-all">
-                        {item.thumbnail ? (
-                          <Image
-                            src={item.thumbnail}
-                            alt={item.product_name}
-                            fill
-                            sizes="64px"
-                            className="object-cover hover:scale-105 transition-transform"
-                          />
-                        ) : (
-                          <Box className="w-7 h-7 text-muted-foreground opacity-30" />
-                        )}
-                      </Link>
-                    ) : (
-                      <div className="relative w-16 h-16 rounded-xl bg-card border border-border overflow-hidden shrink-0 flex items-center justify-center">
-                        {item.thumbnail ? (
-                          <Image src={item.thumbnail} alt={item.product_name} fill sizes="64px" className="object-cover" />
-                        ) : (
-                          <Box className="w-7 h-7 text-muted-foreground opacity-30" />
-                        )}
-                      </div>
-                    )}
-
-                    {/* Info */}
-                    <div className="flex-1 min-w-0">
+                    <div
+                      key={item.id}
+                      className="flex items-center gap-4 py-3 border-b border-border/40 last:border-0 last:pb-0"
+                    >
+                      {/* Thumbnail */}
                       {productLink ? (
-                        <Link href={productLink} className="font-bold text-card-foreground line-clamp-1 hover:text-primary transition-colors">
-                          {item.product_name}
+                        <Link href={productLink} className="relative w-16 h-16 rounded-xl bg-card border border-border overflow-hidden shrink-0 flex items-center justify-center hover:ring-2 hover:ring-primary/30 transition-all">
+                          {item.thumbnail ? (
+                            <Image
+                              src={item.thumbnail}
+                              alt={item.product_name}
+                              fill
+                              sizes="64px"
+                              className="object-cover hover:scale-105 transition-transform"
+                            />
+                          ) : (
+                            <Box className="w-7 h-7 text-muted-foreground opacity-30" />
+                          )}
                         </Link>
                       ) : (
-                        <p className="font-bold text-card-foreground line-clamp-1">{item.product_name}</p>
+                        <div className="relative w-16 h-16 rounded-xl bg-card border border-border overflow-hidden shrink-0 flex items-center justify-center">
+                          {item.thumbnail ? (
+                            <Image src={item.thumbnail} alt={item.product_name} fill sizes="64px" className="object-cover" />
+                          ) : (
+                            <Box className="w-7 h-7 text-muted-foreground opacity-30" />
+                          )}
+                        </div>
                       )}
-                      {item.variant_attrs && (
-                        <p className="text-xs text-muted-foreground mt-0.5">{item.variant_attrs}</p>
-                      )}
-                      <span className="inline-block text-xs font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded-md mt-1.5">
-                        Qty: {item.quantity}
-                      </span>
-                    </div>
 
-                    {/* Subtotal */}
-                    <p className="font-black text-foreground shrink-0">
-                      ₹{Number.parseFloat(item.subtotal).toFixed(2)}
-                    </p>
-                  </div>
+                      {/* Info */}
+                      <div className="flex-1 min-w-0">
+                        {productLink ? (
+                          <Link href={productLink} className="font-bold text-card-foreground line-clamp-1 hover:text-primary transition-colors">
+                            {item.product_name}
+                          </Link>
+                        ) : (
+                          <p className="font-bold text-card-foreground line-clamp-1">{item.product_name}</p>
+                        )}
+                        {item.variant_attrs && (
+                          <p className="text-xs text-muted-foreground mt-0.5">{item.variant_attrs}</p>
+                        )}
+                        <span className="inline-block text-xs font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded-md mt-1.5">
+                          Qty: {item.quantity}
+                        </span>
+                      </div>
+
+                      {/* Subtotal & Item Actions */}
+                      <div className="flex flex-col items-end gap-2 shrink-0 min-w-[80px]">
+                        <p className="font-black text-foreground">
+                          ₹{Number.parseFloat(item.subtotal).toFixed(2)}
+                        </p>
+                        
+                        {/* Item level buttons */}
+                        {item.status === 'ordered' ? (
+                          <div className="flex gap-2">
+                            {['pending', 'confirmed', 'processing'].includes(statusKey) && (
+                              <button
+                                type="button"
+                                onClick={() => openModal('cancel_item', item.id, item.product_name)}
+                                disabled={submitting}
+                                className="text-[10px] font-bold text-red-500 hover:bg-red-500/5 px-2 py-1 rounded-lg border border-red-500/20 transition-colors disabled:opacity-50"
+                              >
+                                Cancel
+                              </button>
+                            )}
+                            {statusKey === 'delivered' && (
+                              <button
+                                type="button"
+                                onClick={() => openModal('return_item', item.id, item.product_name)}
+                                disabled={submitting}
+                                className="text-[10px] font-bold text-primary hover:bg-primary/5 px-2 py-1 rounded-lg border border-primary/20 transition-colors disabled:opacity-50"
+                              >
+                                Return
+                              </button>
+                            )}
+                          </div>
+                        ) : (
+                          <span className={`text-[10px] font-black px-2 py-1 rounded-lg uppercase tracking-wider ${
+                            item.status === 'cancelled' 
+                              ? 'bg-red-500/10 text-red-500 border border-red-500/20' 
+                              : 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
+                          }`}>
+                            {item.status}
+                          </span>
+                        )}
+                      </div>
+                    </div>
                   );
                 })}
               </div>
@@ -353,10 +432,10 @@ function OrderCard({ order, isExpanded, onToggle, href }) {
                 </div>
               </div>
 
-              {/* Shipping Address */}
+              {/* Address */}
               {order.shipping_address && (
                 <div className="mt-3 p-4 rounded-2xl bg-muted/10 border border-border/50 text-sm">
-                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">Shipping Address</p>
+                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">Address</p>
                   <p className="font-semibold text-foreground whitespace-pre-line">{order.shipping_address}</p>
                   {order.address_type && (
                     <span className="inline-block mt-1.5 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-wider">
@@ -365,6 +444,50 @@ function OrderCard({ order, isExpanded, onToggle, href }) {
                   )}
                 </div>
               )}
+
+              {/* Actions: Cancel / Return */}
+              <div className="mt-8 flex flex-wrap gap-3">
+                {['pending', 'confirmed', 'processing'].includes(statusKey) && (
+                  <Button
+                    variant="outline"
+                    className="rounded-xl border-red-500/30 text-red-500 hover:bg-red-500/10 hover:text-red-600 transition-colors gap-2 font-bold"
+                    onClick={() => openModal('cancel_order')}
+                    disabled={submitting}
+                  >
+                    <XCircle className="w-4 h-4" />
+                    Cancel Order
+                  </Button>
+                )}
+                {statusKey === 'delivered' && (
+                  <Button
+                    variant="outline"
+                    className="rounded-xl border-primary/30 text-primary hover:bg-primary/10 transition-colors gap-2 font-bold"
+                    onClick={() => openModal('return_order')}
+                    disabled={submitting}
+                  >
+                    <RotateCcw className="w-4 h-4" />
+                    Return Order
+                  </Button>
+                )}
+                <Button
+                  variant="ghost"
+                  className="rounded-xl text-muted-foreground hover:text-foreground transition-colors gap-2 font-bold ml-auto"
+                  onClick={onToggle}
+                >
+                  Close Details
+                </Button>
+              </div>
+
+              {/* Confirmation Modal */}
+              <ConfirmActionModal
+                isOpen={modalOpen}
+                onClose={closeModal}
+                onConfirm={handleConfirmAction}
+                actionType={modalConfig.type}
+                itemName={modalConfig.itemName}
+                orderNumber={order.id}
+                loading={submitting}
+              />
             </div>
           </motion.div>
         )}
@@ -567,6 +690,7 @@ export default function StorefrontOrdersPage() {
                 isExpanded={expandedOrder === order.id}
                 onToggle={() => setExpandedOrder(expandedOrder === order.id ? null : order.id)}
                 href={href}
+                onRefresh={fetchOrders}
               />
             </motion.div>
           ))}

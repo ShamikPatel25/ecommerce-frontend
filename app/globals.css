@@ -9,6 +9,17 @@ input::-ms-clear {
   display: none;
 }
 
+/* Hide number input spinner arrows */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;
@@ -71,7 +82,7 @@ html {
 
 /* ─── Selection Highlight ─── */
 ::selection {
-  background: rgba(249, 115, 22, 0.2);
+  background: rgba(139, 92, 246, 0.2);
   color: #1f2937;
 }
 

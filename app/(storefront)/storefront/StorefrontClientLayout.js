@@ -33,7 +33,7 @@ export default function StorefrontClientLayout({ children }) {
           setStoreNotFound(true);
         }
       });
-    storefrontAPI.getCategories().then((res) => setCategories(res.data || [])).catch(() => {});
+    storefrontAPI.getCategories().then((res) => setCategories(res.data || [])).catch(() => { });
   }, []);
 
   const closeAuth = useCallback(() => setAuthOpen(false), []);
@@ -43,9 +43,9 @@ export default function StorefrontClientLayout({ children }) {
     return (
       <ThemeProvider
         attribute="class"
-        defaultTheme="dark"
+        defaultTheme="light"
         enableSystem={false}
-        forcedTheme="dark"
+        forcedTheme="light"
       >
         <div className={`storefront-theme ${outfit.className} min-h-screen flex flex-col items-center justify-center antialiased bg-background text-foreground`}>
           <div className="text-center max-w-md px-6">
@@ -63,28 +63,28 @@ export default function StorefrontClientLayout({ children }) {
   return (
     <ThemeProvider
       attribute="class"
-      defaultTheme="dark"
+      defaultTheme="light"
       enableSystem={false}
-      forcedTheme="dark"
+      forcedTheme="light"
     >
       <StoreInfoProvider store={store}>
-      <div className={`storefront-theme ${outfit.className} min-h-screen flex flex-col antialiased bg-background text-foreground`}>
-        <Navbar
-          storeName={store?.name}
-          onOpenAuth={(tab = 'signin') => { setAuthTab(tab); setAuthOpen(true); }}
-          onOpenCart={() => setCartOpen(true)}
-        />
+        <div className={`storefront-theme ${outfit.className} min-h-screen flex flex-col antialiased bg-background text-foreground`}>
+          <Navbar
+            storeName={store?.name}
+            onOpenAuth={(tab = 'signin') => { setAuthTab(tab); setAuthOpen(true); }}
+            onOpenCart={() => setCartOpen(true)}
+          />
 
-        <main className="flex-grow pt-16">
+          <main className="flex-grow pt-16">
             {children}
-        </main>
+          </main>
 
-        <Footer store={store} categories={categories} href={href} />
+          <Footer store={store} categories={categories} href={href} />
 
-        <AuthModal open={authOpen} onClose={closeAuth} initialTab={authTab} />
-        <CartSidebar open={cartOpen} onClose={closeCart} />
-        <Toaster />
-      </div>
+          <AuthModal open={authOpen} onClose={closeAuth} initialTab={authTab} />
+          <CartSidebar open={cartOpen} onClose={closeCart} />
+          <Toaster />
+        </div>
       </StoreInfoProvider>
     </ThemeProvider>
   );

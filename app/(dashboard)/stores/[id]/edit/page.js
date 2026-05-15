@@ -13,9 +13,9 @@ import {
 } from 'lucide-react';
 
 const INPUT_CLS =
-  'w-full rounded-lg border border-orange-500/20 bg-orange-500/5 px-4 py-3 text-slate-900 ' +
-  'placeholder:text-slate-400 focus:outline-none focus:border-orange-500 ' +
-  'focus:ring-2 focus:ring-orange-500/20 transition-all ' +
+  'w-full rounded-lg border border-violet-500/20 bg-violet-500/5 px-4 py-3 text-slate-900 ' +
+  'placeholder:text-slate-400 focus:outline-none focus:border-violet-500 ' +
+  'focus:ring-2 focus:ring-violet-500/20 transition-all ' +
   'dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder:text-gray-500';
 
 const SELECT_CLS = INPUT_CLS + ' appearance-none pr-10';
@@ -94,7 +94,7 @@ export default function EditStorePage() {
   /* ── loading ── */
   if (loading) return (
     <div className="min-h-[60vh] flex items-center justify-center">
-      <Loader2 className="w-10 h-10 text-orange-500 animate-spin" />
+      <Loader2 className="w-10 h-10 text-violet-500 animate-spin" />
     </div>
   );
 
@@ -104,7 +104,7 @@ export default function EditStorePage() {
 
       {/* Breadcrumbs */}
       <nav className="flex items-center gap-1.5 text-sm text-slate-500 dark:text-gray-400 mb-4">
-        <button onClick={() => router.push('/stores')} className="hover:text-orange-500 transition-colors">
+        <button onClick={() => router.push('/stores')} className="hover:text-violet-500 transition-colors">
           Stores
         </button>
         <ChevronRight className="w-3.5 h-3.5" />
@@ -117,7 +117,7 @@ export default function EditStorePage() {
         <button
           type="button"
           onClick={() => router.push('/stores')}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg border border-orange-500/20 bg-white dark:bg-gray-800 dark:border-gray-600 dark:text-white hover:bg-orange-500/5 transition-colors text-sm font-bold self-start md:self-auto"
+          className="flex items-center gap-2 px-4 py-2 rounded-lg border border-violet-500/20 bg-white dark:bg-gray-800 dark:border-gray-600 dark:text-white hover:bg-violet-500/5 transition-colors text-sm font-bold self-start md:self-auto"
         >
           <ArrowLeft className="w-4 h-4" />
           Back to Stores
@@ -125,9 +125,9 @@ export default function EditStorePage() {
       </div>
 
       <form id="edit-store-form" onSubmit={handleSubmit} className="space-y-8">
-        <section className="bg-white dark:bg-gray-800 rounded-xl border border-orange-500/10 dark:border-gray-700 p-6 md:p-8 shadow-sm">
-          <div className="flex items-center gap-2 mb-6 pb-4 border-b border-orange-500/5 dark:border-gray-700">
-            <Store className="w-5 h-5 text-orange-500" />
+        <section className="bg-white dark:bg-gray-800 rounded-xl border border-violet-500/10 dark:border-gray-700 p-6 md:p-8 shadow-sm">
+          <div className="flex items-center gap-2 mb-6 pb-4 border-b border-violet-500/5 dark:border-gray-700">
+            <Store className="w-5 h-5 text-violet-500" />
             <h2 className="text-xl font-bold text-slate-900 dark:text-white">Store Information</h2>
           </div>
 
@@ -135,7 +135,7 @@ export default function EditStorePage() {
             {/* Store Name */}
             <div className="space-y-1.5">
               <label className="text-sm font-semibold text-slate-700 dark:text-gray-300">
-                Store Name <span className="text-orange-500">*</span>
+                Store Name <span className="text-violet-500">*</span>
               </label>
               <input
                 type="text"
@@ -150,7 +150,7 @@ export default function EditStorePage() {
             {/* Currency */}
             <div className="space-y-1.5">
               <label className="text-sm font-semibold text-slate-700 dark:text-gray-300">
-                Currency <span className="text-orange-500">*</span>
+                Currency <span className="text-violet-500">*</span>
               </label>
               <div className="relative">
                 <select
@@ -244,7 +244,7 @@ export default function EditStorePage() {
           <button
             type="submit"
             disabled={saving}
-            className="px-12 py-3 rounded-lg font-bold bg-orange-500 text-white shadow-lg shadow-orange-500/30 hover:bg-orange-500/90 active:scale-95 transition-all disabled:opacity-50"
+            className="px-12 py-3 rounded-lg font-bold bg-violet-500 text-white shadow-lg shadow-violet-500/30 hover:bg-violet-500/90 active:scale-95 transition-all disabled:opacity-50"
           >
             {saving ? (
               <span className="flex items-center gap-2">

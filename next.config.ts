@@ -11,6 +11,7 @@ const extraImageDomains = (process.env.NEXT_PUBLIC_IMAGE_DOMAINS || '')
   .filter(Boolean);
 
 const nextConfig: NextConfig = {
+  reactStrictMode: false,
   output: 'standalone',
 
   turbopack: {},

@@ -354,9 +354,8 @@ export default function ProductDetailClient({ slug, initialVariantSku = null }) 
                     key={img.id}
                     onClick={() => setSelectedImageIndex(idx)}
                     onMouseEnter={() => setSelectedImageIndex(idx)}
-                    className={`relative w-20 sm:w-24 aspect-square flex-shrink-0 rounded-xl overflow-hidden border-2 transition-all ${
-                      idx === selectedImageIndex ? 'border-primary ring-2 ring-primary/20 ring-offset-2 ring-offset-background' : 'border-border/50 hover:border-primary/50 opacity-70 hover:opacity-100'
-                    }`}
+                    className={`relative w-20 sm:w-24 aspect-square flex-shrink-0 rounded-xl overflow-hidden border-2 transition-all ${idx === selectedImageIndex ? 'border-primary ring-2 ring-primary/20 ring-offset-2 ring-offset-background' : 'border-border/50 hover:border-primary/50 opacity-70 hover:opacity-100'
+                      }`}
                   >
                     <Image src={img.file_url} alt={img.alt_text || ''} fill sizes="96px" className="object-cover" />
                   </button>
@@ -418,9 +417,8 @@ export default function ProductDetailClient({ slug, initialVariantSku = null }) 
                         key={val.value_id}
                         onClick={() => handleSelectColor(val.value_id)}
                         title={val.value}
-                        className={`relative w-14 h-14 rounded-full overflow-hidden border-2 transition-all flex items-center justify-center ${
-                          isSelected ? 'border-primary ring-2 ring-primary/20 ring-offset-2 ring-offset-background' : 'border-border hover:border-primary/50'
-                        }`}
+                        className={`relative w-14 h-14 rounded-full overflow-hidden border-2 transition-all flex items-center justify-center ${isSelected ? 'border-primary ring-2 ring-primary/20 ring-offset-2 ring-offset-background' : 'border-border hover:border-primary/50'
+                          }`}
                       >
                         {displayImage ? (
                           <Image src={displayImage.file_url} alt={val.value} fill sizes="56px" className="object-cover" />
@@ -454,11 +452,10 @@ export default function ProductDetailClient({ slug, initialVariantSku = null }) 
                           key={val.value_id}
                           onClick={() => isAvailable && handleSelectAttribute(group.attribute_id, val.value_id)}
                           disabled={!isAvailable}
-                          className={`min-w-[4rem] h-12 flex items-center justify-center px-4 rounded-xl border-2 transition-all font-semibold text-sm ${
-                            !isAvailable ? 'opacity-30 border-border cursor-not-allowed line-through' :
-                            isSelected ? 'border-primary bg-primary text-primary-foreground shadow-md shadow-primary/20' : 
-                            'border-border hover:border-primary/50 bg-card text-foreground'
-                          }`}
+                          className={`min-w-[4rem] h-12 flex items-center justify-center px-4 rounded-xl border-2 transition-all font-semibold text-sm ${!isAvailable ? 'opacity-30 border-border cursor-not-allowed line-through' :
+                            isSelected ? 'border-primary bg-primary text-primary-foreground shadow-md shadow-primary/20' :
+                              'border-border hover:border-primary/50 bg-card text-foreground'
+                            }`}
                         >
                           {val.value}
                         </button>
@@ -491,7 +488,7 @@ export default function ProductDetailClient({ slug, initialVariantSku = null }) 
                   </button>
                 </div>
               </div>
-              
+
               <Button
                 onClick={handleAddToCart}
                 disabled={!inStock}
@@ -563,7 +560,7 @@ export default function ProductDetailClient({ slug, initialVariantSku = null }) 
               <X className="w-6 h-6" />
             </button>
           </div>
-          
+
           <div className="flex-1 w-full flex items-center justify-center relative p-8">
             {images.length > 1 && (
               <button
@@ -578,7 +575,7 @@ export default function ProductDetailClient({ slug, initialVariantSku = null }) 
             <img
               src={images[lightboxIndex]?.file_url}
               alt={product.name}
-              className="max-w-full max-h-[75vh] object-contain rounded-xl shadow-2xl" 
+              className="max-w-full max-h-[75vh] object-contain rounded-xl shadow-2xl"
             />
 
             {images.length > 1 && (
@@ -590,16 +587,15 @@ export default function ProductDetailClient({ slug, initialVariantSku = null }) 
               </button>
             )}
           </div>
-          
+
           {images.length > 1 && (
             <div className="w-full bg-card/80 border-t border-border p-4 flex gap-3 overflow-x-auto justify-center hide-scrollbar">
               {images.map((img, idx) => (
                 <button
                   key={img.id}
                   onClick={() => setLightboxIndex(idx)}
-                  className={`w-16 sm:w-20 aspect-square flex-shrink-0 rounded-lg overflow-hidden border-2 transition-all ${
-                    idx === lightboxIndex ? 'border-primary ring-2 ring-primary/20 scale-105' : 'border-border/50 hover:border-primary/50 opacity-60 hover:opacity-100'
-                  }`}
+                  className={`w-16 sm:w-20 aspect-square flex-shrink-0 rounded-lg overflow-hidden border-2 transition-all ${idx === lightboxIndex ? 'border-primary ring-2 ring-primary/20 scale-105' : 'border-border/50 hover:border-primary/50 opacity-60 hover:opacity-100'
+                    }`}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element -- lightbox thumbnails */}
                   <img src={img.file_url} alt="" className="w-full h-full object-cover" />

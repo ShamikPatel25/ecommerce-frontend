@@ -6,7 +6,7 @@ import { useAuthStore } from '@/store/authStore';
 import { authAPI } from '@/lib/api';
 import { toast } from 'sonner';
 import Link from 'next/link';
-import { Store, User, Mail, Lock, ShieldCheck, Loader2 } from 'lucide-react';
+import { Store, User, Mail, Lock, ShieldCheck, Loader2, Eye, EyeOff } from 'lucide-react';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -21,6 +21,8 @@ export default function RegisterPage() {
   });
   const [loading, setLoading] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -57,14 +59,14 @@ export default function RegisterPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-200 p-6">
       {/* Background Decoration */}
-      <div className="fixed inset-0 z-0 bg-gradient-to-br from-[#ff6600]/5 via-slate-50 to-[#ff6600]/10" />
+      <div className="fixed inset-0 z-0 bg-gradient-to-br from-[#8b5cf6]/5 via-slate-50 to-[#8b5cf6]/10" />
 
       <div className="relative z-10 w-full max-w-md">
         {/* Main Card */}
         <div className="bg-white rounded-xl shadow-2xl p-8 border border-slate-100">
           {/* Header Section */}
           <div className="flex flex-col items-center text-center mb-8">
-            <div className="w-16 h-16 bg-[#ff6600] rounded-full flex items-center justify-center text-white mb-6 shadow-lg shadow-orange-500/30">
+            <div className="w-16 h-16 bg-[#8b5cf6] rounded-full flex items-center justify-center text-white mb-6 shadow-lg shadow-violet-500/30">
               <Store className="w-8 h-8" />
             </div>
             <h1 className="text-3xl font-bold text-slate-900 mb-2">Create Your Account</h1>
@@ -84,9 +86,9 @@ export default function RegisterPage() {
                   id="username"
                   type="text"
                   placeholder="johndoe"
-                  className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-[#ff6600]/20 focus:border-[#ff6600] outline-none transition-all"
+                  className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-[#8b5cf6]/20 focus:border-[#8b5cf6] outline-none transition-all"
                   value={formData.username}
-                  onChange={(e) => setFormData({ ...formData, username: e.target.value.replace(/\s/g, '') })}
+                  onChange={(e) => setFormData({ ...formData, username: e.target.value.replace(/[^a-zA-Z0-9]/g, '') })}
                   required
                 />
               </div>
@@ -103,7 +105,7 @@ export default function RegisterPage() {
                   id="email"
                   type="email"
                   placeholder="name@company.com"
-                  className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-[#ff6600]/20 focus:border-[#ff6600] outline-none transition-all"
+                  className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-[#8b5cf6]/20 focus:border-[#8b5cf6] outline-none transition-all"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value.replace(/\s/g, '').toLowerCase() })}
                   required
@@ -120,14 +122,21 @@ export default function RegisterPage() {
                 <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5 pointer-events-none" />
                 <input
                   id="password"
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   placeholder="••••••••"
-                  className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-[#ff6600]/20 focus:border-[#ff6600] outline-none transition-all"
+                  className="w-full pl-11 pr-12 py-3 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-[#8b5cf6]/20 focus:border-[#8b5cf6] outline-none transition-all"
                   value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value.replace(/\s/g, '') })}
                   required
                   minLength={8}
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                >
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
               </div>
             </div>
 
@@ -140,13 +149,20 @@ export default function RegisterPage() {
                 <ShieldCheck className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5 pointer-events-none" />
                 <input
                   id="confirm-password"
-                  type="password"
+                  type={showConfirmPassword ? 'text' : 'password'}
                   placeholder="••••••••"
-                  className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-[#ff6600]/20 focus:border-[#ff6600] outline-none transition-all"
+                  className="w-full pl-11 pr-12 py-3 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-[#8b5cf6]/20 focus:border-[#8b5cf6] outline-none transition-all"
                   value={formData.password2}
-                  onChange={(e) => setFormData({ ...formData, password2: e.target.value })}
+                  onChange={(e) => setFormData({ ...formData, password2: e.target.value.replace(/\s/g, '') })}
                   required
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                >
+                  {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
               </div>
             </div>
 
@@ -155,14 +171,14 @@ export default function RegisterPage() {
               <input
                 id="terms"
                 type="checkbox"
-                className="mt-1 rounded border-slate-300 text-[#ff6600] focus:ring-[#ff6600]"
+                className="mt-1 rounded border-slate-300 text-[#8b5cf6] focus:ring-[#8b5cf6]"
                 checked={agreedToTerms}
                 onChange={(e) => setAgreedToTerms(e.target.checked)}
               />
               <label htmlFor="terms" className="text-xs text-slate-500 leading-normal">
                 By creating an account, you agree to our{' '}
-                <span className="text-[#ff6600] hover:underline font-semibold cursor-pointer">Terms of Service</span> and{' '}
-                <span className="text-[#ff6600] hover:underline font-semibold cursor-pointer">Privacy Policy</span>.
+                <span className="text-[#8b5cf6] hover:underline font-semibold cursor-pointer">Terms of Service</span> and{' '}
+                <span className="text-[#8b5cf6] hover:underline font-semibold cursor-pointer">Privacy Policy</span>.
               </label>
             </div>
 
@@ -170,7 +186,7 @@ export default function RegisterPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3.5 bg-[#ff6600] text-white font-bold rounded-lg shadow-lg shadow-orange-500/20 hover:bg-[#ff6600]/90 transition-all flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full py-3.5 bg-[#8b5cf6] text-white font-bold rounded-lg shadow-lg shadow-violet-500/20 hover:bg-[#8b5cf6]/90 transition-all flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? (
                 <>
@@ -187,7 +203,7 @@ export default function RegisterPage() {
           <div className="mt-8 pt-6 border-t border-slate-100 text-center">
             <p className="text-slate-600 text-sm">
               Already have an account?
-              <Link href="/login" className="text-[#ff6600] font-bold hover:underline ml-1">
+              <Link href="/login" className="text-[#8b5cf6] font-bold hover:underline ml-1">
                 Sign in
               </Link>
             </p>

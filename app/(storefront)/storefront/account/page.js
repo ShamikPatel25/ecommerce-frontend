@@ -5,15 +5,9 @@ import { storefrontAPI } from '@/lib/storefrontApi';
 import { useStorefrontAuthStore } from '@/store/storefrontAuthStore';
 import { useRouter } from 'next/navigation';
 import { useStorefrontPath } from '@/lib/useStorefrontPath';
-import { User, Mail, Phone, Calendar, Loader2, MapPin, Home, Briefcase, Plus, Pencil, Trash2, Check, X } from 'lucide-react';
+import { ADDRESS_LABEL_ICONS, ADDRESS_LABEL_OPTIONS } from '@/lib/addressConfig';
+import { User, Mail, Phone, Calendar, Loader2, MapPin, Plus, Pencil, Trash2, Check, X } from 'lucide-react';
 import { toast } from 'sonner';
-
-const LABEL_ICONS = { home: Home, work: Briefcase, other: MapPin };
-const LABEL_OPTIONS = [
-  { value: 'home', label: 'Home' },
-  { value: 'work', label: 'Work' },
-  { value: 'other', label: 'Other' },
-];
 
 export default function AccountPage() {
   const [profile, setProfile] = useState(null);
@@ -229,7 +223,7 @@ export default function AccountPage() {
             <h3 className="font-bold text-foreground mb-4">{editingAddress === 'new' ? 'New Address' : 'Edit Address'}</h3>
 
             <div className="flex gap-2 mb-4">
-              {LABEL_OPTIONS.map((opt) => {
+              {ADDRESS_LABEL_OPTIONS.map((opt) => {
                 const usedLabels = addresses.map((a) => a.label);
                 const isUsed = usedLabels.includes(opt.value) && editingAddress === 'new';
                 return (
@@ -282,7 +276,7 @@ export default function AccountPage() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {addresses.map((addr) => {
-              const Icon = LABEL_ICONS[addr.label] || MapPin;
+              const Icon = ADDRESS_LABEL_ICONS[addr.label] || MapPin;
               return (
                 <div key={addr.id} className="p-4 bg-background border border-border rounded-2xl relative group">
                   <div className="flex items-center gap-2 mb-2">

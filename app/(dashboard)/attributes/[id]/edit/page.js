@@ -10,6 +10,7 @@ import {
   ArrowLeft, ChevronRight, Info, List, PlusCircle,
   ChevronDown, X, Undo2, Loader2,
 } from 'lucide-react';
+import { useSharedDataStore } from '@/store/sharedDataStore';
 
 export default function EditAttributePage() {
   const router      = useRouter();
@@ -18,8 +19,8 @@ export default function EditAttributePage() {
 
   const [loading,      setLoading]      = useState(true);
   const [attribute,    setAttribute]    = useState(null);
-  const [categories,   setCategories]   = useState([]);
   const [saving,       setSaving]       = useState(false);
+  const { fetchCategories, categories } = useSharedDataStore();
   const [newValue,     setNewValue]     = useState('');
   const [formData,     setFormData, clearDraft]     = useFormDraft(`attribute-edit-${attributeId}`, { name: '', category: '' });
   const [pendingDeletes, setPendingDeletes] = useState(new Set());
@@ -29,24 +30,20 @@ export default function EditAttributePage() {
   /* ── fetch ── */
   const fetchData = useCallback(async () => {
     try {
-      const [attrRes, catRes] = await Promise.all([
+      const [attrRes] = await Promise.all([
         attributeAPI.get(attributeId),
-        categoryAPI.list(),
+        fetchCategories(), // reads from cache if fresh, no extra network call
       ]);
       const a = attrRes.data;
       setAttribute(a);
       setFormData({ name: a.name || '', category: String(a.category || '') });
-      const catData = catRes.data;
-      const all = Array.isArray(catData) ? catData : (catData?.results || []);
-      // Only show root categories — attributes belong to root categories
-      setCategories(all.filter((c) => !c.parent));
     } catch {
       toast.error('Failed to load attribute');
       router.push('/attributes');
     } finally {
       setLoading(false);
     }
-  }, [attributeId, router, setFormData]);
+  }, [attributeId, router, setFormData, fetchCategories]);
 
   useEffect(() => {
     fetchData();
@@ -104,8 +101,10 @@ export default function EditAttributePage() {
       }
       toast.success('Attribute saved!');
       clearDraft();
+      // Refresh attribute data in-place without re-fetching categories
       const res = await attributeAPI.get(attributeId);
       setAttribute(res.data);
+      setFormData({ name: res.data.name || '', category: String(res.data.category || '') });
     } catch (error) {
       toast.error(error.response?.data?.name?.[0] || 'Failed to save');
     } finally {
@@ -142,12 +141,13 @@ export default function EditAttributePage() {
   /* ── loading ── */
   if (loading) return (
     <div className="min-h-[60vh] flex items-center justify-center">
-      <Loader2 className="w-10 h-10 text-orange-500 animate-spin" />
+      <Loader2 className="w-10 h-10 text-violet-500 animate-spin" />
     </div>
   );
 
   if (!attribute) return null;
 
+  const rootCategories = categories.filter((c) => !c.parent);
   const pendingCount = pendingDeletes.size;
   const pendingAddCount = pendingAdds.length;
 
@@ -160,7 +160,7 @@ export default function EditAttributePage() {
       <nav className="flex items-center gap-1.5 text-sm text-slate-500 dark:text-gray-400 mb-6">
         <button
           onClick={() => router.push('/attributes')}
-          className="hover:text-orange-500 transition-colors"
+          className="hover:text-violet-500 transition-colors"
         >
           Attributes
         </button>
@@ -178,7 +178,7 @@ export default function EditAttributePage() {
         </div>
         <button
           onClick={() => router.push('/attributes')}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg border border-orange-500/20 bg-white dark:bg-gray-800 hover:bg-orange-500/5 transition-colors text-sm font-bold self-start md:self-auto"
+          className="flex items-center gap-2 px-4 py-2 rounded-lg border border-violet-500/20 bg-white dark:bg-gray-800 hover:bg-violet-500/5 transition-colors text-sm font-bold self-start md:self-auto"
         >
           <ArrowLeft className="w-4 h-4" />
           Back to Attributes
@@ -186,9 +186,9 @@ export default function EditAttributePage() {
       </div>
 
       {/* ── Attribute Information ────────────────────────────────── */}
-      <section className="rounded-xl border border-orange-500/10 dark:border-gray-700 bg-white dark:bg-gray-800 p-6 md:p-8 shadow-sm mb-6">
+      <section className="rounded-xl border border-violet-500/10 dark:border-gray-700 bg-white dark:bg-gray-800 p-6 md:p-8 shadow-sm mb-6">
         <div className="flex items-center gap-2 mb-6">
-          <Info className="w-5 h-5 text-orange-500" />
+          <Info className="w-5 h-5 text-violet-500" />
           <h2 className="text-lg font-bold text-slate-900 dark:text-white">Attribute Information</h2>
         </div>
 
@@ -200,7 +200,7 @@ export default function EditAttributePage() {
               <input
                 type="text"
                 required
-                className="w-full h-12 rounded-lg border border-orange-500/20 bg-orange-500/5 px-4 text-slate-900 focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 transition-all dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                className="w-full h-12 rounded-lg border border-violet-500/20 bg-violet-500/5 px-4 text-slate-900 focus:outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 transition-all dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               />
@@ -212,12 +212,12 @@ export default function EditAttributePage() {
               <label className="text-sm font-semibold text-slate-700 dark:text-gray-300">Category</label>
               <div className="relative">
                 <select
-                  className="w-full h-12 rounded-lg border border-orange-500/20 bg-orange-500/5 px-4 pr-10 appearance-none text-slate-900 focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 transition-all dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  className="w-full h-12 rounded-lg border border-violet-500/20 bg-violet-500/5 px-4 pr-10 appearance-none text-slate-900 focus:outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 transition-all dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                   value={formData.category}
                   onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                 >
                   <option value="">Select Category</option>
-                  {categories.map((c) => (
+                  {rootCategories.map((c) => (
                     <option key={c.id} value={c.id}>{c.full_path || c.name}</option>
                   ))}
                 </select>
@@ -230,12 +230,12 @@ export default function EditAttributePage() {
       </section>
 
       {/* ── Attribute Values ─────────────────────────────────────── */}
-      <section className="rounded-xl border border-orange-500/10 dark:border-gray-700 bg-white dark:bg-gray-800 p-6 md:p-8 shadow-sm">
+      <section className="rounded-xl border border-violet-500/10 dark:border-gray-700 bg-white dark:bg-gray-800 p-6 md:p-8 shadow-sm">
 
         {/* Section header */}
         <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
           <div className="flex items-center gap-2">
-            <List className="w-5 h-5 text-orange-500" />
+            <List className="w-5 h-5 text-violet-500" />
             <h2 className="text-lg font-bold text-slate-900 dark:text-white">Attribute Values</h2>
           </div>
           {(pendingCount > 0 || pendingAddCount > 0) && (
@@ -263,7 +263,7 @@ export default function EditAttributePage() {
             <input
               type="text"
               placeholder="Add new value (e.g. XL, Red, 10oz)"
-              className="w-full h-12 rounded-lg border border-orange-500/20 bg-orange-500/5 pl-10 pr-4 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 transition-all dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder:text-gray-500"
+              className="w-full h-12 rounded-lg border border-violet-500/20 bg-violet-500/5 pl-10 pr-4 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 transition-all dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder:text-gray-500"
               value={newValue}
               onChange={(e) => setNewValue(e.target.value)}
               onKeyDown={handleKeyDown}
@@ -273,7 +273,7 @@ export default function EditAttributePage() {
             type="button"
             disabled={!newValue.trim()}
             onClick={handleAddValue}
-            className="h-12 px-8 rounded-lg bg-orange-500 text-white font-bold hover:bg-orange-500/90 transition-all disabled:opacity-50 shadow-lg shadow-orange-500/20 whitespace-nowrap"
+            className="h-12 px-8 rounded-lg bg-violet-500 text-white font-bold hover:bg-violet-500/90 transition-all disabled:opacity-50 shadow-lg shadow-violet-500/20 whitespace-nowrap"
           >
             Add Value
           </button>
@@ -310,7 +310,7 @@ export default function EditAttributePage() {
                     /* Active chip */
                     <div
                       key={v.id}
-                      className="group flex items-center gap-2 rounded-lg bg-orange-500 px-4 py-2 text-white shadow-sm hover:shadow-md transition-all"
+                      className="group flex items-center gap-2 rounded-lg bg-violet-500 px-4 py-2 text-white shadow-sm hover:shadow-md transition-all"
                     >
                       <span className="font-medium text-sm">{v.value}</span>
                       <button
@@ -389,7 +389,7 @@ export default function EditAttributePage() {
           type="submit"
           form="edit-attribute-form"
           disabled={saving}
-          className="px-12 py-3 rounded-lg font-bold bg-orange-500 text-white shadow-lg shadow-orange-500/30 hover:bg-orange-500/90 active:scale-95 transition-all disabled:opacity-50"
+          className="px-12 py-3 rounded-lg font-bold bg-violet-500 text-white shadow-lg shadow-violet-500/30 hover:bg-violet-500/90 active:scale-95 transition-all disabled:opacity-50"
         >
           {saving ? (
             <span className="flex items-center gap-2">

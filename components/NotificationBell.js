@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { Bell } from 'lucide-react';
 import { useNotificationStore } from '@/store/notificationStore';
 import { notificationAPI } from '@/lib/api';
@@ -32,6 +33,7 @@ const ICON_MAP = {
 };
 
 export default function NotificationBell({ variant = 'sidebar' }) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
   const { notifications, unreadCount, markAsRead, markAllAsRead } =
@@ -54,6 +56,10 @@ export default function NotificationBell({ variant = 'sidebar' }) {
     if (!notif.is_read) {
       markAsRead(notif.id);
       try { await notificationAPI.markRead(notif.id); } catch { /* silent */ }
+    }
+    if ((notif.notification_type === 'order_created' || notif.notification_type === 'order_status_changed') && notif.data?.order_id) {
+      setOpen(false);
+      router.push(`/orders/${notif.data.order_id}`);
     }
   };
 
@@ -78,7 +84,6 @@ export default function NotificationBell({ variant = 'sidebar' }) {
       <button
         onClick={() => setOpen(!open)}
         className={buttonCls}
-        title="Notifications"
       >
         <Bell className={iconCls} />
         {unreadCount > 0 && (
@@ -101,7 +106,7 @@ export default function NotificationBell({ variant = 'sidebar' }) {
             {unreadCount > 0 && (
               <button
                 onClick={handleMarkAllRead}
-                className="text-xs text-[#ff6600] hover:underline font-medium"
+                className="text-xs text-[#8b5cf6] hover:underline font-medium"
               >
                 Mark all read
               </button>
@@ -134,7 +139,7 @@ export default function NotificationBell({ variant = 'sidebar' }) {
                           {notif.title}
                         </p>
                         {!notif.is_read && (
-                          <span className="w-2 h-2 bg-[#ff6600] rounded-full flex-shrink-0" />
+                          <span className="w-2 h-2 bg-[#8b5cf6] rounded-full flex-shrink-0" />
                         )}
                       </div>
                       <p className="text-xs text-slate-500 dark:text-gray-400 mt-0.5 line-clamp-2">

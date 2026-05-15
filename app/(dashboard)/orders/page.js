@@ -21,7 +21,6 @@ const STATUS_TABS = [
   { label: 'Shipped',          value: 'shipped' },
   { label: 'Delivered',        value: 'delivered' },
   { label: 'Cancelled',        value: 'cancelled' },
-  { label: 'Return Requested', value: 'return_requested' },
   { label: 'Returned',         value: 'returned' },
 ];
 
@@ -29,11 +28,10 @@ const STATUS_TABS = [
 const STATUS_BADGE = {
   pending:          { dot: 'bg-yellow-500', pill: 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20' },
   confirmed:        { dot: 'bg-blue-500',   pill: 'bg-blue-500/10 text-blue-400 border border-blue-500/20' },
-  processing:       { dot: 'bg-orange-500', pill: 'bg-orange-500/10 text-orange-400 border border-orange-500/20' },
+  processing:       { dot: 'bg-violet-500', pill: 'bg-violet-500/10 text-violet-400 border border-violet-500/20' },
   shipped:          { dot: 'bg-emerald-500', pill: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' },
   delivered:        { dot: 'bg-green-500',  pill: 'bg-green-500/10 text-green-400 border border-green-500/20' },
   cancelled:        { dot: 'bg-red-500',    pill: 'bg-red-500/10 text-red-400 border border-red-500/20' },
-  return_requested: { dot: 'bg-amber-500',  pill: 'bg-amber-500/10 text-amber-400 border border-amber-500/20' },
   returned:         { dot: 'bg-rose-500',   pill: 'bg-rose-500/10 text-rose-400 border border-rose-500/20' },
 };
 
@@ -218,11 +216,11 @@ export default function OrdersPage() {
                     <thead>
                       <tr className="admin-thead-row">
                         <th className="admin-th lg:w-[12%]">Order #</th>
-                        <th className="admin-th lg:w-[25%]">Customer</th>
+                        <th className="admin-th lg:w-[25%] text-left">Customer</th>
                         <th className="admin-th lg:w-[12%]">Items</th>
                         <th className="admin-th lg:w-[15%]">Total Price</th>
                         <th className="admin-th lg:w-[20%]">Status</th>
-                        <th className="admin-th lg:w-[16%] text-right">Date</th>
+                        <th className="admin-th lg:w-[16%]">Date</th>
                       </tr>
                     </thead>
                     <tbody className="admin-tbody">
@@ -230,8 +228,7 @@ export default function OrdersPage() {
                         const badge = STATUS_BADGE[order.status] || { dot: 'bg-slate-400', pill: 'bg-slate-500/10 text-slate-400 border border-slate-500/20' };
 
                         let statusText;
-                        if (order.status === 'return_requested') statusText = 'Return Requested';
-                        else if (order.status === 'returned') statusText = 'Returned';
+                        if (order.status === 'returned') statusText = 'Returned';
                         else statusText = order.status.charAt(0).toUpperCase() + order.status.slice(1);
 
                         return (
@@ -243,8 +240,8 @@ export default function OrdersPage() {
                             <td className="admin-td font-mono font-bold text-slate-900 dark:text-white text-sm whitespace-nowrap">
                               #{order.id}
                             </td>
-                            <td className="admin-td max-w-0">
-                              <div className="flex items-center gap-3">
+                            <td className="admin-td max-w-0 text-left">
+                              <div className="flex items-center justify-start gap-3">
                                 <div className="w-8 h-8 rounded-full bg-indigo-500/10 flex items-center justify-center text-xs font-bold text-indigo-400 flex-shrink-0">
                                   {(order.customer_name || '?').charAt(0).toUpperCase()}
                                 </div>
@@ -257,7 +254,7 @@ export default function OrdersPage() {
                               </div>
                             </td>
                             <td className="admin-td text-sm text-slate-500 dark:text-gray-400 whitespace-nowrap">
-                              {order.items_count ?? 0} item{(order.items_count ?? 0) === 1 ? '' : 's'}
+                              {order.items_count ?? 0}
                             </td>
                             <td className="admin-td">
                               <span className="text-sm font-bold text-slate-900 dark:text-white">
@@ -270,7 +267,7 @@ export default function OrdersPage() {
                                 {statusText}
                               </span>
                             </td>
-                            <td className="admin-td text-sm text-slate-400 dark:text-gray-500 text-right whitespace-nowrap">
+                            <td className="admin-td text-sm text-slate-400 dark:text-gray-500 whitespace-nowrap">
                               {formatDate(order.created_at)}
                             </td>
                           </tr>

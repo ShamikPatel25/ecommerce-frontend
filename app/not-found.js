@@ -21,7 +21,7 @@ export default function NotFound() {
         <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
           <Link
             href="/dashboard"
-            className="w-full sm:w-auto inline-flex items-center justify-center px-5 py-2.5 rounded-lg bg-[#ff6600] text-white font-medium hover:bg-orange-600 transition-colors"
+            className="w-full sm:w-auto inline-flex items-center justify-center px-5 py-2.5 rounded-lg bg-[#8b5cf6] text-white font-medium hover:bg-violet-600 transition-colors"
           >
             Go to Dashboard
           </Link>

@@ -8,8 +8,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useCartStore } from '@/store/cartStore';
 import { useStorefrontAuthStore } from '@/store/storefrontAuthStore';
 import { storefrontAPI } from '@/lib/storefrontApi';
+import { validateCartStock } from '@/lib/stockValidation';
+import { ADDRESS_LABEL_OPTIONS, getAddressIcon } from '@/lib/addressConfig';
 import { toast } from 'sonner';
-import { ArrowLeft, Loader2, ShoppingBag, Shield, Lock, CreditCard, AlertTriangle, MapPin, Home, Briefcase } from 'lucide-react';
+import { ArrowLeft, Loader2, ShoppingBag, Shield, Lock, CreditCard, AlertTriangle, MapPin } from 'lucide-react';
 import { PageTransition } from '@/components/storefront/animations';
 import { useStorefrontPath } from '@/lib/useStorefrontPath';
 import { formatCurrency } from '@/lib/utils';
@@ -111,53 +113,12 @@ export default function CheckoutPage() {
 
   useEffect(() => { setHydrated(true); }, []);
 
-  // Live stock validation on mount — ensures maxStock is current before any order
   useEffect(() => {
     if (!hydrated || items.length === 0) {
-      setStockValidated(true); // nothing to validate
-      return;
-    }
-    const uniqueSlugs = [...new Set(items.filter((i) => i.slug).map((i) => i.slug))];
-    if (uniqueSlugs.length === 0) {
       setStockValidated(true);
       return;
     }
-    Promise.allSettled(uniqueSlugs.map((slug) => storefrontAPI.getProduct(slug)))
-      .then((results) => {
-        results.forEach((result, idx) => {
-          if (result.status !== 'fulfilled') return;
-          const product = result.value.data;
-          const slug = uniqueSlugs[idx];
-          items.forEach((cartItem) => {
-            if (cartItem.slug !== slug) return;
-            let liveStock;
-            if (cartItem.variant && product.attribute_groups?.length > 0) {
-              // Find variant stock from attribute_groups structure
-              liveStock = 0;
-              for (const group of product.attribute_groups) {
-                for (const val of group.values || []) {
-                  // Check direct variant (single-attribute products)
-                  if (val.variant?.variant_id === cartItem.variant) {
-                    liveStock = val.variant.stock ?? 0;
-                  }
-                  // Check available_variants (multi-attribute products)
-                  for (const av of val.available_variants || []) {
-                    for (const v of av.available_values || []) {
-                      if (v.variant_id === cartItem.variant) {
-                        liveStock = v.stock ?? 0;
-                      }
-                    }
-                  }
-                }
-              }
-            } else {
-              liveStock = product.stock ?? 0;
-            }
-            updateItemStock(cartItem.product, cartItem.variant, liveStock);
-          });
-        });
-      })
-      .finally(() => setStockValidated(true));
+    validateCartStock(items, updateItemStock).finally(() => setStockValidated(true));
   }, [hydrated]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Auto-fill form from customer profile
@@ -414,7 +375,7 @@ export default function CheckoutPage() {
                       <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">Select Saved Address</label>
                       <div className="flex flex-wrap gap-3">
                         {savedAddresses.map((addr) => {
-                          const Icon = addr.label === 'home' ? Home : addr.label === 'work' ? Briefcase : MapPin;
+                          const Icon = getAddressIcon(addr.label);
                           const isSelected = selectedAddressId === addr.id;
                           return (
                             <button
@@ -551,11 +512,7 @@ export default function CheckoutPage() {
                     <div className="space-y-2">
                       <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider">Address Type</label>
                       <div className="flex gap-3">
-                        {[
-                          { value: 'home', label: 'Home' },
-                          { value: 'work', label: 'Work' },
-                          { value: 'other', label: 'Other' },
-                        ].map((opt) => (
+                        {ADDRESS_LABEL_OPTIONS.map((opt) => (
                           <button
                             key={opt.value}
                             type="button"

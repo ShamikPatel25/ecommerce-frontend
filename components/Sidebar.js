@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
 import { useStoreStore } from '@/store/storeStore';
-import { storeAPI } from '@/lib/api';
 import { useState, useEffect, useRef } from 'react';
 import { useThemeStore } from '@/store/themeStore';
 import {
@@ -50,29 +49,8 @@ export default function Sidebar() {
     return () => document.removeEventListener('pointerdown', handleClick);
   }, []);
 
-  // Fetch user's stores on mount
-  useEffect(() => {
-    const fetchStores = async () => {
-      try {
-        const res = await storeAPI.myStores();
-        const storeList = res.data?.stores || res.data || [];
-        setStores(storeList);
-        if (!activeStore && storeList.length > 0) {
-          setActiveStore(storeList[0]);
-        }
-        if (activeStore && storeList.length > 0) {
-          const found = storeList.find((s) => s.id === activeStore.id);
-          if (!found) setActiveStore(storeList[0]);
-        }
-        if (storeList.length === 0 && activeStore) {
-          setActiveStore(null);
-        }
-      } catch {
-        /* fail silently */
-      }
-    };
-    fetchStores();
-  }, [activeStore, setActiveStore, setStores]);
+  // Stores are fetched and resolved by the DashboardLayout.
+  // Sidebar reads from Zustand — no duplicate fetch needed.
 
   const handleStoreSwitch = (store) => {
     if (!store.is_active) {
@@ -146,6 +124,7 @@ export default function Sidebar() {
         {stores.length === 0 && !activeStore ? (
           <Link
             href="/stores/create"
+            prefetch={false}
             className="flex items-center gap-3 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg px-3 py-2 transition-colors"
           >
             <div className="w-8 h-8 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center flex-shrink-0">
@@ -153,7 +132,7 @@ export default function Sidebar() {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-gray-500 dark:text-gray-400">No Store Found</p>
-              <p className="text-xs text-orange-500">Create your first store</p>
+              <p className="text-xs text-violet-500">Create your first store</p>
             </div>
           </Link>
         ) : (
@@ -162,7 +141,7 @@ export default function Sidebar() {
           onClick={() => setStoreDropdownOpen(!storeDropdownOpen)}
           className="flex items-center gap-3 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg px-3 py-2 transition-colors"
         >
-          <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0">
+          <div className="w-8 h-8 bg-violet-500 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0">
             {storeInitial}
           </div>
           <div className="flex-1 min-w-0">
@@ -192,12 +171,12 @@ export default function Sidebar() {
                       onClick={() => handleStoreSwitch(store)}
                       className={`flex items-center gap-3 w-full px-3 py-2.5 text-left transition-colors ${
                         isActive
-                          ? 'bg-orange-500/10 text-orange-500'
+                          ? 'bg-violet-500/10 text-violet-500'
                           : 'text-slate-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                       }`}
                     >
                       <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${
-                        isActive ? 'bg-orange-500 text-white' : 'bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300'
+                        isActive ? 'bg-violet-500 text-white' : 'bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300'
                       }`}>
                         {store.name?.charAt(0).toUpperCase()}
                       </div>
@@ -211,7 +190,7 @@ export default function Sidebar() {
                         </div>
                       </div>
                       {isActive && (
-                        <svg className="w-4 h-4 text-orange-400 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                        <svg className="w-4 h-4 text-violet-400 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                         </svg>
                       )}
@@ -256,6 +235,7 @@ export default function Sidebar() {
                 <Link
                   key={item.href}
                   href={item.href}
+                  prefetch={false}
                   className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all text-sm mb-0.5 ${
                     isActive
                       ? 'bg-gray-200 dark:bg-slate-200 text-slate-900 font-medium'
@@ -308,6 +288,7 @@ export default function Sidebar() {
             <div className="ml-4 flex flex-col gap-0.5">
               <Link
                 href="/settings"
+                prefetch={false}
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
                   pathname === '/settings'
                     ? 'bg-gray-200 dark:bg-slate-200 text-slate-900 font-medium'
@@ -319,6 +300,7 @@ export default function Sidebar() {
               </Link>
               <Link
                 href="/settings/change-password"
+                prefetch={false}
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
                   pathname === '/settings/change-password'
                     ? 'bg-gray-200 dark:bg-slate-200 text-slate-900 font-medium'

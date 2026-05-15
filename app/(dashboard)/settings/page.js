@@ -9,9 +9,9 @@ import { User, Loader2, Save, ArrowLeft, ChevronRight } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 const INPUT_CLS =
-  'w-full rounded-lg border border-orange-500/20 bg-orange-500/5 dark:bg-gray-700 dark:border-gray-600 px-4 py-3 text-slate-900 dark:text-white ' +
-  'placeholder:text-slate-400 dark:placeholder:text-gray-500 focus:outline-none focus:border-orange-500 ' +
-  'focus:ring-2 focus:ring-orange-500/20 transition-all';
+  'w-full rounded-lg border border-violet-500/20 bg-violet-500/5 dark:bg-gray-700 dark:border-gray-600 px-4 py-3 text-slate-900 dark:text-white ' +
+  'placeholder:text-slate-400 dark:placeholder:text-gray-500 focus:outline-none focus:border-violet-500 ' +
+  'focus:ring-2 focus:ring-violet-500/20 transition-all';
 
 export default function SettingsPage() {
   const { user, setAuth } = useAuthStore();
@@ -105,7 +105,7 @@ export default function SettingsPage() {
   if (loading) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
-        <Loader2 className="w-10 h-10 text-orange-500 animate-spin" />
+        <Loader2 className="w-10 h-10 text-violet-500 animate-spin" />
       </div>
     );
   }
@@ -115,7 +115,7 @@ export default function SettingsPage() {
       <div className="admin-container">
       {/* Breadcrumbs */}
       <nav className="flex items-center gap-1.5 text-sm text-slate-500 dark:text-gray-400 mb-4">
-        <button onClick={() => router.push('/dashboard')} className="hover:text-orange-500 transition-colors">
+        <button onClick={() => router.push('/dashboard')} className="hover:text-violet-500 transition-colors">
           Dashboard
         </button>
         <ChevronRight className="w-3.5 h-3.5" />
@@ -128,7 +128,7 @@ export default function SettingsPage() {
         <button
           type="button"
           onClick={() => router.push('/dashboard')}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg border border-orange-500/20 bg-white dark:bg-gray-800 hover:bg-orange-500/5 transition-colors text-sm font-bold self-start md:self-auto"
+          className="flex items-center gap-2 px-4 py-2 rounded-lg border border-violet-500/20 bg-white dark:bg-gray-800 hover:bg-violet-500/5 transition-colors text-sm font-bold self-start md:self-auto"
         >
           <ArrowLeft className="w-4 h-4" />
           Back to Dashboard
@@ -137,7 +137,7 @@ export default function SettingsPage() {
 
         <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden shadow-sm">
           <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2">
-            <User className="w-5 h-5 text-orange-500" />
+            <User className="w-5 h-5 text-violet-500" />
             <h2 className="text-lg font-bold text-slate-900 dark:text-white">Profile Information</h2>
           </div>
 
@@ -208,7 +208,7 @@ export default function SettingsPage() {
                 <button
                   type="submit"
                   disabled={savingProfile}
-                  className="flex items-center gap-2 bg-orange-500 text-white font-bold rounded-lg px-8 py-3 shadow-lg shadow-orange-500/30 hover:bg-orange-500/90 active:scale-95 transition-all disabled:opacity-50"
+                  className="flex items-center gap-2 bg-violet-500 text-white font-bold rounded-lg px-8 py-3 shadow-lg shadow-violet-500/30 hover:bg-violet-500/90 active:scale-95 transition-all disabled:opacity-50"
                 >
                   {savingProfile ? (
                     <>

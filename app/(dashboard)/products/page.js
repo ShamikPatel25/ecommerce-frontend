@@ -9,6 +9,8 @@ import { Plus, Search, MoreHorizontal, Trash2, Eye, EyeOff, Star, SlidersHorizon
 import Pagination from '@/components/dashboard/Pagination';
 import { formatCurrency } from '@/lib/utils';
 import { useStoreStore } from '@/store/storeStore';
+import { useDashboardStore } from '@/store/dashboardStore';
+import { useSharedDataStore } from '@/store/sharedDataStore';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -19,8 +21,9 @@ import {
 export default function ProductsPage() {
   const router = useRouter();
   const { activeStore } = useStoreStore();
+  const invalidateDashboard = useDashboardStore((s) => s.invalidate);
+  const { fetchCategories, categories, invalidateProducts: invalidateSharedProducts, fetchProducts: fetchSharedProducts } = useSharedDataStore();
   const [products, setProducts] = useState([]);
-  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -41,21 +44,30 @@ export default function ProductsPage() {
   }, [filterOpen]);
   const itemsPerPage = 10;
 
-  const fetchData = useCallback(async () => {
+  const fetchProducts = useCallback(async () => {
     try {
-      const [prodRes, catRes] = await Promise.all([
-        productAPI.list().catch(() => ({ data: [] })),
-        categoryAPI.list().catch(() => ({ data: [] })),
-      ]);
-
+      const prodRes = await productAPI.list().catch(() => ({ data: [] }));
       setProducts(Array.isArray(prodRes.data) ? prodRes.data : prodRes.data?.results || []);
-      setCategories(Array.isArray(catRes.data) ? catRes.data : catRes.data?.results || []);
     } catch {
       toast.error('Failed to load products');
     } finally {
       setLoading(false);
     }
   }, []);
+
+  const fetchData = useCallback(async () => {
+    try {
+      const [prodRes] = await Promise.all([
+        productAPI.list().catch(() => ({ data: [] })),
+        fetchCategories(), // reads from cache if fresh
+      ]);
+      setProducts(Array.isArray(prodRes.data) ? prodRes.data : prodRes.data?.results || []);
+    } catch {
+      toast.error('Failed to load products');
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchCategories]);
 
   useEffect(() => {
     fetchData();
@@ -67,7 +79,9 @@ export default function ProductsPage() {
       await productAPI.delete(deleteModal.product.id);
       toast.success('Product deleted!');
       setDeleteModal({ open: false, product: null });
-      fetchData();
+      invalidateDashboard(activeStore?.id);
+      invalidateSharedProducts();
+      fetchProducts(); // categories unchanged
     } catch {
       toast.error('Failed to delete product');
     }
@@ -77,7 +91,9 @@ export default function ProductsPage() {
     try {
       await productAPI.toggleActive(product.id);
       toast.success(product.is_active ? 'Product and its variants deactivated' : 'Product and its variants activated');
-      fetchData();
+      invalidateDashboard(activeStore?.id);
+      invalidateSharedProducts();
+      fetchProducts(); // categories unchanged
     } catch (err) {
       const detail = err.response?.data;
       let msg = 'Failed to update product status';
@@ -151,8 +167,8 @@ export default function ProductsPage() {
 
   const getStockColor = (stock) => {
     if (stock <= 15) return 'bg-red-500';
-    if (stock <= 30) return 'bg-orange-400';
-    return 'bg-orange-500';
+    if (stock <= 30) return 'bg-violet-400';
+    return 'bg-violet-500';
   };
 
   const getStockTextColor = (stock) => {
@@ -253,12 +269,12 @@ export default function ProductsPage() {
                 <table className="admin-table min-w-[900px]">
                   <thead>
                     <tr className="admin-thead-row">
-                      <th className="admin-th lg:w-[28%]">Product</th>
-                      <th className="admin-th lg:w-[12%]">SKU</th>
+                      <th className="admin-th lg:w-[28%] text-left">Product</th>
+                      <th className="admin-th lg:w-[12%] text-left">SKU</th>
                       <th className="admin-th lg:w-[14%]">Stock Level</th>
-                      <th className="admin-th lg:w-[10%] text-center">Catalog</th>
+                      <th className="admin-th lg:w-[10%]">Catalog</th>
                       <th className="admin-th lg:w-[12%]">Price</th>
-                      <th className="admin-th lg:w-[14%] text-right">Actions</th>
+                      <th className="admin-th lg:w-[14%]">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="admin-tbody">
@@ -287,8 +303,8 @@ export default function ProductsPage() {
                             onClick={() => router.push(`/products/${product.id}/edit`)}
                           >
                             {/* Product */}
-                            <td className="admin-td">
-                              <div className="flex items-center gap-3">
+                            <td className="admin-td text-left">
+                              <div className="flex items-center justify-start gap-3">
                                 <div className="size-10 rounded-lg bg-slate-100 dark:bg-gray-700 overflow-hidden border border-slate-200 dark:border-gray-600 flex items-center justify-center flex-shrink-0">
                                   {mediaUrl ? (
                                     // eslint-disable-next-line @next/next/no-img-element
@@ -307,7 +323,7 @@ export default function ProductsPage() {
                                   <div className="flex items-center gap-2">
                                     <p className={`text-sm font-medium truncate ${product.is_active ? 'text-slate-900 dark:text-white' : 'text-slate-400 dark:text-gray-500'}`}>{product.name}</p>
                                     {product.is_featured && (
-                                      <Star className="w-3.5 h-3.5 text-orange-500 fill-orange-500 flex-shrink-0" />
+                                      <Star className="w-3.5 h-3.5 text-violet-500 fill-violet-500 flex-shrink-0" />
                                     )}
                                   </div>
                                   <p className="text-slate-500 dark:text-gray-400 text-xs truncate">{getCategoryName(product.category)}</p>
@@ -316,7 +332,7 @@ export default function ProductsPage() {
                             </td>
 
                             {/* SKU */}
-                            <td className="admin-td">
+                            <td className="admin-td text-left">
                               <span className="font-mono text-xs bg-slate-100 dark:bg-gray-700 px-2 py-1 rounded text-slate-600 dark:text-gray-300">
                                 {product.sku}
                               </span>
@@ -324,7 +340,7 @@ export default function ProductsPage() {
 
                             {/* Stock Level */}
                             <td className="admin-td">
-                              <div className="flex items-center gap-3">
+                              <div className="flex items-center justify-center gap-3">
                                 <div className="w-20 h-1.5 rounded-full bg-slate-100 dark:bg-gray-700 overflow-hidden">
                                   <div
                                     className={`h-full ${getStockColor(stock)} rounded-full transition-all`}
@@ -334,15 +350,15 @@ export default function ProductsPage() {
                                 <span className={`text-xs font-bold ${getStockTextColor(stock)}`}>{stock}</span>
                               </div>
                               {reserved > 0 && (
-                                <p className="text-[11px] font-semibold text-orange-500 mt-1">{reserved} reserved</p>
+                                <p className="text-[11px] font-semibold text-violet-500 mt-1 text-center">{reserved} reserved</p>
                               )}
                             </td>
 
 
                             {/* Catalog */}
-                            <td className="admin-td text-center">
+                            <td className="admin-td">
                               {variantCount > 0 ? (
-                                <span className="inline-flex items-center justify-center size-7 rounded-full bg-orange-500/10 text-orange-500 border border-orange-500/20 text-xs font-bold">
+                                <span className="inline-flex items-center justify-center size-7 rounded-full bg-violet-500/10 text-violet-500 border border-violet-500/20 text-xs font-bold">
                                   {variantCount}
                                 </span>
                               ) : (
@@ -358,7 +374,7 @@ export default function ProductsPage() {
                             </td>
 
                             {/* Actions */}
-                            <td className="admin-td text-right">
+                            <td className="admin-td">
                               <DropdownMenu>
                                 <DropdownMenuTrigger
                                   onClick={(e) => e.stopPropagation()}

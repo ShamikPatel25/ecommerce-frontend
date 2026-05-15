@@ -3,11 +3,14 @@
 import { useState, useEffect } from 'react';
 import { storefrontAPI } from '@/lib/storefrontApi';
 import { useStorefrontAuthStore } from '@/store/storefrontAuthStore';
-import { X, Loader2 } from 'lucide-react';
+import { X, Loader2, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 export default function AuthModal({ open, onClose, initialTab = 'signin' }) {
   const [tab, setTab] = useState(initialTab);
+  const [showSiPass, setShowSiPass] = useState(false);
+  const [showSuPass, setShowSuPass] = useState(false);
+  const [showSuPass2, setShowSuPass2] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const setAuth = useStorefrontAuthStore((s) => s.setAuth);
@@ -26,7 +29,6 @@ export default function AuthModal({ open, onClose, initialTab = 'signin' }) {
   const [suEmail, setSuEmail] = useState('');
   const [suPass, setSuPass] = useState('');
   const [suPass2, setSuPass2] = useState('');
-  const [suPhone, setSuPhone] = useState('');
 
   const switchTab = (t) => { setTab(t); setError(''); };
 
@@ -59,14 +61,14 @@ export default function AuthModal({ open, onClose, initialTab = 'signin' }) {
       const username = suEmail.split('@')[0] + '_' + Date.now().toString().slice(-4);
       await storefrontAPI.register({
         email: suEmail, password: suPass, password2: suPass2,
-        username, first_name: suFirst, last_name: suLast, phone: suPhone,
+        username, first_name: suFirst, last_name: suLast,
       });
       // Auto login after register
       const loginRes = await storefrontAPI.login({ email: suEmail, password: suPass });
       const { tokens, user } = loginRes.data;
       setAuth(user, tokens.access, tokens.refresh);
       onClose();
-      setSuFirst(''); setSuLast(''); setSuEmail(''); setSuPass(''); setSuPass2(''); setSuPhone('');
+      setSuFirst(''); setSuLast(''); setSuEmail(''); setSuPass(''); setSuPass2('');
     } catch (err) {
       const data = err.response?.data;
       const msg = data?.email?.[0] || data?.password?.[0] || data?.password2?.[0]
@@ -141,13 +143,22 @@ export default function AuthModal({ open, onClose, initialTab = 'signin' }) {
                     <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex justify-between">
                       <span>Password</span>
                     </label>
-                    <input 
-                      type="password" 
-                      className="w-full h-12 px-4 rounded-xl bg-background border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all" 
-                      placeholder="••••••••" 
-                      value={siPass} 
-                      onChange={(e) => setSiPass(e.target.value)} 
-                    />
+                    <div className="relative">
+                      <input 
+                        type={showSiPass ? 'text' : 'password'}
+                        className="w-full h-12 px-4 pr-12 rounded-xl bg-background border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all" 
+                        placeholder="••••••••" 
+                        value={siPass} 
+                        onChange={(e) => setSiPass(e.target.value)} 
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowSiPass(!showSiPass)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        {showSiPass ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                      </button>
+                    </div>
                   </div>
                 </div>
 
@@ -209,35 +220,42 @@ export default function AuthModal({ open, onClose, initialTab = 'signin' }) {
 
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Password</label>
-                  <input 
-                    type="password" 
-                    className="w-full h-12 px-4 rounded-xl bg-background border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all" 
-                    placeholder="Min. 8 characters" 
-                    value={suPass} 
-                    onChange={(e) => setSuPass(e.target.value)} 
-                  />
+                  <div className="relative">
+                    <input 
+                      type={showSuPass ? 'text' : 'password'}
+                      className="w-full h-12 px-4 pr-12 rounded-xl bg-background border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all" 
+                      placeholder="Min. 8 characters" 
+                      value={suPass} 
+                      onChange={(e) => setSuPass(e.target.value)} 
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowSuPass(!showSuPass)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      {showSuPass ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    </button>
+                  </div>
                 </div>
 
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Confirm Password</label>
-                  <input 
-                    type="password" 
-                    className="w-full h-12 px-4 rounded-xl bg-background border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all" 
-                    placeholder="Confirm password" 
-                    value={suPass2} 
-                    onChange={(e) => setSuPass2(e.target.value)} 
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Phone (Optional)</label>
-                  <input 
-                    type="tel" 
-                    className="w-full h-12 px-4 rounded-xl bg-background border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all" 
-                    placeholder="+1 234 567 8900" 
-                    value={suPhone} 
-                    onChange={(e) => setSuPhone(e.target.value)} 
-                  />
+                  <div className="relative">
+                    <input 
+                      type={showSuPass2 ? 'text' : 'password'}
+                      className="w-full h-12 px-4 pr-12 rounded-xl bg-background border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all" 
+                      placeholder="Confirm password" 
+                      value={suPass2} 
+                      onChange={(e) => setSuPass2(e.target.value)} 
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowSuPass2(!showSuPass2)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      {showSuPass2 ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    </button>
+                  </div>
                 </div>
 
                 <div className="pt-2">

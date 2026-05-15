@@ -11,15 +11,15 @@ import {
 } from 'lucide-react';
 import { formatDateTime, formatCurrency } from '@/lib/utils';
 import { useStoreStore } from '@/store/storeStore';
+import { useDashboardStore } from '@/store/dashboardStore';
 
 const STATUS_STYLES = {
   pending:          'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20',
   confirmed:        'bg-blue-500/10 text-blue-400 border border-blue-500/20',
-  processing:       'bg-orange-500/10 text-orange-400 border border-orange-500/20',
+  processing:       'bg-violet-500/10 text-violet-400 border border-violet-500/20',
   shipped:          'bg-purple-500/10 text-purple-400 border border-purple-500/20',
   delivered:        'bg-green-500/10 text-green-400 border border-green-500/20',
   cancelled:        'bg-red-500/10 text-red-400 border border-red-500/20',
-  return_requested: 'bg-amber-500/10 text-amber-400 border border-amber-500/20',
   returned:         'bg-rose-500/10 text-rose-400 border border-rose-500/20',
 };
 
@@ -28,8 +28,7 @@ const VALID_TRANSITIONS = {
   confirmed:        ['processing', 'cancelled'],
   processing:       ['shipped', 'cancelled'],
   shipped:          ['delivered'],
-  delivered:        ['return_requested'],
-  return_requested: ['returned'],
+  delivered:        ['returned'],
   cancelled:        [],
   returned:         [],
 };
@@ -41,7 +40,6 @@ const STATUS_LABELS = {
   shipped:          'Shipped',
   delivered:        'Delivered',
   cancelled:        'Cancelled',
-  return_requested: 'Return Requested',
   returned:         'Returned',
 };
 
@@ -59,6 +57,7 @@ export default function OrderDetailPage() {
   const router = useRouter();
   const { id }  = useParams();
   const { activeStore } = useStoreStore();
+  const invalidateDashboard = useDashboardStore((s) => s.invalidate);
 
   const [order,        setOrder]        = useState(null);
   const [loading,      setLoading]      = useState(true);
@@ -124,6 +123,7 @@ export default function OrderDetailPage() {
     try {
       const res = await orderAPI.updateStatus(id, newStatus);
       setOrder(res.data);
+      invalidateDashboard(activeStore?.id);
       toast.success('Status updated!');
     } catch {
       toast.error('Failed to update status');
@@ -142,7 +142,6 @@ export default function OrderDetailPage() {
 
   const isCancelled   = order.status === 'cancelled';
   const isReturned    = order.status === 'returned';
-  const isReturnReq   = order.status === 'return_requested';
   const customerInit  = order.customer_name?.charAt(0).toUpperCase() || '?';
   const allowedNext   = VALID_TRANSITIONS[order.status] || [];
 
@@ -161,18 +160,16 @@ export default function OrderDetailPage() {
       );
     }
 
-    if (isReturnReq || isReturned) {
-      const label = isReturned ? 'Returned' : 'Return Requested';
-      const colorCls = isReturned
-        ? 'bg-rose-500/10 text-rose-500 border-rose-500/20'
-        : 'bg-amber-500/10 text-amber-500 border-amber-500/20';
+    if (isReturned) {
+      const label = 'Returned';
+      const colorCls = 'bg-rose-500/10 text-rose-500 border-rose-500/20';
       return (
         <div className="flex items-center gap-3 py-3">
           <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 border ${colorCls}`}>
             <RotateCcw className="w-5 h-5" />
           </div>
           <div>
-            <p className={`text-sm font-bold ${isReturned ? 'text-rose-500' : 'text-amber-500'}`}>{label}</p>
+            <p className="text-sm font-bold text-rose-500">{label}</p>
             <p className="text-xs text-slate-400 dark:text-gray-500">{formatDateTime(order.updated_at)}</p>
           </div>
         </div>
@@ -195,9 +192,9 @@ export default function OrderDetailPage() {
                 <div
                   className={`w-10 h-10 shrink-0 rounded-full flex items-center justify-center border-2 transition-colors ${
                     done
-                      ? 'bg-orange-500 border-orange-500 text-white shadow-lg shadow-orange-500/20'
+                      ? 'bg-violet-500 border-violet-500 text-white shadow-lg shadow-violet-500/20'
                       : active
-                      ? 'bg-orange-500/15 border-orange-500 text-orange-500'
+                      ? 'bg-violet-500/15 border-violet-500 text-violet-500'
                       : 'bg-white dark:bg-gray-800 border-slate-200 dark:border-gray-600 text-slate-400 dark:text-gray-500'
                   }`}
                 >
@@ -207,7 +204,7 @@ export default function OrderDetailPage() {
                 {!isLast && (
                   <div className="flex-1 h-0.5 mx-1 bg-slate-200 dark:bg-gray-700 relative overflow-hidden">
                     <div
-                      className="absolute inset-0 bg-orange-500 origin-left transition-transform duration-500"
+                      className="absolute inset-0 bg-violet-500 origin-left transition-transform duration-500"
                       style={{ transform: `scaleX(${done ? 1 : 0})` }}
                     />
                   </div>
@@ -241,13 +238,131 @@ export default function OrderDetailPage() {
     );
   };
 
+  const handlePrintInvoice = () => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      toast.error('Please allow popups to print invoice');
+      return;
+    }
+
+    const invoiceHTML = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Invoice #INV-${String(order.id).padStart(5, '0')}</title>
+        <style>
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 40px; color: #1f2937; }
+          .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #1f2937; padding-bottom: 20px; margin-bottom: 30px; }
+          .store-name { font-size: 24px; font-weight: bold; color: #111827; }
+          .store-info { font-size: 13px; color: #4b5563; margin-top: 4px; }
+          .invoice-title { font-size: 32px; font-weight: bold; color: #111827; text-align: right; }
+          .invoice-meta { font-size: 13px; color: #4b5563; text-align: right; margin-top: 8px; }
+          .section { margin-bottom: 30px; }
+          .section-title { font-size: 12px; font-weight: bold; color: #111827; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; }
+          .customer-name { font-size: 16px; font-weight: 600; color: #111827; }
+          .customer-info { font-size: 13px; color: #4b5563; margin-top: 4px; }
+          table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+          th { background: #f3f4f6; padding: 12px; font-size: 13px; font-weight: bold; color: #111827; border: 1px solid #d1d5db; text-align: left; }
+          th.center { text-align: center; }
+          th.right { text-align: right; }
+          td { padding: 12px; font-size: 13px; color: #1f2937; border: 1px solid #d1d5db; }
+          td.center { text-align: center; }
+          td.right { text-align: right; }
+          .item-name { font-weight: 500; }
+          .item-variant { font-size: 11px; color: #6b7280; }
+          .item-sku { font-size: 11px; color: #9ca3af; }
+          .totals { display: flex; justify-content: flex-end; }
+          .totals-box { width: 250px; }
+          .total-row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 14px; }
+          .total-row.final { border-top: 2px solid #1f2937; margin-top: 10px; padding-top: 12px; font-size: 18px; font-weight: bold; }
+          .footer { border-top: 1px solid #d1d5db; padding-top: 20px; text-align: center; margin-top: 40px; }
+          .footer-text { font-size: 14px; color: #4b5563; }
+          .footer-note { font-size: 11px; color: #9ca3af; margin-top: 8px; }
+          @media print { body { padding: 20px; } }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div>
+            <div class="store-name">${activeStore?.name || 'Store'}</div>
+            ${activeStore?.address ? `<div class="store-info">${activeStore.address}</div>` : ''}
+            ${activeStore?.phone ? `<div class="store-info">Phone: ${activeStore.phone}</div>` : ''}
+            ${activeStore?.email ? `<div class="store-info">Email: ${activeStore.email}</div>` : ''}
+          </div>
+          <div>
+            <div class="invoice-title">INVOICE</div>
+            <div class="invoice-meta">Invoice #: INV-${String(order.id).padStart(5, '0')}</div>
+            <div class="invoice-meta">Date: ${formatDateTime(order.created_at)}</div>
+            <div class="invoice-meta">Status: ${STATUS_LABELS[order.status] || order.status}</div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Bill To:</div>
+          <div class="customer-name">${order.customer_name || ''}</div>
+          ${order.customer_email ? `<div class="customer-info">${order.customer_email}</div>` : ''}
+          ${order.customer_phone ? `<div class="customer-info">${order.customer_phone}</div>` : ''}
+          ${order.shipping_address ? `<div class="customer-info">${order.shipping_address.replace(/\n/g, '<br>')}</div>` : ''}
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Item</th>
+              <th class="center" style="width:70px">Qty</th>
+              <th class="right" style="width:100px">Price</th>
+              <th class="right" style="width:100px">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${order.items?.map(item => `
+              <tr>
+                <td>
+                  <div class="item-name">${item.product_name}</div>
+                  ${item.variant_attrs ? `<div class="item-variant">${item.variant_attrs}</div>` : ''}
+                  ${item.product_sku ? `<div class="item-sku">SKU: ${item.product_sku}</div>` : ''}
+                </td>
+                <td class="center">${item.quantity}</td>
+                <td class="right">${formatCurrency(item.unit_price, activeStore?.currency)}</td>
+                <td class="right" style="font-weight:500">${formatCurrency(Number.parseFloat(item.unit_price) * item.quantity, activeStore?.currency)}</td>
+              </tr>
+            `).join('') || ''}
+          </tbody>
+        </table>
+
+        <div class="totals">
+          <div class="totals-box">
+            ${order.subtotal != null ? `<div class="total-row"><span>Subtotal:</span><span>${formatCurrency(order.subtotal, activeStore?.currency)}</span></div>` : ''}
+            ${order.shipping_cost != null ? `<div class="total-row"><span>Shipping:</span><span>${formatCurrency(order.shipping_cost, activeStore?.currency)}</span></div>` : ''}
+            <div class="total-row final"><span>Total:</span><span>${formatCurrency(order.total_amount, activeStore?.currency)}</span></div>
+          </div>
+        </div>
+
+        <div class="footer">
+          <div class="footer-text">Thank you for your business!</div>
+          <div class="footer-note">This is a computer-generated invoice. No signature required.</div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    printWindow.document.write(invoiceHTML);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+      printWindow.print();
+      printWindow.close();
+    }, 250);
+  };
+
   return (
     <div className="admin-page">
       <div className="admin-container">
 
         {/* Breadcrumbs */}
         <nav className="flex items-center gap-1.5 text-sm text-slate-500 dark:text-gray-400 mb-4">
-          <button onClick={() => router.push('/orders')} className="hover:text-orange-500 transition-colors">
+          <button onClick={() => router.push('/orders')} className="hover:text-violet-500 transition-colors">
             Orders
           </button>
           <ChevronRight className="w-3.5 h-3.5" />
@@ -259,7 +374,7 @@ export default function OrderDetailPage() {
           <div className="flex flex-wrap items-center gap-3">
             <button
               onClick={() => router.push('/orders')}
-              className="flex items-center gap-1.5 text-slate-500 dark:text-gray-400 hover:text-orange-500 text-sm font-medium transition-colors"
+              className="flex items-center gap-1.5 text-slate-500 dark:text-gray-400 hover:text-violet-500 text-sm font-medium transition-colors"
             >
               <ArrowLeft className="w-4 h-4" />
             </button>
@@ -273,7 +388,7 @@ export default function OrderDetailPage() {
 
           <div className="flex gap-3">
             <button
-              onClick={() => globalThis.print()}
+              onClick={handlePrintInvoice}
               className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-lg text-slate-700 dark:text-gray-300 text-sm font-bold hover:bg-slate-50 dark:hover:bg-gray-700 transition-all shadow-sm"
             >
               <Printer className="w-4 h-4" />
@@ -302,7 +417,7 @@ export default function OrderDetailPage() {
           <div className="lg:col-span-2">
             <div className="admin-table-card">
               <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2">
-                <Package className="w-5 h-5 text-orange-500" />
+                <Package className="w-5 h-5 text-violet-500" />
                 <h3 className="text-lg font-bold text-slate-900 dark:text-white">Order Items</h3>
               </div>
 
@@ -316,10 +431,10 @@ export default function OrderDetailPage() {
                     <thead>
                       <tr className="admin-thead-row">
                         <th className="admin-th">Product</th>
-                        <th className="admin-th text-center">Qty</th>
-                        <th className="admin-th text-right">Price</th>
-                        <th className="admin-th text-right">Total</th>
-                        <th className="admin-th text-center">Stock Left</th>
+                        <th className="admin-th">Qty</th>
+                        <th className="admin-th">Price</th>
+                        <th className="admin-th">Total</th>
+                        <th className="admin-th">Stock Left</th>
                       </tr>
                     </thead>
                     <tbody className="admin-tbody">
@@ -335,7 +450,7 @@ export default function OrderDetailPage() {
                           stockCell = <span className="px-2 py-0.5 bg-red-500/10 text-red-500 text-xs font-bold rounded-full border border-red-500/20">Out</span>;
                         } else {
                           stockCell = (
-                            <span className={`text-sm font-bold ${currentStock <= 5 ? 'text-orange-500' : 'text-green-500'}`}>
+                            <span className={`text-sm font-bold ${currentStock <= 5 ? 'text-violet-500' : 'text-green-500'}`}>
                               {currentStock}
                             </span>
                           );
@@ -345,8 +460,8 @@ export default function OrderDetailPage() {
                           <tr key={item.id}>
                             <td className="admin-td">
                               <div className="flex items-center gap-4">
-                                <div className="w-12 h-12 rounded-lg bg-orange-500/10 flex items-center justify-center shrink-0">
-                                  <Package className="w-5 h-5 text-orange-500/60" />
+                                <div className="w-12 h-12 rounded-lg bg-violet-500/10 flex items-center justify-center shrink-0">
+                                  <Package className="w-5 h-5 text-violet-500/60" />
                                 </div>
                                 <div>
                                   <p className="font-bold text-slate-900 dark:text-white text-sm">{item.product_name}</p>
@@ -359,18 +474,18 @@ export default function OrderDetailPage() {
                                 </div>
                               </div>
                             </td>
-                            <td className="admin-td text-center">
+                            <td className="admin-td">
                               <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-100 dark:bg-gray-700 text-slate-700 dark:text-gray-300">
                                 {item.quantity}
                               </span>
                             </td>
-                            <td className="admin-td text-right text-sm text-slate-500 dark:text-gray-400">
+                            <td className="admin-td text-sm text-slate-500 dark:text-gray-400">
                               {formatCurrency(item.unit_price, activeStore?.currency)}
                             </td>
-                            <td className="admin-td text-right text-sm font-semibold text-slate-900 dark:text-white">
+                            <td className="admin-td text-sm font-semibold text-slate-900 dark:text-white">
                               {formatCurrency(Number.parseFloat(item.unit_price) * item.quantity, activeStore?.currency)}
                             </td>
-                            <td className="admin-td text-center">
+                            <td className="admin-td">
                               {stockCell}
                             </td>
                           </tr>
@@ -381,23 +496,23 @@ export default function OrderDetailPage() {
                     <tfoot className="bg-slate-50/50 dark:bg-gray-700/20">
                       {order.subtotal != null && (
                         <tr>
-                          <td colSpan={3} className="admin-td text-right text-sm text-slate-500 dark:text-gray-400">Subtotal</td>
-                          <td className="admin-td text-right text-sm font-medium text-slate-700 dark:text-gray-300" colSpan={2}>
+                          <td colSpan={3} className="admin-td text-sm text-slate-500 dark:text-gray-400">Subtotal</td>
+                          <td className="admin-td text-sm font-medium text-slate-700 dark:text-gray-300" colSpan={2}>
                             {formatCurrency(order.subtotal, activeStore?.currency)}
                           </td>
                         </tr>
                       )}
                       {order.shipping_cost != null && (
                         <tr>
-                          <td colSpan={3} className="admin-td text-right text-sm text-slate-500 dark:text-gray-400">Shipping</td>
-                          <td className="admin-td text-right text-sm font-medium text-slate-700 dark:text-gray-300" colSpan={2}>
+                          <td colSpan={3} className="admin-td text-sm text-slate-500 dark:text-gray-400">Shipping</td>
+                          <td className="admin-td text-sm font-medium text-slate-700 dark:text-gray-300" colSpan={2}>
                             {formatCurrency(order.shipping_cost, activeStore?.currency)}
                           </td>
                         </tr>
                       )}
                       <tr>
-                        <td colSpan={3} className="admin-td text-right text-slate-900 dark:text-white font-bold">Total</td>
-                        <td className="admin-td text-right text-xl font-black text-orange-500" colSpan={2}>
+                        <td colSpan={3} className="admin-td text-slate-900 dark:text-white font-bold">Total</td>
+                        <td className="admin-td text-xl font-black text-violet-500" colSpan={2}>
                           {formatCurrency(order.total_amount, activeStore?.currency)}
                         </td>
                       </tr>
@@ -422,12 +537,12 @@ export default function OrderDetailPage() {
               <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-5">Customer Details</h3>
 
               <div className="flex items-center gap-4 mb-5">
-                <div className="w-14 h-14 rounded-full bg-orange-500/10 flex items-center justify-center text-orange-500 font-black text-xl ring-4 ring-orange-500/5 shrink-0">
+                <div className="w-14 h-14 rounded-full bg-violet-500/10 flex items-center justify-center text-violet-500 font-black text-xl ring-4 ring-violet-500/5 shrink-0">
                   {customerInit}
                 </div>
                 <div>
                   <p className="font-bold text-lg text-slate-900 dark:text-white">{order.customer_name}</p>
-                  <p className="text-sm text-orange-500 font-medium">Customer</p>
+                  <p className="text-sm text-violet-500 font-medium">Customer</p>
                 </div>
               </div>
 
@@ -482,7 +597,7 @@ export default function OrderDetailPage() {
                       value={newStatus}
                       onChange={(e) => setNewStatus(e.target.value)}
                       disabled={allowedNext.length === 0}
-                      className="w-full h-11 rounded-lg border border-gray-200 dark:border-gray-700 bg-slate-50 dark:bg-gray-700/50 px-4 pr-10 appearance-none text-sm text-slate-800 dark:text-gray-200 focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full h-11 rounded-lg border border-gray-200 dark:border-gray-700 bg-slate-50 dark:bg-gray-700/50 px-4 pr-10 appearance-none text-sm text-slate-800 dark:text-gray-200 focus:outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <option value={order.status}>{STATUS_LABELS[order.status] || order.status} (current)</option>
                       {allowedNext.map((s) => (
@@ -496,7 +611,7 @@ export default function OrderDetailPage() {
                 <button
                   onClick={handleStatusSave}
                   disabled={saving || newStatus === order.status}
-                  className="w-full py-2.5 bg-orange-500 text-white rounded-lg font-bold shadow-lg shadow-orange-500/20 hover:bg-orange-600 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                  className="w-full py-2.5 bg-violet-500 text-white rounded-lg font-bold shadow-lg shadow-violet-500/20 hover:bg-violet-600 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   {saving
                     ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving…</>

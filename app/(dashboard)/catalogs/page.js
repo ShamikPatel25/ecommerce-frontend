@@ -9,12 +9,14 @@ import { Search, Trash2, Package } from 'lucide-react';
 import Pagination from '@/components/dashboard/Pagination';
 import { formatCurrency } from '@/lib/utils';
 import { useStoreStore } from '@/store/storeStore';
+import { useSharedDataStore } from '@/store/sharedDataStore';
 
 const PER_PAGE = 10;
 
 export default function CatalogsPage() {
   const router = useRouter();
   const { activeStore } = useStoreStore();
+  const { fetchProducts } = useSharedDataStore();
   const [catalogs, setCatalogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -23,13 +25,20 @@ export default function CatalogsPage() {
 
   const fetchCatalogs = useCallback(async () => {
     try {
-      const response = await productAPI.list();
-      const products = Array.isArray(response.data) ? response.data : response.data?.results || [];
+      // Use shared cache — avoids re-fetching if products were recently loaded
+      const products = await fetchProducts();
       const catalogProducts = products.filter(p => p.product_type === 'catalog');
+
+      // Fetch all catalog product details in parallel
+      const detailResults = await Promise.all(
+        catalogProducts.map(p => productAPI.get(p.id).catch(() => null))
+      );
+
       const allVariants = [];
-      for (const product of catalogProducts) {
-        const productDetail = await productAPI.get(product.id);
-        const variants = productDetail.data?.variants || [];
+      detailResults.forEach((res, idx) => {
+        if (!res) return;
+        const product = catalogProducts[idx];
+        const variants = res.data?.variants || [];
         variants.forEach(variant => {
           const valuesLabel = variant.attribute_values?.map(av => av.value).join('-') || '';
           allVariants.push({
@@ -40,14 +49,14 @@ export default function CatalogsPage() {
             product_price: product.price,
           });
         });
-      }
+      });
       setCatalogs(allVariants);
     } catch {
       toast.error('Failed to load catalogs');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [fetchProducts]);
 
   useEffect(() => {
     fetchCatalogs();
@@ -68,8 +77,8 @@ export default function CatalogsPage() {
 
   const getStockColor = (stock) => {
     if (stock <= 15) return 'bg-red-500';
-    if (stock <= 30) return 'bg-orange-400';
-    return 'bg-orange-500';
+    if (stock <= 30) return 'bg-violet-400';
+    return 'bg-violet-500';
   };
 
   const getStockTextColor = (stock) => {
@@ -136,11 +145,11 @@ export default function CatalogsPage() {
                 <table className="admin-table min-w-[750px]">
                   <thead>
                     <tr className="admin-thead-row">
-                      <th className="admin-th">Variant Name</th>
-                      <th className="admin-th">Product</th>
+                      <th className="admin-th text-left">Variant Name</th>
+                      <th className="admin-th text-left">Product</th>
                       <th className="admin-th">Stock</th>
                       <th className="admin-th">Price</th>
-                      <th className="admin-th text-right w-20">Actions</th>
+                      <th className="admin-th w-20">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="admin-tbody">
@@ -163,7 +172,7 @@ export default function CatalogsPage() {
                             onClick={() => router.push(`/products/${variant.product_id}/edit`)}
                             className="admin-tr group"
                           >
-                            <td className="admin-td">
+                            <td className="admin-td text-left">
                               <p className="text-slate-900 dark:text-white text-sm font-medium">
                                 {variant.variant_name || variant.sku}
                               </p>
@@ -171,7 +180,7 @@ export default function CatalogsPage() {
                                 {variant.sku}
                               </span>
                             </td>
-                            <td className="admin-td">
+                            <td className="admin-td text-left">
                               <span className="text-slate-600 dark:text-gray-300 text-sm">{variant.product_name}</span>
                             </td>
                             <td className="admin-td">
@@ -192,7 +201,7 @@ export default function CatalogsPage() {
                                 {formatCurrency(variant.price ?? variant.product_price ?? 0, activeStore?.currency)}
                               </span>
                             </td>
-                            <td className="admin-td text-right">
+                            <td className="admin-td">
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();

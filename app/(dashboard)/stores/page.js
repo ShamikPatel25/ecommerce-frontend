@@ -171,11 +171,11 @@ export default function StoresPage() {
                 <table className="admin-table min-w-[800px]">
                   <thead>
                     <tr className="admin-thead-row">
-                      <th className="admin-th">Store</th>
-                      <th className="admin-th">Description</th>
+                      <th className="admin-th text-left">Store</th>
+                      <th className="admin-th text-left">Description</th>
                       <th className="admin-th">Currency</th>
                       <th className="admin-th">Status</th>
-                      <th className="admin-th text-right w-20">Actions</th>
+                      <th className="admin-th w-20">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="admin-tbody">
@@ -197,23 +197,23 @@ export default function StoresPage() {
                           onClick={() => router.push(`/stores/${store.id}/edit`)}
                         >
                           {/* Store Name */}
-                          <td className="admin-td">
-                            <div className="flex items-center gap-3">
+                          <td className="admin-td text-left">
+                            <div className="flex items-center justify-start gap-3">
                               <div className="size-10 bg-slate-100 dark:bg-gray-700 rounded-lg flex items-center justify-center text-lg flex-shrink-0">🏪</div>
                               <div className="min-w-0">
                                 <p className="text-sm font-semibold truncate text-slate-900 dark:text-white">{store.name}</p>
-                                <p className="text-xs text-orange-500">{store.full_domain || `${store.subdomain}.localhost:3000`}</p>
+                                <p className="text-xs text-violet-500">{store.full_domain || `${store.subdomain}.localhost:3000`}</p>
                               </div>
                             </div>
                           </td>
 
                           {/* Description */}
-                          <td className="admin-td">
+                          <td className="admin-td text-left">
                             <span className="text-slate-500 dark:text-gray-400 text-sm">{store.description || '—'}</span>
                           </td>
 
                           {/* Currency */}
-                          <td className="admin-td">
+                          <td className="admin-td text-left">
                             <span className="font-mono text-xs bg-slate-100 dark:bg-gray-700 px-2 py-1 rounded text-slate-600 dark:text-gray-300 font-semibold">{store.currency}</span>
                           </td>
 
@@ -230,7 +230,7 @@ export default function StoresPage() {
                           </td>
 
                           {/* Actions */}
-                          <td className="admin-td text-right">
+                          <td className="admin-td">
                             <DropdownMenu>
                               <DropdownMenuTrigger
                                 onClick={(e) => e.stopPropagation()}

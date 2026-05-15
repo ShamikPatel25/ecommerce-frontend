@@ -129,8 +129,8 @@ export default function MediaUploader({ productId, initialMedia = [], onMediaCha
               key={item.id}
               className={`group relative aspect-square rounded-xl overflow-hidden border-2 transition-all ${
                 item.is_thumbnail
-                  ? 'border-[#ff6600] ring-2 ring-[#ff6600]/20'
-                  : 'border-slate-200 dark:border-gray-700 hover:border-[#ff6600]/40 dark:hover:border-[#ff6600]/40'
+                  ? 'border-[#8b5cf6] ring-2 ring-[#8b5cf6]/20'
+                  : 'border-slate-200 dark:border-gray-700 hover:border-[#8b5cf6]/40 dark:hover:border-[#8b5cf6]/40'
               }`}
             >
               {item.media_type === 'video' ? (
@@ -154,7 +154,7 @@ export default function MediaUploader({ productId, initialMedia = [], onMediaCha
               )}
               {/* Thumbnail badge */}
               {item.is_thumbnail && (
-                <span className="absolute top-2 left-2 bg-[#ff6600] text-white text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+                <span className="absolute top-2 left-2 bg-[#8b5cf6] text-white text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
                   <Star className="w-3 h-3 fill-white" /> THUMBNAIL
                 </span>
               )}
@@ -170,7 +170,7 @@ export default function MediaUploader({ productId, initialMedia = [], onMediaCha
                     type="button"
                     onClick={(e) => { e.stopPropagation(); handleSetThumbnail(item); }}
                     disabled={settingThumbId === item.id}
-                    className="p-1.5 bg-white/90 dark:bg-gray-800/90 rounded-full text-[#ff6600] shadow-sm hover:bg-[#ff6600]/10 dark:hover:bg-[#ff6600]/20 disabled:opacity-100 disabled:cursor-wait"
+                    className="p-1.5 bg-white/90 dark:bg-gray-800/90 rounded-full text-[#8b5cf6] shadow-sm hover:bg-[#8b5cf6]/10 dark:hover:bg-[#8b5cf6]/20 disabled:opacity-100 disabled:cursor-wait"
                     title="Set as Thumbnail"
                   >
                     {settingThumbId === item.id
@@ -206,9 +206,9 @@ export default function MediaUploader({ productId, initialMedia = [], onMediaCha
   };
 
   return (
-    <section className="bg-white dark:bg-gray-800 rounded-xl border border-[#ff6600]/10 dark:border-gray-700 p-6 md:p-8 shadow-sm mt-8">
-      <div className="flex items-center gap-2 mb-6 pb-4 border-b border-[#ff6600]/5 dark:border-gray-700">
-        <ImageIcon className="w-5 h-5 text-[#ff6600]" />
+    <section className="bg-white dark:bg-gray-800 rounded-xl border border-[#8b5cf6]/10 dark:border-gray-700 p-6 md:p-8 shadow-sm mt-8">
+      <div className="flex items-center gap-2 mb-6 pb-4 border-b border-[#8b5cf6]/5 dark:border-gray-700">
+        <ImageIcon className="w-5 h-5 text-[#8b5cf6]" />
         <h2 className="text-xl font-bold text-slate-900 dark:text-white">Product Media</h2>
       </div>
 
@@ -223,7 +223,7 @@ export default function MediaUploader({ productId, initialMedia = [], onMediaCha
               <select
                 value={selectedAttrValue}
                 onChange={(e) => setSelectedAttrValue(e.target.value)}
-                className="appearance-none rounded-lg border border-[#ff6600]/20 bg-[#ff6600]/5 px-4 h-11 pr-10 text-sm text-slate-900 dark:text-white dark:bg-gray-700 dark:border-gray-600 focus:outline-none focus:border-[#ff6600] focus:ring-2 focus:ring-[#ff6600]/20 transition-all font-medium"
+                className="appearance-none rounded-lg border border-[#8b5cf6]/20 bg-[#8b5cf6]/5 px-4 h-11 pr-10 text-sm text-slate-900 dark:text-white dark:bg-gray-700 dark:border-gray-600 focus:outline-none focus:border-[#8b5cf6] focus:ring-2 focus:ring-[#8b5cf6]/20 transition-all font-medium"
               >
                 <option value="">General (Product Main)</option>
                 {attributeValues.map(av => (
@@ -239,7 +239,7 @@ export default function MediaUploader({ productId, initialMedia = [], onMediaCha
             type="button"
             onClick={() => inputRef.current?.click()}
             disabled={uploading}
-            className="flex items-center gap-2 cursor-pointer rounded-lg h-11 px-6 bg-orange-500 text-white text-sm font-bold shadow-lg shadow-orange-500/20 hover:bg-orange-600 transition-all disabled:opacity-60 disabled:cursor-wait"
+            className="flex items-center gap-2 cursor-pointer rounded-lg h-11 px-6 bg-violet-500 text-white text-sm font-bold shadow-lg shadow-violet-500/20 hover:bg-violet-600 transition-all disabled:opacity-60 disabled:cursor-wait"
           >
             {uploading ? (
               <>
@@ -268,7 +268,7 @@ export default function MediaUploader({ productId, initialMedia = [], onMediaCha
             type="button"
             onClick={() => inputRef.current?.click()}
             disabled={uploading}
-            className="flex items-center gap-2 cursor-pointer rounded-lg h-11 px-6 bg-orange-500 text-white text-sm font-bold shadow-lg shadow-orange-500/20 hover:bg-orange-600 transition-all disabled:opacity-60 disabled:cursor-wait"
+            className="flex items-center gap-2 cursor-pointer rounded-lg h-11 px-6 bg-violet-500 text-white text-sm font-bold shadow-lg shadow-violet-500/20 hover:bg-violet-600 transition-all disabled:opacity-60 disabled:cursor-wait"
           >
             {uploading ? (
               <>

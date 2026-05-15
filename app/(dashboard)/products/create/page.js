@@ -9,11 +9,14 @@ import {
   ArrowLeft, ChevronRight, Info, ImageIcon, ChevronDown,
   CloudUpload, Plus, Loader2, Sliders, Package, Trash2, Star,
 } from 'lucide-react';
+import { useDashboardStore } from '@/store/dashboardStore';
+import { useStoreStore } from '@/store/storeStore';
+import { useSharedDataStore } from '@/store/sharedDataStore';
 
 const INPUT_CLS =
-  'w-full rounded-lg border border-orange-500/20 bg-orange-500/5 px-4 py-3 text-slate-900 ' +
-  'placeholder:text-slate-400 focus:outline-none focus:border-orange-500 ' +
-  'focus:ring-2 focus:ring-orange-500/20 transition-all ' +
+  'w-full rounded-lg border border-violet-500/20 bg-violet-500/5 px-4 py-3 text-slate-900 ' +
+  'placeholder:text-slate-400 focus:outline-none focus:border-violet-500 ' +
+  'focus:ring-2 focus:ring-violet-500/20 transition-all ' +
   'dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder:text-gray-500';
 
 const SELECT_CLS = INPUT_CLS + ' appearance-none pr-10';
@@ -148,7 +151,7 @@ const renderStep1ActionButton = (productType, submitting, attributes, selectedAt
         type="button"
         onClick={onGenerateCatalog}
         disabled={attributes.length === 0 || selectedAttributes.length === 0}
-        className="px-12 py-3 rounded-lg font-bold bg-orange-500 text-white shadow-lg shadow-orange-500/30 hover:bg-orange-500/90 active:scale-95 transition-all disabled:opacity-50"
+        className="px-12 py-3 rounded-lg font-bold bg-violet-500 text-white shadow-lg shadow-violet-500/30 hover:bg-violet-500/90 active:scale-95 transition-all disabled:opacity-50"
       >
         Generate Catalog
       </button>
@@ -158,7 +161,7 @@ const renderStep1ActionButton = (productType, submitting, attributes, selectedAt
     <button
       type="submit"
       disabled={submitting}
-      className="px-12 py-3 rounded-lg font-bold bg-orange-500 text-white shadow-lg shadow-orange-500/30 hover:bg-orange-500/90 active:scale-95 transition-all disabled:opacity-50"
+      className="px-12 py-3 rounded-lg font-bold bg-violet-500 text-white shadow-lg shadow-violet-500/30 hover:bg-violet-500/90 active:scale-95 transition-all disabled:opacity-50"
     >
       {submitting ? (
         <span className="flex items-center gap-2">
@@ -173,8 +176,10 @@ const renderStep1ActionButton = (productType, submitting, attributes, selectedAt
 
 export default function CreateProductPage() {
   const router = useRouter();
+  const { activeStore } = useStoreStore();
+  const invalidateDashboard = useDashboardStore((s) => s.invalidate);
+  const { fetchCategories, categories, invalidateProducts } = useSharedDataStore();
 
-  const [categories,          setCategories]          = useState([]);
   const [attributes,          setAttributes]          = useState([]);
   const [selectedAttributes,  setSelectedAttributes, clearSelAttrDraft]  = useFormDraft('product-create-selattr', []);
   const [loading,             setLoading]             = useState(true);
@@ -203,20 +208,14 @@ export default function CreateProductPage() {
   const [skuError, setSkuError] = useState('');
 
   /* ── fetch categories ── */
-  const fetchCategories = useCallback(async () => {
-    try {
-      const res = await categoryAPI.list();
-      setCategories(Array.isArray(res.data) ? res.data : res.data?.results || []);
-    } catch {
-      toast.error('Failed to load categories');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const fetchCategoriesData = useCallback(async () => {
+    await fetchCategories(); // reads from cache if fresh
+    setLoading(false);
+  }, [fetchCategories]);
 
   useEffect(() => {
-    fetchCategories();
-  }, [fetchCategories]);
+    fetchCategoriesData();
+  }, [fetchCategoriesData]);
 
   /* ── fetch attributes when category changes ── */
   const fetchAttributes = async (categoryId) => {
@@ -555,6 +554,8 @@ export default function CreateProductPage() {
       }
 
       clearFormDraft(); clearSelAttrDraft(); clearStepDraft(); clearCombosDraft(); clearComboSelDraft();
+      invalidateDashboard(activeStore?.id);
+      invalidateProducts();
       router.push('/products');
     } catch (error) {
       const errData = error.response?.data;
@@ -585,13 +586,13 @@ export default function CreateProductPage() {
       role="button"
       tabIndex={0}
       className={`relative group aspect-square rounded-xl overflow-hidden border-2 cursor-pointer transition-all ${
-        img.isMain ? 'border-orange-500 ring-2 ring-orange-500/20' : 'border-slate-200 dark:border-gray-600 hover:border-orange-500/40'
+        img.isMain ? 'border-violet-500 ring-2 ring-violet-500/20' : 'border-slate-200 dark:border-gray-600 hover:border-violet-500/40'
       }`}
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={img.preview} alt="" className="w-full h-full object-cover" />
       {img.isMain && (
-        <span className="absolute top-2 left-2 bg-orange-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+        <span className="absolute top-2 left-2 bg-violet-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
           <Star className="w-3 h-3 fill-white" /> THUMBNAIL
         </span>
       )}
@@ -599,7 +600,7 @@ export default function CreateProductPage() {
         <button
           type="button"
           onClick={(e) => { e.stopPropagation(); setMain(img._idx); }}
-          className="absolute top-2 left-2 p-1.5 bg-white/90 dark:bg-gray-800/90 rounded-full text-orange-500 shadow-sm hover:bg-orange-500/10 opacity-0 group-hover:opacity-100 transition-opacity"
+          className="absolute top-2 left-2 p-1.5 bg-white/90 dark:bg-gray-800/90 rounded-full text-violet-500 shadow-sm hover:bg-violet-500/10 opacity-0 group-hover:opacity-100 transition-opacity"
           title="Set as Thumbnail"
         >
           <Star className="w-4 h-4" />
@@ -634,7 +635,7 @@ export default function CreateProductPage() {
               <button
                 type="button"
                 onClick={() => { setSelectedUploadAttr(''); fileInputRef.current?.click(); }}
-                className="aspect-square rounded-xl border-2 border-dashed border-orange-500/20 bg-slate-50 dark:bg-gray-700 flex items-center justify-center cursor-pointer hover:border-orange-500/40 hover:bg-orange-500/5 transition-colors appearance-none p-0 m-0"
+                className="aspect-square rounded-xl border-2 border-dashed border-violet-500/20 bg-slate-50 dark:bg-gray-700 flex items-center justify-center cursor-pointer hover:border-violet-500/40 hover:bg-violet-500/5 transition-colors appearance-none p-0 m-0"
               >
                 <Plus className="w-6 h-6 text-slate-300 dark:text-gray-500" />
               </button>
@@ -650,7 +651,7 @@ export default function CreateProductPage() {
               <button
                 type="button"
                 onClick={() => { setSelectedUploadAttr(valueId); fileInputRef.current?.click(); }}
-                className="aspect-square rounded-xl border-2 border-dashed border-orange-500/20 bg-slate-50 dark:bg-gray-700 flex items-center justify-center cursor-pointer hover:border-orange-500/40 hover:bg-orange-500/5 transition-colors appearance-none p-0 m-0"
+                className="aspect-square rounded-xl border-2 border-dashed border-violet-500/20 bg-slate-50 dark:bg-gray-700 flex items-center justify-center cursor-pointer hover:border-violet-500/40 hover:bg-violet-500/5 transition-colors appearance-none p-0 m-0"
               >
                 <Plus className="w-6 h-6 text-slate-300 dark:text-gray-500" />
               </button>
@@ -669,7 +670,7 @@ export default function CreateProductPage() {
 
   if (loading) return (
     <div className="min-h-[60vh] flex items-center justify-center">
-      <Loader2 className="w-10 h-10 text-orange-500 animate-spin" />
+      <Loader2 className="w-10 h-10 text-violet-500 animate-spin" />
     </div>
   );
 
@@ -685,11 +686,11 @@ export default function CreateProductPage() {
 
         {/* Breadcrumbs */}
         <nav className="flex items-center gap-1.5 text-sm text-slate-500 dark:text-gray-400 mb-4">
-          <button onClick={() => router.push('/products')} className="hover:text-orange-500 transition-colors">
+          <button onClick={() => router.push('/products')} className="hover:text-violet-500 transition-colors">
             Products
           </button>
           <ChevronRight className="w-3.5 h-3.5" />
-          <button onClick={() => setStep(1)} className="hover:text-orange-500 transition-colors">
+          <button onClick={() => setStep(1)} className="hover:text-violet-500 transition-colors">
             Create Product
           </button>
           <ChevronRight className="w-3.5 h-3.5" />
@@ -707,7 +708,7 @@ export default function CreateProductPage() {
           <button
             type="button"
             onClick={() => setStep(1)}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg border border-orange-500/20 bg-white dark:bg-gray-800 dark:border-gray-600 hover:bg-orange-500/5 transition-colors text-sm font-bold self-start md:self-auto"
+            className="flex items-center gap-2 px-4 py-2 rounded-lg border border-violet-500/20 bg-white dark:bg-gray-800 dark:border-gray-600 hover:bg-violet-500/5 transition-colors text-sm font-bold self-start md:self-auto"
           >
             <ArrowLeft className="w-4 h-4" />
             Back
@@ -715,11 +716,11 @@ export default function CreateProductPage() {
         </div>
 
         {/* Select Values Card */}
-        <section className="bg-white dark:bg-gray-800 rounded-xl border border-orange-500/10 dark:border-gray-700 p-6 md:p-8 shadow-sm mb-8">
+        <section className="bg-white dark:bg-gray-800 rounded-xl border border-violet-500/10 dark:border-gray-700 p-6 md:p-8 shadow-sm mb-8">
           {/* Header + Toggle */}
-          <div className="flex items-center justify-between mb-6 pb-4 border-b border-orange-500/5 dark:border-gray-700">
+          <div className="flex items-center justify-between mb-6 pb-4 border-b border-violet-500/5 dark:border-gray-700">
             <div className="flex items-center gap-2">
-              <Sliders className="w-5 h-5 text-orange-500" />
+              <Sliders className="w-5 h-5 text-violet-500" />
               <h2 className="text-xl font-bold text-slate-900 dark:text-white">Select Attribute Value</h2>
             </div>
 
@@ -729,7 +730,7 @@ export default function CreateProductPage() {
               <button
                 type="button"
                 onClick={handleToggleMode}
-                className={`relative w-11 h-6 rounded-full transition-colors ${singleMode ? 'bg-orange-500' : 'bg-slate-300 dark:bg-gray-600'}`}
+                className={`relative w-11 h-6 rounded-full transition-colors ${singleMode ? 'bg-violet-500' : 'bg-slate-300 dark:bg-gray-600'}`}
               >
                 <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${singleMode ? 'left-[22px]' : 'left-0.5'}`} />
               </button>
@@ -753,13 +754,13 @@ export default function CreateProductPage() {
                         <label
                           key={v.id}
                           className={`flex items-center gap-2.5 px-5 py-2.5 rounded-full cursor-pointer transition-all border ${
-                            isSelected ? 'border-orange-500 bg-orange-500/5' : 'border-slate-200 dark:border-gray-600 bg-white dark:bg-gray-800 hover:border-slate-300 dark:hover:border-gray-500'
+                            isSelected ? 'border-violet-500 bg-violet-500/5' : 'border-slate-200 dark:border-gray-600 bg-white dark:bg-gray-800 hover:border-slate-300 dark:hover:border-gray-500'
                           }`}
                         >
                           <span className={`w-[18px] h-[18px] rounded-full border flex items-center justify-center flex-shrink-0 transition-colors ${
-                            isSelected ? 'border-orange-500' : 'border-slate-300 dark:border-gray-500'
+                            isSelected ? 'border-violet-500' : 'border-slate-300 dark:border-gray-500'
                           }`}>
-                            {isSelected && <span className="w-2 h-2 rounded-full bg-orange-500" />}
+                            {isSelected && <span className="w-2 h-2 rounded-full bg-violet-500" />}
                           </span>
                           <input
                             type="radio"
@@ -784,11 +785,11 @@ export default function CreateProductPage() {
                         <label
                           key={v.id}
                           className={`flex items-center gap-2.5 px-5 py-2.5 rounded-full cursor-pointer transition-all border ${
-                            isChecked ? 'border-orange-500 bg-orange-500/5' : 'border-slate-200 dark:border-gray-600 bg-white dark:bg-gray-800 hover:border-slate-300 dark:hover:border-gray-500'
+                            isChecked ? 'border-violet-500 bg-violet-500/5' : 'border-slate-200 dark:border-gray-600 bg-white dark:bg-gray-800 hover:border-slate-300 dark:hover:border-gray-500'
                           }`}
                         >
                           <span className={`w-[18px] h-[18px] rounded flex items-center justify-center flex-shrink-0 transition-colors border ${
-                            isChecked ? 'border-orange-500 bg-orange-500' : 'border-slate-300 dark:border-gray-500'
+                            isChecked ? 'border-violet-500 bg-violet-500' : 'border-slate-300 dark:border-gray-500'
                           }`}>
                             {isChecked && (
                               <svg className="w-2.5 h-2.5 text-white" viewBox="0 0 12 12" fill="none">
@@ -817,7 +818,7 @@ export default function CreateProductPage() {
             <button
               type="button"
               onClick={handleAddCombo}
-              className="px-6 py-2.5 rounded-lg font-semibold border border-orange-500 text-orange-500 hover:bg-orange-500/5 active:scale-95 transition-all text-sm"
+              className="px-6 py-2.5 rounded-lg font-semibold border border-violet-500 text-violet-500 hover:bg-violet-500/5 active:scale-95 transition-all text-sm"
             >
               Add
             </button>
@@ -825,9 +826,9 @@ export default function CreateProductPage() {
         </section>
 
         {/* Added Combinations Table */}
-        <section className="bg-white dark:bg-gray-800 rounded-xl border border-orange-500/10 dark:border-gray-700 p-6 md:p-8 shadow-sm mb-8">
-          <div className="flex items-center gap-2 mb-6 pb-4 border-b border-orange-500/5 dark:border-gray-700">
-            <Package className="w-5 h-5 text-orange-500" />
+        <section className="bg-white dark:bg-gray-800 rounded-xl border border-violet-500/10 dark:border-gray-700 p-6 md:p-8 shadow-sm mb-8">
+          <div className="flex items-center gap-2 mb-6 pb-4 border-b border-violet-500/5 dark:border-gray-700">
+            <Package className="w-5 h-5 text-violet-500" />
             <h2 className="text-xl font-bold text-slate-900 dark:text-white">
               Added Catalogs
               {catalogCombos.length > 0 && (
@@ -859,13 +860,13 @@ export default function CreateProductPage() {
                 </thead>
                 <tbody>
                   {catalogCombos.map((combo, idx) => (
-                    <tr key={comboKey(combo.values)} className="border-b border-slate-50 dark:border-gray-700 hover:bg-orange-500/5 transition-colors">
+                    <tr key={comboKey(combo.values)} className="border-b border-slate-50 dark:border-gray-700 hover:bg-violet-500/5 transition-colors">
                       <td className="py-3 px-3 text-slate-400 dark:text-gray-500 font-mono">{idx + 1}</td>
                       {selectedAttrObjects.map((attr) => {
                         const val = combo.values.find((v) => v.attrId === attr.id);
                         return (
                           <td key={attr.id} className="py-3 px-3">
-                            <span className="px-2.5 py-1 bg-orange-500/10 text-orange-500 rounded-md font-semibold text-xs">
+                            <span className="px-2.5 py-1 bg-violet-500/10 text-violet-500 rounded-md font-semibold text-xs">
                               {val?.valName}
                             </span>
                           </td>
@@ -879,7 +880,7 @@ export default function CreateProductPage() {
                           placeholder={formData.price || '0.00'}
                           value={combo.price}
                           onChange={(e) => updateComboField(idx, 'price', e.target.value)}
-                          className="w-24 px-2 py-1.5 rounded-md border border-orange-500/20 bg-orange-500/5 text-sm focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                          className="w-24 px-2 py-1.5 rounded-md border border-violet-500/20 bg-violet-500/5 text-sm focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/20 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                         />
                       </td>
                       <td className="py-3 px-3">
@@ -889,7 +890,7 @@ export default function CreateProductPage() {
                           placeholder="0"
                           value={combo.stock}
                           onChange={(e) => updateComboField(idx, 'stock', e.target.value)}
-                          className="w-20 px-2 py-1.5 rounded-md border border-orange-500/20 bg-orange-500/5 text-sm focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                          className="w-20 px-2 py-1.5 rounded-md border border-violet-500/20 bg-violet-500/5 text-sm focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/20 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                         />
                       </td>
                       <td className="py-3 px-3 text-right">
@@ -925,7 +926,7 @@ export default function CreateProductPage() {
             type="button"
             onClick={handleSubmit}
             disabled={submitting || catalogCombos.length === 0}
-            className="px-12 py-3 rounded-lg font-bold bg-orange-500 text-white shadow-lg shadow-orange-500/30 hover:bg-orange-500/90 active:scale-95 transition-all disabled:opacity-50"
+            className="px-12 py-3 rounded-lg font-bold bg-violet-500 text-white shadow-lg shadow-violet-500/30 hover:bg-violet-500/90 active:scale-95 transition-all disabled:opacity-50"
           >
             {submitting ? (
               <span className="flex items-center gap-2">
@@ -948,7 +949,7 @@ export default function CreateProductPage() {
 
       {/* Breadcrumbs */}
       <nav className="flex items-center gap-1.5 text-sm text-slate-500 dark:text-gray-400 mb-4">
-        <button onClick={() => router.push('/products')} className="hover:text-orange-500 transition-colors">
+        <button onClick={() => router.push('/products')} className="hover:text-violet-500 transition-colors">
           Products
         </button>
         <ChevronRight className="w-3.5 h-3.5" />
@@ -964,7 +965,7 @@ export default function CreateProductPage() {
             clearFormDraft(); clearSelAttrDraft(); clearStepDraft(); clearCombosDraft(); clearComboSelDraft();
             router.push('/products');
           }}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg border border-orange-500/20 bg-white dark:bg-gray-800 dark:border-gray-600 hover:bg-orange-500/5 transition-colors text-sm font-bold self-start md:self-auto"
+          className="flex items-center gap-2 px-4 py-2 rounded-lg border border-violet-500/20 bg-white dark:bg-gray-800 dark:border-gray-600 hover:bg-violet-500/5 transition-colors text-sm font-bold self-start md:self-auto"
         >
           <ArrowLeft className="w-4 h-4" />
           Back to Products
@@ -974,16 +975,16 @@ export default function CreateProductPage() {
       <form id="create-product-form" onSubmit={handleSubmit} className="space-y-8">
 
         {/* ── Section 1: Basic Information ────────────────────── */}
-        <section className="bg-white dark:bg-gray-800 rounded-xl border border-orange-500/10 dark:border-gray-700 p-6 md:p-8 shadow-sm">
-          <div className="flex items-center gap-2 mb-6 pb-4 border-b border-orange-500/5 dark:border-gray-700">
-            <Info className="w-5 h-5 text-orange-500" />
+        <section className="bg-white dark:bg-gray-800 rounded-xl border border-violet-500/10 dark:border-gray-700 p-6 md:p-8 shadow-sm">
+          <div className="flex items-center gap-2 mb-6 pb-4 border-b border-violet-500/5 dark:border-gray-700">
+            <Info className="w-5 h-5 text-violet-500" />
             <h2 className="text-xl font-bold text-slate-900 dark:text-white">Basic Information</h2>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-1.5">
               <label htmlFor="product-name" className="text-sm font-semibold text-slate-700 dark:text-gray-300">
-                Product Name <span className="text-orange-500">*</span>
+                Product Name <span className="text-violet-500">*</span>
               </label>
               <input
                 id="product-name"
@@ -997,7 +998,7 @@ export default function CreateProductPage() {
 
             <div className="space-y-1.5">
               <label htmlFor="product-sku" className="text-sm font-semibold text-slate-700 dark:text-gray-300">
-                SKU <span className="text-orange-500">*</span>
+                SKU <span className="text-violet-500">*</span>
               </label>
               <input
                 id="product-sku"
@@ -1012,7 +1013,7 @@ export default function CreateProductPage() {
 
             <div className="space-y-1.5">
               <label htmlFor="product-price" className="text-sm font-semibold text-slate-700 dark:text-gray-300">
-                Price (USD) <span className="text-orange-500">*</span>
+                Price (USD) <span className="text-violet-500">*</span>
               </label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-gray-500 font-medium">$</span>
@@ -1044,7 +1045,7 @@ export default function CreateProductPage() {
 
             <div className="space-y-1.5">
               <label htmlFor="product-category" className="text-sm font-semibold text-slate-700 dark:text-gray-300">
-                Category {formData.product_type === 'catalog' && <span className="text-orange-500">*</span>}
+                Category {formData.product_type === 'catalog' && <span className="text-violet-500">*</span>}
               </label>
               <div className="relative">
                 <select
@@ -1065,7 +1066,7 @@ export default function CreateProductPage() {
 
             <div className="space-y-1.5">
               <label htmlFor="product-type" className="text-sm font-semibold text-slate-700 dark:text-gray-300">
-                Product Type <span className="text-orange-500">*</span>
+                Product Type <span className="text-violet-500">*</span>
               </label>
               <div className="relative">
                 <select
@@ -1115,9 +1116,9 @@ export default function CreateProductPage() {
         </section>
 
         {/* ── Section 2: Product Media ─────────────────────────── */}
-        <section className="bg-white dark:bg-gray-800 rounded-xl border border-orange-500/10 dark:border-gray-700 p-6 md:p-8 shadow-sm">
-          <div className="flex items-center gap-2 mb-6 pb-4 border-b border-orange-500/5 dark:border-gray-700">
-            <ImageIcon className="w-5 h-5 text-orange-500" />
+        <section className="bg-white dark:bg-gray-800 rounded-xl border border-violet-500/10 dark:border-gray-700 p-6 md:p-8 shadow-sm">
+          <div className="flex items-center gap-2 mb-6 pb-4 border-b border-violet-500/5 dark:border-gray-700">
+            <ImageIcon className="w-5 h-5 text-violet-500" />
             <h2 className="text-xl font-bold text-slate-900 dark:text-white">Product Media</h2>
           </div>
 
@@ -1134,7 +1135,7 @@ export default function CreateProductPage() {
                       id="upload-attr-select"
                       value={selectedUploadAttr}
                       onChange={(e) => setSelectedUploadAttr(e.target.value)}
-                      className="w-full appearance-none rounded-lg border border-orange-500/20 bg-orange-500/5 px-4 py-2.5 pr-10 text-sm text-slate-900 dark:text-white dark:bg-gray-700 dark:border-gray-600 focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 transition-all font-medium truncate"
+                      className="w-full appearance-none rounded-lg border border-violet-500/20 bg-violet-500/5 px-4 py-2.5 pr-10 text-sm text-slate-900 dark:text-white dark:bg-gray-700 dark:border-gray-600 focus:outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 transition-all font-medium truncate"
                     >
                       <option value="">General (Product Main)</option>
                       {attributes
@@ -1154,7 +1155,7 @@ export default function CreateProductPage() {
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="flex items-center gap-2 cursor-pointer rounded-lg h-11 px-6 bg-orange-500 text-white text-sm font-bold shadow-lg shadow-orange-500/20 hover:bg-orange-600 transition-all"
+                className="flex items-center gap-2 cursor-pointer rounded-lg h-11 px-6 bg-violet-500 text-white text-sm font-bold shadow-lg shadow-violet-500/20 hover:bg-violet-600 transition-all"
               >
                 <CloudUpload className="w-5 h-5" />
                 <span>Upload Images</span>
@@ -1173,8 +1174,8 @@ export default function CreateProductPage() {
 
             {images.length > 0 && (
               <p className="text-xs text-slate-400 dark:text-gray-500 flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-orange-500 inline-block" />
-                Click the <Star className="w-3 h-3 text-orange-500 inline" /> star to set an image as thumbnail.
+                <span className="w-1.5 h-1.5 rounded-full bg-violet-500 inline-block" />
+                Click the <Star className="w-3 h-3 text-violet-500 inline" /> star to set an image as thumbnail.
               </p>
             )}
           </div>
@@ -1182,9 +1183,9 @@ export default function CreateProductPage() {
 
         {/* ── Section 3: Attributes (Catalog only) ────────────── */}
         {formData.product_type === 'catalog' && formData.category && (
-          <section className="bg-white dark:bg-gray-800 rounded-xl border border-orange-500/10 dark:border-gray-700 p-6 md:p-8 shadow-sm">
-            <div className="flex items-center gap-2 mb-6 pb-4 border-b border-orange-500/5 dark:border-gray-700">
-              <Sliders className="w-5 h-5 text-orange-500" />
+          <section className="bg-white dark:bg-gray-800 rounded-xl border border-violet-500/10 dark:border-gray-700 p-6 md:p-8 shadow-sm">
+            <div className="flex items-center gap-2 mb-6 pb-4 border-b border-violet-500/5 dark:border-gray-700">
+              <Sliders className="w-5 h-5 text-violet-500" />
               <h2 className="text-xl font-bold text-slate-900 dark:text-white">Select Attributes</h2>
             </div>
 
@@ -1196,7 +1197,7 @@ export default function CreateProductPage() {
                 <button
                   type="button"
                   onClick={() => router.push('/attributes/create')}
-                  className="px-6 py-2.5 rounded-lg font-bold bg-orange-500 text-white shadow-lg shadow-orange-500/20 hover:bg-orange-500/90 transition-all text-sm"
+                  className="px-6 py-2.5 rounded-lg font-bold bg-violet-500 text-white shadow-lg shadow-violet-500/20 hover:bg-violet-500/90 transition-all text-sm"
                 >
                   + Create Attribute
                 </button>
@@ -1213,8 +1214,8 @@ export default function CreateProductPage() {
                       htmlFor={`attr-select-${attr.id}`}
                       className={`flex items-center gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all ${
                         selectedAttributes.includes(attr.id)
-                          ? 'border-orange-500/30 bg-orange-500/5'
-                          : 'border-slate-200 dark:border-gray-600 hover:border-orange-500/20 hover:bg-slate-50 dark:hover:bg-gray-700'
+                          ? 'border-violet-500/30 bg-violet-500/5'
+                          : 'border-slate-200 dark:border-gray-600 hover:border-violet-500/20 hover:bg-slate-50 dark:hover:bg-gray-700'
                       }`}
                     >
                       <input
@@ -1226,7 +1227,7 @@ export default function CreateProductPage() {
                           if (e.target.checked) setSelectedAttributes([...selectedAttributes, attr.id]);
                           else setSelectedAttributes(selectedAttributes.filter((id) => id !== attr.id));
                         }}
-                        className="w-5 h-5 rounded accent-orange-500"
+                        className="w-5 h-5 rounded accent-violet-500"
                       />
                       <div className="flex-1 min-w-0">
                         <p className="font-semibold text-slate-900 dark:text-white">{attr.name}</p>

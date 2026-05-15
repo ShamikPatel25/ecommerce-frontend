@@ -18,6 +18,9 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from '@/components/ui/dropdown-menu';
+import { useStoreStore } from '@/store/storeStore';
+import { useDashboardStore } from '@/store/dashboardStore';
+import { formatDate } from '@/lib/utils';
 
 const PER_PAGE = 10;
 
@@ -48,6 +51,8 @@ function buildTreeOrder(items) {
 
 export default function CategoriesPage() {
   const router = useRouter();
+  const { activeStore } = useStoreStore();
+  const invalidateDashboard = useDashboardStore((s) => s.invalidate);
 
   const [categories,   setCategories]   = useState([]);
   const [loading,      setLoading]      = useState(true);
@@ -98,6 +103,7 @@ export default function CategoriesPage() {
       await categoryAPI.delete(deleteModal.id);
       toast.success('Category and all its products deleted!');
       setDeleteModal(null);
+      invalidateDashboard(activeStore?.id);
       fetchCategories();
     } catch (err) {
       const detail = err.response?.data?.detail;
@@ -112,6 +118,7 @@ export default function CategoriesPage() {
     try {
       await categoryAPI.toggleActive(cat.id);
       toast.success(cat.is_active ? 'Category, subcategories and products deactivated' : 'Category, subcategories and products activated');
+      invalidateDashboard(activeStore?.id);
       fetchCategories();
     } catch (err) {
       const detail = err.response?.data;
@@ -127,7 +134,7 @@ export default function CategoriesPage() {
   const getLevelBadge = (level) => {
     if (level === 0) return { cls: 'bg-blue-500/10 text-blue-400 border border-blue-500/20', label: 'Main' };
     if (level === 1) return { cls: 'bg-green-500/10 text-green-400 border border-green-500/20', label: 'Sub' };
-    return               { cls: 'bg-orange-500/10 text-orange-400 border border-orange-500/20', label: 'Sub-sub' };
+    return               { cls: 'bg-violet-500/10 text-violet-400 border border-violet-500/20', label: 'Sub-sub' };
   };
 
   /* ── filter + paginate ── */
@@ -233,15 +240,16 @@ export default function CategoriesPage() {
 
         ) : (
           <div className="overflow-x-auto">
-            <table className="admin-table min-w-[800px]">
+            <table className="admin-table min-w-[950px]">
               <thead>
                 <tr className="admin-thead-row">
-                  <th className="admin-th">Category Name</th>
-                  <th className="admin-th">Slug</th>
-                  <th className="admin-th">Parent</th>
-                  <th className="admin-th text-center">Products</th>
+                  <th className="admin-th text-left">Category Name</th>
+                  <th className="admin-th text-left">Slug</th>
+                  <th className="admin-th text-left">Parent</th>
+                  <th className="admin-th">Products</th>
                   <th className="admin-th">Status</th>
-                  <th className="admin-th text-right w-20">Actions</th>
+                  <th className="admin-th">Updated</th>
+                  <th className="admin-th w-20">Actions</th>
                 </tr>
               </thead>
               <tbody className="admin-tbody">
@@ -254,8 +262,8 @@ export default function CategoriesPage() {
                       onClick={() => router.push(`/categories/${cat.id}/edit`)}
                     >
                       {/* Name */}
-                      <td className="admin-td whitespace-nowrap">
-                        <div className="flex items-center gap-3">
+                      <td className="admin-td whitespace-nowrap text-left">
+                        <div className="flex items-center justify-start gap-3">
                           <span className="font-medium text-sm text-slate-900 dark:text-white">
                             {cat.name}
                           </span>
@@ -263,14 +271,14 @@ export default function CategoriesPage() {
                       </td>
 
                       {/* Slug */}
-                      <td className="admin-td whitespace-nowrap">
+                      <td className="admin-td whitespace-nowrap text-left">
                         <code className="text-xs font-mono bg-slate-100 dark:bg-gray-700 px-2 py-1 rounded text-slate-500 dark:text-gray-400">
                           /{cat.slug}
                         </code>
                       </td>
 
                       {/* Parent */}
-                      <td className="admin-td whitespace-nowrap text-sm text-slate-500 dark:text-gray-400">
+                      <td className="admin-td whitespace-nowrap text-sm text-slate-500 dark:text-gray-400 text-left">
                         {cat.parent ? (
                           <span className="inline-block px-2.5 py-1 rounded-md bg-slate-100 dark:bg-gray-700 text-xs font-medium text-slate-600 dark:text-gray-300">
                             {getParentName(cat.parent)}
@@ -281,8 +289,8 @@ export default function CategoriesPage() {
                       </td>
 
                       {/* Products */}
-                      <td className="admin-td whitespace-nowrap text-center">
-                        <span className="inline-block px-2.5 py-1 rounded-md bg-orange-500/10 text-orange-500 border border-orange-500/20 text-xs font-bold">
+                      <td className="admin-td whitespace-nowrap">
+                        <span className="inline-block px-2.5 py-1 rounded-md bg-violet-500/10 text-violet-500 border border-violet-500/20 text-xs font-bold">
                           {(cat.product_count ?? 0).toLocaleString()}
                         </span>
                       </td>
@@ -299,8 +307,13 @@ export default function CategoriesPage() {
                         </span>
                       </td>
 
+                      {/* Updated */}
+                      <td className="admin-td whitespace-nowrap text-sm text-slate-500 dark:text-gray-400">
+                        {formatDate(cat.updated_at)}
+                      </td>
+
                       {/* Actions */}
-                      <td className="admin-td whitespace-nowrap text-right">
+                      <td className="admin-td whitespace-nowrap">
                         <DropdownMenu>
                           <DropdownMenuTrigger
                             onClick={(e) => e.stopPropagation()}

@@ -45,8 +45,8 @@ export default function LoginPage() {
 
         {/* Header */}
         <div className="flex flex-col items-center mb-8">
-          <div className="w-16 h-16 bg-[#ff6600]/10 rounded-full flex items-center justify-center mb-4">
-            <LayoutDashboard className="w-8 h-8 text-[#ff6600]" />
+          <div className="w-16 h-16 bg-[#8b5cf6]/10 rounded-full flex items-center justify-center mb-4">
+            <LayoutDashboard className="w-8 h-8 text-[#8b5cf6]" />
           </div>
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Welcome Back</h1>
           <p className="text-slate-500 mt-2 text-sm">Please enter your admin credentials</p>
@@ -66,7 +66,7 @@ export default function LoginPage() {
                 id="email"
                 type="email"
                 placeholder="admin@estore.com"
-                className="w-full pl-10 pr-4 py-3 rounded-lg border border-slate-200 bg-white text-slate-900 focus:ring-2 focus:ring-[#ff6600]/20 focus:border-[#ff6600] outline-none transition-all"
+                className="w-full pl-10 pr-4 py-3 rounded-lg border border-slate-200 bg-white text-slate-900 focus:ring-2 focus:ring-[#8b5cf6]/20 focus:border-[#8b5cf6] outline-none transition-all"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value.replace(/\s/g, '').toLowerCase() })}
                 required
@@ -80,7 +80,7 @@ export default function LoginPage() {
               <label htmlFor="password" className="block text-sm font-semibold text-slate-700">
                 Password
               </label>
-              <Link href="/forgot-password" className="text-xs font-medium text-[#ff6600] hover:underline">
+              <Link href="/forgot-password" className="text-xs font-medium text-[#8b5cf6] hover:underline">
                 Forgot password?
               </Link>
             </div>
@@ -90,9 +90,9 @@ export default function LoginPage() {
                 id="password"
                 type={showPassword ? 'text' : 'password'}
                 placeholder="••••••••"
-                className="w-full pl-10 pr-12 py-3 rounded-lg border border-slate-200 bg-white text-slate-900 focus:ring-2 focus:ring-[#ff6600]/20 focus:border-[#ff6600] outline-none transition-all"
+                className="w-full pl-10 pr-12 py-3 rounded-lg border border-slate-200 bg-white text-slate-900 focus:ring-2 focus:ring-[#8b5cf6]/20 focus:border-[#8b5cf6] outline-none transition-all"
                 value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value.replace(/\s/g, '') })}
                 required
               />
               <button
@@ -110,7 +110,7 @@ export default function LoginPage() {
             <input
               id="remember"
               type="checkbox"
-              className="w-4 h-4 rounded border-slate-300 text-[#ff6600] focus:ring-[#ff6600]"
+              className="w-4 h-4 rounded border-slate-300 text-[#8b5cf6] focus:ring-[#8b5cf6]"
             />
             <label htmlFor="remember" className="ml-2 text-sm text-slate-600">
               Remember this device
@@ -128,7 +128,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-[#ff6600] hover:bg-[#ff6600]/90 text-white font-bold py-3.5 rounded-lg shadow-lg shadow-orange-500/20 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full bg-[#8b5cf6] hover:bg-[#8b5cf6]/90 text-white font-bold py-3.5 rounded-lg shadow-lg shadow-violet-500/20 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? (
               <>
@@ -148,7 +148,7 @@ export default function LoginPage() {
         <div className="mt-8 pt-6 border-t border-slate-100 text-center">
           <p className="text-slate-600 text-sm">
             Don&apos;t have an admin account?
-            <Link href="/register" className="text-[#ff6600] font-semibold hover:underline ml-1">
+            <Link href="/register" className="text-[#8b5cf6] font-semibold hover:underline ml-1">
               Create one now
             </Link>
           </p>
@@ -157,9 +157,9 @@ export default function LoginPage() {
 
       {/* Bottom Links */}
       <div className="absolute bottom-6 hidden sm:flex gap-6 text-slate-400 text-sm">
-        <span className="hover:text-[#ff6600] transition-colors cursor-pointer">Privacy Policy</span>
-        <span className="hover:text-[#ff6600] transition-colors cursor-pointer">Terms of Service</span>
-        <span className="hover:text-[#ff6600] transition-colors cursor-pointer">Contact Support</span>
+        <span className="hover:text-[#8b5cf6] transition-colors cursor-pointer">Privacy Policy</span>
+        <span className="hover:text-[#8b5cf6] transition-colors cursor-pointer">Terms of Service</span>
+        <span className="hover:text-[#8b5cf6] transition-colors cursor-pointer">Contact Support</span>
       </div>
     </div>
   );
