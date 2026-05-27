@@ -6,7 +6,7 @@ import { useStorefrontAuthStore } from '@/store/storefrontAuthStore';
 import { useRouter } from 'next/navigation';
 import { useStorefrontPath } from '@/lib/useStorefrontPath';
 import { ADDRESS_LABEL_ICONS, ADDRESS_LABEL_OPTIONS } from '@/lib/addressConfig';
-import { User, Mail, Phone, Calendar, Loader2, MapPin, Plus, Pencil, Trash2, Check, X } from 'lucide-react';
+import { User, Mail, Phone, Loader2, MapPin, Plus, Pencil, Trash2, Check, X, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function AccountPage() {
@@ -15,9 +15,11 @@ export default function AccountPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({ first_name: '', last_name: '', phone: '' });
-  const [editingAddress, setEditingAddress] = useState(null); // null | 'new' | address id
+  const [phoneError, setPhoneError] = useState('');
+  const [editingAddress, setEditingAddress] = useState(null);
   const [addressForm, setAddressForm] = useState({ label: 'home', address_line_1: '', address_line_2: '', city: '', state: '', postal_code: '', country: 'India' });
   const [addressSaving, setAddressSaving] = useState(false);
+  const [addressErrors, setAddressErrors] = useState({});
 
   const customer = useStorefrontAuthStore((s) => s.customer);
   const accessToken = useStorefrontAuthStore((s) => s.accessToken);
@@ -56,7 +58,27 @@ export default function AccountPage() {
     fetchData();
   }, [isMounted, isLoggedIn]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const handlePhoneChange = (e) => {
+    const value = e.target.value.replace(/\D/g, '').slice(0, 15);
+    setForm({ ...form, phone: value });
+    if (value && value.length < 10) {
+      setPhoneError('Phone number must be at least 10 digits');
+    } else if (value && value.length > 15) {
+      setPhoneError('Phone number cannot exceed 15 digits');
+    } else {
+      setPhoneError('');
+    }
+  };
+
   const handleProfileSave = async () => {
+    if (form.phone && form.phone.length < 10) {
+      setPhoneError('Phone number must be at least 10 digits');
+      return;
+    }
+    if (form.phone && form.phone.length > 15) {
+      setPhoneError('Phone number cannot exceed 15 digits');
+      return;
+    }
     setSaving(true);
     try {
       const res = await storefrontAPI.updateProfile(form);
@@ -71,10 +93,13 @@ export default function AccountPage() {
   };
 
   const openAddressForm = (address = null) => {
+    setAddressErrors({});
     if (address) {
       setEditingAddress(address.id);
+      const isStandardLabel = ['home', 'work', 'other'].includes(address.label.toLowerCase());
       setAddressForm({
-        label: address.label,
+        label: isStandardLabel ? address.label.toLowerCase() : 'other',
+        customLabel: isStandardLabel ? '' : address.label,
         address_line_1: address.address_line_1,
         address_line_2: address.address_line_2 || '',
         city: address.city,
@@ -84,22 +109,64 @@ export default function AccountPage() {
       });
     } else {
       setEditingAddress('new');
-      setAddressForm({ label: 'home', address_line_1: '', address_line_2: '', city: '', state: '', postal_code: '', country: 'India' });
+      const usedLabels = addresses.map((a) => a.label.toLowerCase());
+      const firstAvailable = ['home', 'work', 'other'].find(l => !usedLabels.includes(l)) || 'other';
+      setAddressForm({ label: firstAvailable, customLabel: '', address_line_1: '', address_line_2: '', city: '', state: '', postal_code: '', country: 'India' });
+    }
+  };
+
+  const handlePostalCodeChange = (e) => {
+    const value = e.target.value.replace(/\D/g, '').slice(0, 6);
+    setAddressForm({ ...addressForm, postal_code: value });
+    if (value && value.length !== 6) {
+      setAddressErrors({ ...addressErrors, postal_code: 'Postal code must be exactly 6 digits' });
+    } else {
+      setAddressErrors({ ...addressErrors, postal_code: '' });
     }
   };
 
   const handleAddressSave = async () => {
-    if (!addressForm.address_line_1 || !addressForm.city || !addressForm.state || !addressForm.postal_code) {
-      toast.error('Please fill all required address fields');
+    const errors = {};
+
+    // Validate custom label for "other"
+    if (addressForm.label === 'other') {
+      if (!addressForm.customLabel?.trim()) {
+        errors.label = 'Please enter a label';
+      } else {
+        const customLower = addressForm.customLabel.trim().toLowerCase();
+        const usedLabels = addresses.map((a) => a.label.toLowerCase());
+        if (usedLabels.includes(customLower) && editingAddress === 'new') {
+          errors.label = 'This label already exists';
+        }
+      }
+    }
+
+    if (!addressForm.address_line_1.trim()) errors.address_line_1 = 'Address line 1 is required';
+    if (!addressForm.city.trim()) errors.city = 'City is required';
+    if (!addressForm.state.trim()) errors.state = 'State is required';
+    if (!addressForm.postal_code) errors.postal_code = 'Postal code is required';
+    else if (addressForm.postal_code.length !== 6) errors.postal_code = 'Postal code must be exactly 6 digits';
+    if (!addressForm.country.trim()) errors.country = 'Country is required';
+
+    if (Object.keys(errors).some(k => errors[k])) {
+      setAddressErrors(errors);
       return;
     }
+
+    // Prepare data for API - use customLabel if "other" is selected
+    const dataToSend = {
+      ...addressForm,
+      label: addressForm.label === 'other' ? addressForm.customLabel.trim() : addressForm.label,
+    };
+    delete dataToSend.customLabel;
+
     setAddressSaving(true);
     try {
       if (editingAddress === 'new') {
-        await storefrontAPI.createAddress(addressForm);
+        await storefrontAPI.createAddress(dataToSend);
         toast.success('Address added');
       } else {
-        await storefrontAPI.updateAddress(editingAddress, addressForm);
+        await storefrontAPI.updateAddress(editingAddress, dataToSend);
         toast.success('Address updated');
       }
       setEditingAddress(null);
@@ -125,184 +192,318 @@ export default function AccountPage() {
 
   if (!isMounted || loading) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-6 sm:py-8">
-        <div className="flex items-center justify-center py-24">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
-        </div>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-6 h-6 animate-spin text-primary" />
       </div>
     );
   }
 
   const data = profile || customer || {};
-  const joinDate = data.date_joined ? new Date(data.date_joined).toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' }) : null;
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-6 sm:py-8">
-      {/* Page Header */}
-      <div className="mb-10 space-y-2">
-        <div className="flex items-center gap-2 text-primary text-xs font-bold uppercase tracking-widest">
-          <User className="w-4 h-4" /> My Account
-        </div>
-        <h1 className="text-4xl md:text-5xl font-black text-foreground tracking-tight">Profile</h1>
-        <p className="text-muted-foreground">Manage your account information and addresses</p>
-      </div>
-
-      {/* Profile Card */}
-      <div className="bg-card border border-border rounded-3xl p-6 md:p-8 shadow-sm mb-8">
-        <div className="flex items-center gap-5 mb-8 pb-8 border-b border-border">
-          <div className="w-16 h-16 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-2xl font-black shrink-0">
+    <div className="min-h-screen bg-muted/30">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
+        {/* Compact Header */}
+        <div className="flex items-center gap-4 mb-8">
+          <div className="w-14 h-14 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xl font-bold shadow-sm">
             {(data.first_name || data.email || '?').charAt(0).toUpperCase()}
           </div>
           <div>
-            <h2 className="text-2xl font-black text-foreground">{data.first_name || ''} {data.last_name || ''}</h2>
-            <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
-              <span className="flex items-center gap-1"><Mail className="w-3.5 h-3.5" /> {data.email}</span>
-              {joinDate && <span className="flex items-center gap-1"><Calendar className="w-3.5 h-3.5" /> {joinDate}</span>}
-            </div>
+            <h1 className="text-xl font-bold text-foreground">
+              {data.first_name ? `${data.first_name} ${data.last_name || ''}`.trim() : 'My Account'}
+            </h1>
+            <p className="text-sm text-muted-foreground">{data.email}</p>
           </div>
         </div>
 
-        {/* Editable Fields */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-          <div>
-            <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1.5 block">First Name</label>
-            <input
-              type="text"
-              value={form.first_name}
-              onChange={(e) => setForm({ ...form, first_name: e.target.value })}
-              className="w-full px-4 py-3 rounded-xl bg-background border border-border focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none text-sm font-medium text-foreground transition-all"
-            />
+        {/* Profile Card */}
+        <div className="bg-background rounded-2xl shadow-sm border border-border overflow-hidden mb-6">
+          <div className="px-6 py-4 border-b border-border">
+            <h2 className="font-semibold text-foreground">Personal Information</h2>
           </div>
-          <div>
-            <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1.5 block">Last Name</label>
-            <input
-              type="text"
-              value={form.last_name}
-              onChange={(e) => setForm({ ...form, last_name: e.target.value })}
-              className="w-full px-4 py-3 rounded-xl bg-background border border-border focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none text-sm font-medium text-foreground transition-all"
-            />
-          </div>
-          <div className="sm:col-span-2">
-            <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1.5 block flex items-center gap-1.5"><Phone className="w-3.5 h-3.5" /> Phone</label>
-            <input
-              type="tel"
-              value={form.phone}
-              onChange={(e) => setForm({ ...form, phone: e.target.value })}
-              className="w-full px-4 py-3 rounded-xl bg-background border border-border focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none text-sm font-medium text-foreground transition-all"
-              placeholder="e.g. 9876543210"
-            />
-          </div>
-        </div>
-
-        <button
-          onClick={handleProfileSave}
-          disabled={saving}
-          className="mt-6 px-6 py-3 bg-primary text-primary-foreground rounded-xl font-bold text-sm hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center gap-2"
-        >
-          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-          Save Profile
-        </button>
-      </div>
-
-      {/* Addresses Section */}
-      <div className="bg-card border border-border rounded-3xl p-6 md:p-8 shadow-sm">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-black text-foreground flex items-center gap-2">
-            <MapPin className="w-5 h-5 text-primary" /> Saved Addresses
-          </h2>
-          {editingAddress === null && (
-            <button onClick={() => openAddressForm()} className="flex items-center gap-1.5 text-sm font-bold text-primary hover:opacity-80 transition-opacity">
-              <Plus className="w-4 h-4" /> Add Address
-            </button>
-          )}
-        </div>
-
-        {/* Address Form */}
-        {editingAddress !== null && (
-          <div className="mb-6 p-5 bg-background border border-border rounded-2xl">
-            <h3 className="font-bold text-foreground mb-4">{editingAddress === 'new' ? 'New Address' : 'Edit Address'}</h3>
-
-            <div className="flex gap-2 mb-4">
-              {ADDRESS_LABEL_OPTIONS.map((opt) => {
-                const usedLabels = addresses.map((a) => a.label);
-                const isUsed = usedLabels.includes(opt.value) && editingAddress === 'new';
-                return (
-                  <button
-                    key={opt.value}
-                    disabled={isUsed}
-                    onClick={() => setAddressForm({ ...addressForm, label: opt.value })}
-                    className={`px-4 py-2 rounded-lg text-sm font-bold border transition-all ${
-                      addressForm.label === opt.value
-                        ? 'bg-primary text-primary-foreground border-primary'
-                        : isUsed
-                          ? 'opacity-40 cursor-not-allowed border-border text-muted-foreground'
-                          : 'border-border text-muted-foreground hover:border-primary hover:text-primary'
-                    }`}
-                  >
-                    {opt.label}
-                  </button>
-                );
-              })}
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="sm:col-span-2">
-                <input value={addressForm.address_line_1} onChange={(e) => setAddressForm({ ...addressForm, address_line_1: e.target.value })} placeholder="Address Line 1 *" className="w-full px-4 py-3 rounded-xl bg-card border border-border focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none text-sm font-medium text-foreground" />
+          <div className="p-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              <div>
+                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1.5 block">First Name</label>
+                <input
+                  type="text"
+                  value={form.first_name}
+                  onChange={(e) => setForm({ ...form, first_name: e.target.value })}
+                  className="w-full px-3.5 py-2.5 rounded-lg bg-muted/50 border-0 focus:ring-2 focus:ring-primary/20 focus:bg-background text-sm text-foreground transition-all placeholder:text-muted-foreground/60"
+                  placeholder="Enter first name"
+                />
               </div>
-              <div className="sm:col-span-2">
-                <input value={addressForm.address_line_2} onChange={(e) => setAddressForm({ ...addressForm, address_line_2: e.target.value })} placeholder="Address Line 2" className="w-full px-4 py-3 rounded-xl bg-card border border-border focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none text-sm font-medium text-foreground" />
+              <div>
+                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1.5 block">Last Name</label>
+                <input
+                  type="text"
+                  value={form.last_name}
+                  onChange={(e) => setForm({ ...form, last_name: e.target.value })}
+                  className="w-full px-3.5 py-2.5 rounded-lg bg-muted/50 border-0 focus:ring-2 focus:ring-primary/20 focus:bg-background text-sm text-foreground transition-all placeholder:text-muted-foreground/60"
+                  placeholder="Enter last name"
+                />
               </div>
-              <input value={addressForm.city} onChange={(e) => setAddressForm({ ...addressForm, city: e.target.value })} placeholder="City *" className="w-full px-4 py-3 rounded-xl bg-card border border-border focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none text-sm font-medium text-foreground" />
-              <input value={addressForm.state} onChange={(e) => setAddressForm({ ...addressForm, state: e.target.value })} placeholder="State *" className="w-full px-4 py-3 rounded-xl bg-card border border-border focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none text-sm font-medium text-foreground" />
-              <input value={addressForm.postal_code} onChange={(e) => setAddressForm({ ...addressForm, postal_code: e.target.value })} placeholder="Postal Code *" className="w-full px-4 py-3 rounded-xl bg-card border border-border focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none text-sm font-medium text-foreground" />
-              <input value={addressForm.country} onChange={(e) => setAddressForm({ ...addressForm, country: e.target.value })} placeholder="Country" className="w-full px-4 py-3 rounded-xl bg-card border border-border focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none text-sm font-medium text-foreground" />
+              <div>
+                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1.5 block">Email</label>
+                <div className="relative">
+                  <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50" />
+                  <input
+                    type="email"
+                    value={data.email || ''}
+                    disabled
+                    className="w-full pl-10 pr-3.5 py-2.5 rounded-lg bg-muted/30 border-0 text-sm text-muted-foreground cursor-not-allowed"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1.5 block">Phone</label>
+                <div className="relative">
+                  <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50" />
+                  <input
+                    type="tel"
+                    value={form.phone}
+                    onChange={handlePhoneChange}
+                    maxLength={15}
+                    className={`w-full pl-10 pr-3.5 py-2.5 rounded-lg bg-muted/50 border-0 focus:ring-2 focus:ring-primary/20 focus:bg-background text-sm text-foreground transition-all placeholder:text-muted-foreground/60 ${phoneError ? 'ring-2 ring-red-500/50' : ''}`}
+                    placeholder="Enter phone number"
+                  />
+                </div>
+                {phoneError && (
+                  <p className="text-xs text-red-500 mt-1.5">{phoneError}</p>
+                )}
+              </div>
             </div>
-
-            <div className="flex gap-3 mt-4">
-              <button onClick={handleAddressSave} disabled={addressSaving} className="px-5 py-2.5 bg-primary text-primary-foreground rounded-xl font-bold text-sm hover:opacity-90 disabled:opacity-50 flex items-center gap-2">
-                {addressSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-                Save
-              </button>
-              <button onClick={() => setEditingAddress(null)} className="px-5 py-2.5 border border-border rounded-xl font-bold text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-2">
-                <X className="w-4 h-4" /> Cancel
+            <div className="flex justify-end mt-6">
+              <button
+                onClick={handleProfileSave}
+                disabled={saving || !!phoneError}
+                className="px-5 py-2 bg-primary text-primary-foreground rounded-lg font-medium text-sm hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center gap-2"
+              >
+                {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+                Update Profile
               </button>
             </div>
           </div>
-        )}
+        </div>
 
-        {/* Address Cards */}
-        {addresses.length === 0 && editingAddress === null ? (
-          <p className="text-muted-foreground text-sm text-center py-8">No saved addresses yet. Add one to speed up checkout.</p>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {addresses.map((addr) => {
-              const Icon = ADDRESS_LABEL_ICONS[addr.label] || MapPin;
+        {/* Addresses Card */}
+        <div className="bg-background rounded-2xl shadow-sm border border-border overflow-hidden">
+          <div className="px-6 py-4 border-b border-border flex items-center justify-between">
+            <h2 className="font-semibold text-foreground">Saved Addresses</h2>
+            {editingAddress === null && (
+              <button
+                onClick={() => openAddressForm()}
+                className="flex items-center gap-1.5 text-sm font-medium text-primary hover:text-primary/80 transition-colors"
+              >
+                <Plus className="w-4 h-4" /> Add New
+              </button>
+            )}
+          </div>
+
+          <div className="p-6">
+            {/* Address Form */}
+            {editingAddress !== null && (() => {
+              const usedLabels = addresses.map((a) => a.label.toLowerCase());
+              const availableStandardLabels = ['home', 'work'].filter(l => !usedLabels.includes(l) || editingAddress !== 'new');
+              const showOnlyCustomInput = availableStandardLabels.length === 0 && editingAddress === 'new';
+
               return (
-                <div key={addr.id} className="p-4 bg-background border border-border rounded-2xl relative group">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Icon className="w-4 h-4 text-primary" />
-                    <span className="font-bold text-foreground text-sm capitalize">{addr.label}</span>
-                    {addr.is_default && <span className="text-[10px] font-bold uppercase bg-primary/10 text-primary px-2 py-0.5 rounded-full">Default</span>}
+              <div className="mb-6 p-4 bg-muted/30 rounded-xl">
+                <h3 className="font-medium text-foreground mb-4 text-sm">
+                  {editingAddress === 'new' ? 'Add New Address' : 'Edit Address'}
+                </h3>
+
+                {!showOnlyCustomInput && (
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    {ADDRESS_LABEL_OPTIONS.map((opt) => {
+                      const isUsed = usedLabels.includes(opt.value.toLowerCase()) && editingAddress === 'new';
+                      if (isUsed && opt.value !== 'other') return null;
+                      return (
+                        <button
+                          key={opt.value}
+                          onClick={() => {
+                            setAddressForm({ ...addressForm, label: opt.value, customLabel: '' });
+                            if (addressErrors.label) setAddressErrors({ ...addressErrors, label: '' });
+                          }}
+                          className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                            addressForm.label === opt.value
+                              ? 'bg-primary text-primary-foreground'
+                              : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                          }`}
+                        >
+                          {opt.label}
+                        </button>
+                      );
+                    })}
                   </div>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    {addr.address_line_1}
-                    {addr.address_line_2 && <>, {addr.address_line_2}</>}<br />
-                    {addr.city}, {addr.state} {addr.postal_code}<br />
-                    {addr.country}
-                  </p>
-                  <div className="flex gap-2 mt-3">
-                    <button onClick={() => openAddressForm(addr)} className="text-xs font-bold text-primary hover:opacity-80 flex items-center gap-1">
-                      <Pencil className="w-3 h-3" /> Edit
-                    </button>
-                    <button onClick={() => handleAddressDelete(addr.id)} className="text-xs font-bold text-red-500 hover:opacity-80 flex items-center gap-1">
-                      <Trash2 className="w-3 h-3" /> Delete
-                    </button>
+                )}
+
+                {(addressForm.label === 'other' || showOnlyCustomInput) && (
+                  <div className="mb-4">
+                    <input
+                      value={addressForm.customLabel || ''}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setAddressForm({ ...addressForm, customLabel: val, label: 'other' });
+                        const trimmed = val.trim().toLowerCase();
+                        if (trimmed && usedLabels.includes(trimmed) && editingAddress === 'new') {
+                          setAddressErrors({ ...addressErrors, label: 'This label already exists' });
+                        } else {
+                          setAddressErrors({ ...addressErrors, label: '' });
+                        }
+                      }}
+                      placeholder="Label *"
+                      className={`w-full px-3.5 py-2.5 rounded-lg bg-background border focus:ring-1 focus:ring-primary/20 text-sm ${addressErrors.label ? 'border-red-500' : 'border-border focus:border-primary'}`}
+                    />
+                    {addressErrors.label && <p className="text-xs text-red-500 mt-1">{addressErrors.label}</p>}
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="sm:col-span-2">
+                    <input
+                      value={addressForm.address_line_1}
+                      onChange={(e) => {
+                        setAddressForm({ ...addressForm, address_line_1: e.target.value });
+                        if (addressErrors.address_line_1) setAddressErrors({ ...addressErrors, address_line_1: '' });
+                      }}
+                      placeholder="Address Line 1 *"
+                      className={`w-full px-3.5 py-2.5 rounded-lg bg-background border focus:ring-1 focus:ring-primary/20 text-sm ${addressErrors.address_line_1 ? 'border-red-500' : 'border-border focus:border-primary'}`}
+                    />
+                    {addressErrors.address_line_1 && <p className="text-xs text-red-500 mt-1">{addressErrors.address_line_1}</p>}
+                  </div>
+                  <div className="sm:col-span-2">
+                    <input
+                      value={addressForm.address_line_2}
+                      onChange={(e) => setAddressForm({ ...addressForm, address_line_2: e.target.value })}
+                      placeholder="Address Line 2"
+                      className="w-full px-3.5 py-2.5 rounded-lg bg-background border border-border focus:border-primary focus:ring-1 focus:ring-primary/20 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <input
+                      value={addressForm.city}
+                      onChange={(e) => {
+                        setAddressForm({ ...addressForm, city: e.target.value });
+                        if (addressErrors.city) setAddressErrors({ ...addressErrors, city: '' });
+                      }}
+                      placeholder="City *"
+                      className={`w-full px-3.5 py-2.5 rounded-lg bg-background border focus:ring-1 focus:ring-primary/20 text-sm ${addressErrors.city ? 'border-red-500' : 'border-border focus:border-primary'}`}
+                    />
+                    {addressErrors.city && <p className="text-xs text-red-500 mt-1">{addressErrors.city}</p>}
+                  </div>
+                  <div>
+                    <input
+                      value={addressForm.state}
+                      onChange={(e) => {
+                        setAddressForm({ ...addressForm, state: e.target.value });
+                        if (addressErrors.state) setAddressErrors({ ...addressErrors, state: '' });
+                      }}
+                      placeholder="State *"
+                      className={`w-full px-3.5 py-2.5 rounded-lg bg-background border focus:ring-1 focus:ring-primary/20 text-sm ${addressErrors.state ? 'border-red-500' : 'border-border focus:border-primary'}`}
+                    />
+                    {addressErrors.state && <p className="text-xs text-red-500 mt-1">{addressErrors.state}</p>}
+                  </div>
+                  <div>
+                    <input
+                      value={addressForm.postal_code}
+                      onChange={handlePostalCodeChange}
+                      maxLength={6}
+                      placeholder="Postal Code *"
+                      className={`w-full px-3.5 py-2.5 rounded-lg bg-background border focus:ring-1 focus:ring-primary/20 text-sm ${addressErrors.postal_code ? 'border-red-500' : 'border-border focus:border-primary'}`}
+                    />
+                    {addressErrors.postal_code && <p className="text-xs text-red-500 mt-1">{addressErrors.postal_code}</p>}
+                  </div>
+                  <div>
+                    <input
+                      value={addressForm.country}
+                      onChange={(e) => {
+                        setAddressForm({ ...addressForm, country: e.target.value });
+                        if (addressErrors.country) setAddressErrors({ ...addressErrors, country: '' });
+                      }}
+                      placeholder="Country *"
+                      className={`w-full px-3.5 py-2.5 rounded-lg bg-background border focus:ring-1 focus:ring-primary/20 text-sm ${addressErrors.country ? 'border-red-500' : 'border-border focus:border-primary'}`}
+                    />
+                    {addressErrors.country && <p className="text-xs text-red-500 mt-1">{addressErrors.country}</p>}
                   </div>
                 </div>
+
+                <div className="flex gap-2 mt-4">
+                  <button
+                    onClick={handleAddressSave}
+                    disabled={addressSaving}
+                    className="px-4 py-2 bg-primary text-primary-foreground rounded-lg font-medium text-sm hover:bg-primary/90 disabled:opacity-50 flex items-center gap-2"
+                  >
+                    {addressSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                    Save
+                  </button>
+                  <button
+                    onClick={() => setEditingAddress(null)}
+                    className="px-4 py-2 bg-muted text-muted-foreground rounded-lg font-medium text-sm hover:bg-muted/80 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
               );
-            })}
+            })()}
+
+            {/* Address List */}
+            {addresses.length === 0 && editingAddress === null ? (
+              <div className="text-center py-10">
+                <div className="w-12 h-12 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-3">
+                  <MapPin className="w-5 h-5 text-muted-foreground" />
+                </div>
+                <p className="text-sm text-muted-foreground">No addresses saved yet</p>
+                <p className="text-xs text-muted-foreground/70 mt-1">Add an address for faster checkout</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {addresses.map((addr) => {
+                  const Icon = ADDRESS_LABEL_ICONS[addr.label] || MapPin;
+                  return (
+                    <div
+                      key={addr.id}
+                      className="flex items-start gap-4 p-4 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors group"
+                    >
+                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                        <Icon className="w-4 h-4 text-primary" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-medium text-foreground text-sm capitalize">{addr.label}</span>
+                          {addr.is_default && (
+                            <span className="text-[10px] font-medium bg-primary/10 text-primary px-2 py-0.5 rounded-full">Default</span>
+                          )}
+                        </div>
+                        <p className="text-sm text-muted-foreground leading-relaxed">
+                          {addr.address_line_1}
+                          {addr.address_line_2 && `, ${addr.address_line_2}`}
+                          <br />
+                          {addr.city}, {addr.state} {addr.postal_code}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={() => openAddressForm(addr)}
+                          className="p-2 rounded-lg hover:bg-background text-muted-foreground hover:text-primary transition-colors"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleAddressDelete(addr.id)}
+                          className="p-2 rounded-lg hover:bg-background text-muted-foreground hover:text-red-500 transition-colors"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
-        )}
+        </div>
       </div>
     </div>
   );

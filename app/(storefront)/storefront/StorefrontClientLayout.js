@@ -7,7 +7,6 @@ import { useStorefrontPath } from '@/lib/useStorefrontPath';
 import { StoreInfoProvider } from '@/lib/StorefrontContext';
 import AuthModal from '@/components/storefront/AuthModal';
 import CartSidebar from '@/components/storefront/CartSidebar';
-import { Toaster } from 'sonner';
 import { ThemeProvider } from '@/components/storefront/shared/theme-provider';
 import { Navbar } from '@/components/storefront/shared/Navbar';
 import { Footer } from '@/components/storefront/shared/Footer';
@@ -83,7 +82,6 @@ export default function StorefrontClientLayout({ children }) {
 
           <AuthModal open={authOpen} onClose={closeAuth} initialTab={authTab} />
           <CartSidebar open={cartOpen} onClose={closeCart} />
-          <Toaster />
         </div>
       </StoreInfoProvider>
     </ThemeProvider>

@@ -2,10 +2,12 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { ShoppingBag, Menu, LogOut, User, Search } from 'lucide-react';
+import { ShoppingBag, Menu, LogOut, User, Heart, KeyRound } from 'lucide-react';
 import { useCartStore } from '@/store/cartStore';
+import { useFavoritesStore } from '@/store/favoritesStore';
 import { useStorefrontPath } from '@/lib/useStorefrontPath';
 import { useStorefrontAuthStore } from '@/store/storefrontAuthStore';
+import FavoritesSidebar from '@/components/storefront/FavoritesSidebar';
 import { Button } from '@/components/ui/button';
 import {
   Sheet,
@@ -14,11 +16,20 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet';
 import { Badge } from '@/components/ui/badge';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { useState, useEffect } from 'react';
 
 export function Navbar({ storeName, onOpenAuth, onOpenCart }) {
   const [isScrolled, setIsScrolled] = useState(false);
+  const [favoritesOpen, setFavoritesOpen] = useState(false);
   const cartItems = useCartStore((state) => state.items);
+  const favoriteItems = useFavoritesStore((state) => state.items);
   const { href } = useStorefrontPath();
   const pathname = usePathname();
   const router = useRouter();
@@ -33,6 +44,7 @@ export function Navbar({ storeName, onOpenAuth, onOpenCart }) {
   };
 
   const itemCount = cartItems.reduce((total, item) => total + item.quantity, 0);
+  const favoritesCount = favoriteItems.length;
 
   const [isMounted, setIsMounted] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -62,6 +74,7 @@ export function Navbar({ storeName, onOpenAuth, onOpenCart }) {
     }`;
 
   return (
+    <>
     <header
       className={`fixed top-0 w-full z-50 transition-all duration-300 ${
         isScrolled
@@ -90,14 +103,14 @@ export function Navbar({ storeName, onOpenAuth, onOpenCart }) {
                 )}
               </Link>
               <Link href={href('/products')} className={navLinkClass('/products')}>
-                Shop
+                Products
                 {isActive('/products') && (
                   <span className="absolute bottom-0 left-1 right-1 h-0.5 bg-primary rounded-full" />
                 )}
               </Link>
               {isLoggedIn && (
                 <Link href={href('/account/orders')} className={navLinkClass('/account/orders')}>
-                  My Orders
+                  Orders
                   {isActive('/account/orders') && (
                     <span className="absolute bottom-0 left-1 right-1 h-0.5 bg-primary rounded-full" />
                   )}
@@ -107,14 +120,20 @@ export function Navbar({ storeName, onOpenAuth, onOpenCart }) {
           </div>
 
           <div className="flex items-center gap-2 md:gap-3">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="hidden md:flex h-10 w-10 rounded-full text-foreground/70 hover:text-foreground hover:bg-muted"
+            {/* Favorites Button */}
+            <button
+              type="button"
+              onClick={() => setFavoritesOpen(true)}
+              className="relative h-10 w-10 rounded-full flex items-center justify-center text-foreground/70 hover:text-foreground hover:bg-muted transition-colors"
             >
-              <Search className="h-5 w-5" />
-              <span className="sr-only">Search</span>
-            </Button>
+              <Heart className="h-5 w-5" />
+              {isMounted && favoritesCount > 0 && (
+                <Badge className="absolute -top-1 -right-1 h-5 min-w-5 flex items-center justify-center p-0 rounded-full bg-red-500 text-white text-xs font-semibold hover:bg-red-500">
+                  {favoritesCount > 99 ? '99+' : favoritesCount}
+                </Badge>
+              )}
+              <span className="sr-only">Favorites</span>
+            </button>
 
             {isMounted && isLoggedIn && (
               <Button
@@ -135,26 +154,75 @@ export function Navbar({ storeName, onOpenAuth, onOpenCart }) {
 
             {isMounted && isLoggedIn ? (
               <div className="hidden md:flex items-center gap-2">
-                <Link
-                  href={href('/account')}
-                  className="flex items-center gap-2 px-3 py-2 rounded-full hover:bg-muted transition-colors"
-                >
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground font-semibold text-sm">
-                    {(customer.first_name || customer.email || '?').charAt(0).toUpperCase()}
-                  </div>
-                  <span className="text-sm font-medium text-foreground/80 hidden xl:block">
-                    {customer.first_name || 'Account'}
-                  </span>
-                </Link>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={handleLogout}
-                  className="h-10 w-10 rounded-full text-foreground/70 hover:text-destructive hover:bg-destructive/10"
-                  title="Sign Out"
-                >
-                  <LogOut className="h-4 w-4" />
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger className="flex items-center gap-2 px-3 py-2 rounded-full hover:bg-muted transition-colors outline-none">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground font-semibold text-sm">
+                      {(customer.first_name || customer.email || '?').charAt(0).toUpperCase()}
+                    </div>
+                    <span className="text-sm font-medium text-foreground/80 hidden xl:block">
+                      {customer.first_name || 'Account'}
+                    </span>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" sideOffset={12} className="w-64 p-0 overflow-hidden border-0 shadow-xl">
+                    {/* User Header */}
+                    <div className="bg-gradient-to-br from-primary/10 via-primary/5 to-transparent p-4">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground font-bold text-lg shadow-md">
+                          {(customer.first_name || customer.email || '?').charAt(0).toUpperCase()}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-foreground truncate">
+                            {customer.first_name ? `${customer.first_name} ${customer.last_name || ''}`.trim() : 'Welcome'}
+                          </p>
+                          <p className="text-xs text-muted-foreground truncate">{customer.email}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Menu Items */}
+                    <div className="p-2">
+                      <DropdownMenuItem className="rounded-lg px-3 py-2.5 focus:bg-primary/10">
+                        <Link href={href('/account')} className="flex items-center gap-3 w-full">
+                          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-500/10 text-blue-600">
+                            <User className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <p className="font-medium text-sm">Profile</p>
+                            <p className="text-xs text-muted-foreground">Manage your account</p>
+                          </div>
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem className="rounded-lg px-3 py-2.5 focus:bg-primary/10">
+                        <Link href={href('/account/change-password')} className="flex items-center gap-3 w-full">
+                          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-amber-500/10 text-amber-600">
+                            <KeyRound className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <p className="font-medium text-sm">Change Password</p>
+                            <p className="text-xs text-muted-foreground">Update your security</p>
+                          </div>
+                        </Link>
+                      </DropdownMenuItem>
+                    </div>
+
+                    <DropdownMenuSeparator className="my-0" />
+
+                    {/* Sign Out */}
+                    <div className="p-2">
+                      <DropdownMenuItem
+                        onClick={handleLogout}
+                        className="rounded-lg px-3 py-2.5 text-red-600 focus:bg-red-50 focus:text-red-600 cursor-pointer"
+                      >
+                        <div className="flex items-center gap-3 w-full">
+                          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-red-500/10">
+                            <LogOut className="w-4 h-4" />
+                          </div>
+                          <p className="font-medium text-sm">Sign Out</p>
+                        </div>
+                      </DropdownMenuItem>
+                    </div>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             ) : (
               <div className="hidden md:flex items-center gap-2">
@@ -174,11 +242,12 @@ export function Navbar({ storeName, onOpenAuth, onOpenCart }) {
               </div>
             )}
 
-            <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-              <SheetTrigger className="lg:hidden flex h-10 w-10 items-center justify-center rounded-full hover:bg-muted transition-colors">
-                <Menu className="w-5 h-5 text-foreground" />
-                <span className="sr-only">Toggle Menu</span>
-              </SheetTrigger>
+            {isMounted && (
+              <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+                <SheetTrigger className="lg:hidden flex h-10 w-10 items-center justify-center rounded-full hover:bg-muted transition-colors">
+                  <Menu className="w-5 h-5 text-foreground" />
+                  <span className="sr-only">Toggle Menu</span>
+                </SheetTrigger>
               <SheetContent
                 side="right"
                 className="w-[300px] sm:w-[350px] border-l border-border bg-background p-0"
@@ -219,8 +288,25 @@ export function Navbar({ storeName, onOpenAuth, onOpenCart }) {
                           : 'text-foreground/80 hover:bg-muted'
                       }`}
                     >
-                      Shop All Products
+                      Products
                     </Link>
+                    <button
+                      onClick={() => {
+                        setMobileMenuOpen(false);
+                        setFavoritesOpen(true);
+                      }}
+                      className="flex items-center justify-between text-base font-medium text-foreground/80 hover:bg-muted transition-colors w-full text-left rounded-xl px-4 py-3.5"
+                    >
+                      <span className="flex items-center gap-3">
+                        <Heart className="w-5 h-5" />
+                        Favorites
+                      </span>
+                      {isMounted && favoritesCount > 0 && (
+                        <Badge className="rounded-full bg-red-500 text-white">
+                          {favoritesCount}
+                        </Badge>
+                      )}
+                    </button>
                     {isMounted && isLoggedIn && (
                       <>
                         <button
@@ -249,7 +335,7 @@ export function Navbar({ storeName, onOpenAuth, onOpenCart }) {
                               : 'text-foreground/80 hover:bg-muted'
                           }`}
                         >
-                          My Orders
+                          Orders
                         </Link>
                       </>
                     )}
@@ -264,7 +350,15 @@ export function Navbar({ storeName, onOpenAuth, onOpenCart }) {
                           className="flex items-center gap-3 text-base font-medium text-foreground/80 hover:bg-muted transition-colors rounded-xl px-4 py-3.5 w-full"
                         >
                           <User className="w-5 h-5" />
-                          My Account
+                          Profile
+                        </Link>
+                        <Link
+                          href={href('/account/change-password')}
+                          onClick={() => setMobileMenuOpen(false)}
+                          className="flex items-center gap-3 text-base font-medium text-foreground/80 hover:bg-muted transition-colors rounded-xl px-4 py-3.5 w-full"
+                        >
+                          <KeyRound className="w-5 h-5" />
+                          Change Password
                         </Link>
                         <button
                           onClick={() => {
@@ -303,10 +397,14 @@ export function Navbar({ storeName, onOpenAuth, onOpenCart }) {
                   </div>
                 </div>
               </SheetContent>
-            </Sheet>
+            </Sheet>)}
           </div>
         </div>
       </div>
     </header>
+
+      {/* Favorites Sidebar */}
+      <FavoritesSidebar open={favoritesOpen} onClose={() => setFavoritesOpen(false)} />
+    </>
   );
 }

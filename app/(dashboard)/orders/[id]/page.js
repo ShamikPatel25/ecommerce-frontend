@@ -2,12 +2,12 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { orderAPI, productAPI } from '@/lib/api';
+import { orderAPI } from '@/lib/api';
 import { toast } from 'sonner';
 import {
   ArrowLeft, ChevronRight, Printer, Truck, Package,
   Mail, Phone, MapPin, Save, CheckCircle2, Clock,
-  ChevronDown, Loader2, Info, XCircle, RotateCcw,
+  ChevronDown, Loader2, XCircle, RotateCcw,
 } from 'lucide-react';
 import { formatDateTime, formatCurrency } from '@/lib/utils';
 import { useStoreStore } from '@/store/storeStore';
@@ -63,8 +63,6 @@ export default function OrderDetailPage() {
   const [loading,      setLoading]      = useState(true);
   const [saving,       setSaving]       = useState(false);
   const [newStatus,    setNewStatus]    = useState('');
-  const [stockMap,     setStockMap]     = useState({});
-  const [stockLoading, setStockLoading] = useState(false);
 
   const fetchOrder = useCallback(async () => {
     try {
@@ -79,43 +77,9 @@ export default function OrderDetailPage() {
     }
   }, [id, router]);
 
-  const fetchStockInfo = useCallback(async (items) => {
-    if (!items?.length) return;
-    setStockLoading(true);
-    try {
-      const ids = [...new Set(items.map((i) => i.product_id).filter(Boolean))];
-      const results = await Promise.allSettled(ids.map((pid) => productAPI.get(pid)));
-      const map = {};
-      results.forEach((r, idx) => {
-        if (r.status === 'fulfilled') {
-          const p = r.value.data;
-          map[ids[idx]] = { stock: p.stock, variants: p.variants || [], product_type: p.product_type };
-        }
-      });
-      setStockMap(map);
-    } catch {
-      toast.error('Failed to load stock info');
-    } finally {
-      setStockLoading(false);
-    }
-  }, []);
-
   useEffect(() => {
     fetchOrder();
   }, [id, fetchOrder]);
-
-  useEffect(() => {
-    if (order?.items) fetchStockInfo(order.items);
-  }, [order, fetchStockInfo]);
-
-  const getItemCurrentStock = (item) => {
-    const info = stockMap[item.product_id];
-    if (!info) return null;
-    if (info.product_type === 'catalog' && item.variant_id) {
-      return info.variants.find((v) => v.id === item.variant_id)?.stock ?? null;
-    }
-    return info.stock ?? null;
-  };
 
   const handleStatusSave = async () => {
     if (newStatus === order.status) return;
@@ -430,63 +394,52 @@ export default function OrderDetailPage() {
                   <table className="w-full text-left min-w-[580px]">
                     <thead>
                       <tr className="admin-thead-row">
-                        <th className="admin-th">Product</th>
-                        <th className="admin-th">Qty</th>
-                        <th className="admin-th">Price</th>
-                        <th className="admin-th">Total</th>
-                        <th className="admin-th">Stock Left</th>
+                        <th className="admin-th text-left">Product</th>
+                        <th className="admin-th text-center">Qty</th>
+                        <th className="admin-th text-right">Price</th>
+                        <th className="admin-th text-right">Total</th>
+                        <th className="admin-th text-center">Status</th>
                       </tr>
                     </thead>
                     <tbody className="admin-tbody">
                       {order.items.map((item) => {
-                        const currentStock = getItemCurrentStock(item);
-
-                        let stockCell;
-                        if (stockLoading) {
-                          stockCell = <div className="h-4 w-8 bg-slate-200 dark:bg-gray-700 animate-pulse rounded mx-auto" />;
-                        } else if (currentStock === null) {
-                          stockCell = <span className="text-slate-300 dark:text-gray-600 text-xs">&mdash;</span>;
-                        } else if (currentStock === 0) {
-                          stockCell = <span className="px-2 py-0.5 bg-red-500/10 text-red-500 text-xs font-bold rounded-full border border-red-500/20">Out</span>;
-                        } else {
-                          stockCell = (
-                            <span className={`text-sm font-bold ${currentStock <= 5 ? 'text-violet-500' : 'text-green-500'}`}>
-                              {currentStock}
-                            </span>
-                          );
-                        }
-
+                        const isItemCancelled = item.status === 'cancelled';
                         return (
-                          <tr key={item.id}>
-                            <td className="admin-td">
-                              <div className="flex items-center gap-4">
-                                <div className="w-12 h-12 rounded-lg bg-violet-500/10 flex items-center justify-center shrink-0">
-                                  <Package className="w-5 h-5 text-violet-500/60" />
+                          <tr key={item.id} className={isItemCancelled ? 'opacity-60' : ''}>
+                            <td className="admin-td text-left">
+                              <div className="flex items-center gap-4 justify-start">
+                                <div className="w-10 h-10 rounded-lg bg-violet-500/10 flex items-center justify-center shrink-0">
+                                  <Package className="w-4 h-4 text-violet-500/60" />
                                 </div>
-                                <div>
-                                  <p className="font-bold text-slate-900 dark:text-white text-sm">{item.product_name}</p>
+                                <div className="min-w-0">
+                                  <p className={`font-semibold text-sm ${isItemCancelled ? 'line-through text-slate-400 dark:text-gray-500' : 'text-slate-900 dark:text-white'}`}>{item.product_name}</p>
                                   {item.variant_attrs && (
-                                    <p className="text-xs text-slate-400 dark:text-gray-500">{item.variant_attrs}</p>
-                                  )}
-                                  {item.product_sku && (
-                                    <p className="text-xs text-slate-400 dark:text-gray-500 font-mono">{item.product_sku}</p>
+                                    <p className="text-xs text-slate-500 dark:text-gray-400">{item.variant_attrs}</p>
                                   )}
                                 </div>
                               </div>
                             </td>
-                            <td className="admin-td">
+                            <td className="admin-td text-center">
                               <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-100 dark:bg-gray-700 text-slate-700 dark:text-gray-300">
                                 {item.quantity}
                               </span>
                             </td>
-                            <td className="admin-td text-sm text-slate-500 dark:text-gray-400">
+                            <td className="admin-td text-sm text-slate-500 dark:text-gray-400 text-right">
                               {formatCurrency(item.unit_price, activeStore?.currency)}
                             </td>
-                            <td className="admin-td text-sm font-semibold text-slate-900 dark:text-white">
+                            <td className="admin-td text-sm font-semibold text-slate-900 dark:text-white text-right">
                               {formatCurrency(Number.parseFloat(item.unit_price) * item.quantity, activeStore?.currency)}
                             </td>
-                            <td className="admin-td">
-                              {stockCell}
+                            <td className="admin-td text-center">
+                              {isItemCancelled ? (
+                                <span className="px-2 py-1 rounded-full text-xs font-bold bg-red-500/10 text-red-500 border border-red-500/20">
+                                  Cancelled
+                                </span>
+                              ) : (
+                                <span className="px-2 py-1 rounded-full text-xs font-bold bg-green-500/10 text-green-500 border border-green-500/20">
+                                  Active
+                                </span>
+                              )}
                             </td>
                           </tr>
                         );
@@ -494,40 +447,50 @@ export default function OrderDetailPage() {
                     </tbody>
 
                     <tfoot className="bg-slate-50/50 dark:bg-gray-700/20">
-                      {order.subtotal != null && (
-                        <tr>
-                          <td colSpan={3} className="admin-td text-sm text-slate-500 dark:text-gray-400">Subtotal</td>
-                          <td className="admin-td text-sm font-medium text-slate-700 dark:text-gray-300" colSpan={2}>
-                            {formatCurrency(order.subtotal, activeStore?.currency)}
-                          </td>
-                        </tr>
-                      )}
-                      {order.shipping_cost != null && (
-                        <tr>
-                          <td colSpan={3} className="admin-td text-sm text-slate-500 dark:text-gray-400">Shipping</td>
-                          <td className="admin-td text-sm font-medium text-slate-700 dark:text-gray-300" colSpan={2}>
-                            {formatCurrency(order.shipping_cost, activeStore?.currency)}
-                          </td>
-                        </tr>
-                      )}
-                      <tr>
-                        <td colSpan={3} className="admin-td text-slate-900 dark:text-white font-bold">Total</td>
-                        <td className="admin-td text-xl font-black text-violet-500" colSpan={2}>
-                          {formatCurrency(order.total_amount, activeStore?.currency)}
-                        </td>
-                      </tr>
+                      {(() => {
+                        const activeItems = order.items?.filter(i => i.status !== 'cancelled') || [];
+                        const cancelledItems = order.items?.filter(i => i.status === 'cancelled') || [];
+                        const activeSubtotal = activeItems.reduce((sum, i) => sum + (Number.parseFloat(i.unit_price) * i.quantity), 0);
+                        const cancelledTotal = cancelledItems.reduce((sum, i) => sum + (Number.parseFloat(i.unit_price) * i.quantity), 0);
+                        const activeTotal = activeSubtotal + (order.shipping_cost || 0);
+
+                        return (
+                          <>
+                            <tr>
+                              <td colSpan={4} className="admin-td text-sm text-slate-500 dark:text-gray-400 text-right">Subtotal ({activeItems.length} items)</td>
+                              <td className="admin-td text-sm font-medium text-slate-700 dark:text-gray-300 text-right">
+                                {formatCurrency(activeSubtotal, activeStore?.currency)}
+                              </td>
+                            </tr>
+                            {cancelledItems.length > 0 && (
+                              <tr>
+                                <td colSpan={4} className="admin-td text-sm text-red-400 text-right">Cancelled ({cancelledItems.length} items)</td>
+                                <td className="admin-td text-sm font-medium text-red-400 text-right line-through">
+                                  {formatCurrency(cancelledTotal, activeStore?.currency)}
+                                </td>
+                              </tr>
+                            )}
+                            {order.shipping_cost != null && (
+                              <tr>
+                                <td colSpan={4} className="admin-td text-sm text-slate-500 dark:text-gray-400 text-right">Shipping</td>
+                                <td className="admin-td text-sm font-medium text-slate-700 dark:text-gray-300 text-right">
+                                  {formatCurrency(order.shipping_cost, activeStore?.currency)}
+                                </td>
+                              </tr>
+                            )}
+                            <tr>
+                              <td colSpan={4} className="admin-td text-slate-900 dark:text-white font-bold text-right">Total</td>
+                              <td className="admin-td text-xl font-black text-violet-500 text-right">
+                                {formatCurrency(activeTotal, activeStore?.currency)}
+                              </td>
+                            </tr>
+                          </>
+                        );
+                      })()}
                     </tfoot>
                   </table>
                 </div>
               )}
-
-              {/* Stock info note */}
-              <div className="mx-6 mb-6 mt-2 flex items-start gap-2 bg-blue-500/5 border border-blue-500/20 rounded-lg p-3">
-                <Info className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
-                <p className="text-xs text-blue-600 dark:text-blue-400">
-                  Stock was automatically reduced when this order was placed. <strong>Stock Left</strong> shows current inventory.
-                </p>
-              </div>
             </div>
           </div>
 

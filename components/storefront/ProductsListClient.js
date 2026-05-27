@@ -6,7 +6,37 @@ import { storefrontAPI } from '@/lib/storefrontApi';
 import { useStorefrontPath } from '@/lib/useStorefrontPath';
 import { ProductCard } from '@/components/storefront/shared/ProductCard';
 import { Button } from '@/components/ui/button';
-import { Search, X, SlidersHorizontal, Grid3X3, LayoutGrid, ChevronLeft, ChevronRight } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
+  DropdownMenuSeparator,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+} from '@/components/ui/dropdown-menu';
+import { Search, X, ChevronLeft, ChevronRight, SlidersHorizontal, Layers, IndianRupee, Percent, ArrowUpDown } from 'lucide-react';
+
+const PRICE_RANGES = [
+  { label: 'Below ₹500', min: 0, max: 500 },
+  { label: '₹501 - ₹1,000', min: 501, max: 1000 },
+  { label: '₹1,001 - ₹1,500', min: 1001, max: 1500 },
+  { label: '₹1,501 - ₹2,000', min: 1501, max: 2000 },
+  { label: 'Above ₹2,000', min: 2001, max: null },
+];
+
+const DISCOUNT_THRESHOLDS = [10, 20, 30, 40, 50];
+
+const SORT_OPTIONS = [
+  { label: 'Newest', value: 'newest' },
+  { label: 'Price: Low to High', value: 'price_asc' },
+  { label: 'Price: High to Low', value: 'price_desc' },
+  { label: 'Name: A to Z', value: 'name_asc' },
+  { label: 'Name: Z to A', value: 'name_desc' },
+];
 
 export default function ProductsListClient() {
   const searchParams = useSearchParams();
@@ -15,14 +45,17 @@ export default function ProductsListClient() {
 
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [filterCounts, setFilterCounts] = useState({ discount: {}, price: {} });
   const [loading, setLoading] = useState(true);
   const [totalCount, setTotalCount] = useState(0);
-  const [gridSize, setGridSize] = useState(4);
 
   const currentCategory = searchParams.get('category') || '';
   const currentSearch = searchParams.get('search') || '';
   const currentSort = searchParams.get('sort') || 'newest';
   const currentPage = Number.parseInt(searchParams.get('page') || '1', 10);
+  const currentMinPrice = searchParams.get('min_price') || '';
+  const currentMaxPrice = searchParams.get('max_price') || '';
+  const currentMinDiscount = searchParams.get('min_discount') || '';
 
   const updateParams = useCallback((updates) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -30,11 +63,24 @@ export default function ProductsListClient() {
       if (val) params.set(key, val);
       else params.delete(key);
     });
-    if (updates.category !== undefined || updates.search !== undefined || updates.sort !== undefined) {
+    if (updates.category !== undefined || updates.search !== undefined ||
+        updates.sort !== undefined || updates.min_price !== undefined ||
+        updates.max_price !== undefined || updates.min_discount !== undefined) {
       params.delete('page');
     }
     router.push(href(`/products?${params.toString()}`));
   }, [searchParams, router, href]);
+
+  const clearAllFilters = useCallback(() => {
+    updateParams({
+      category: null,
+      search: null,
+      min_price: null,
+      max_price: null,
+      min_discount: null,
+      sort: null,
+    });
+  }, [updateParams]);
 
   /* eslint-disable react-hooks/set-state-in-effect -- data fetch on filter change */
   useEffect(() => {
@@ -42,6 +88,9 @@ export default function ProductsListClient() {
     const params = { sort: currentSort, page: currentPage };
     if (currentCategory) params.category = currentCategory;
     if (currentSearch) params.search = currentSearch;
+    if (currentMinPrice) params.min_price = currentMinPrice;
+    if (currentMaxPrice) params.max_price = currentMaxPrice;
+    if (currentMinDiscount) params.min_discount = currentMinDiscount;
 
     Promise.all([
       storefrontAPI.getProducts(params),
@@ -50,154 +99,247 @@ export default function ProductsListClient() {
       .then(([productsRes, categoriesRes]) => {
         setProducts(productsRes.data?.results || productsRes.data || []);
         setTotalCount(productsRes.data?.count || 0);
+        setFilterCounts(productsRes.data?.filter_counts || { discount: {}, price: {} });
         setCategories(categoriesRes.data || []);
       })
       .catch(() => {
         setProducts([]);
         setCategories([]);
+        setFilterCounts({ discount: {}, price: {} });
       })
       .finally(() => setLoading(false));
-  }, [currentCategory, currentSearch, currentSort, currentPage]);
+  }, [currentCategory, currentSearch, currentSort, currentPage, currentMinPrice, currentMaxPrice, currentMinDiscount]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   const totalPages = Math.ceil(totalCount / 20);
-  const categoryName = categories.find(c => c.slug === currentCategory)?.name;
+
+  const hasActiveFilters = currentCategory || currentSearch || currentMinPrice || currentMaxPrice || currentMinDiscount || currentSort !== 'newest';
+
+  const getPriceRangeLabel = () => {
+    if (!currentMinPrice && !currentMaxPrice) return null;
+    const range = PRICE_RANGES.find(r =>
+      String(r.min) === currentMinPrice &&
+      (r.max === null ? !currentMaxPrice : String(r.max) === currentMaxPrice)
+    );
+    return range?.label || `₹${currentMinPrice}${currentMaxPrice ? ` - ₹${currentMaxPrice}` : '+'}`;
+  };
+
+  const getSortLabel = () => {
+    const sort = SORT_OPTIONS.find(s => s.value === currentSort);
+    return sort?.label || 'Newest';
+  };
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="bg-gradient-to-b from-muted/50 to-background border-b border-border/50">
-        <div className="container mx-auto px-4 md:px-6 py-12 md:py-16">
-          <div className="max-w-3xl">
-            <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-4 font-medium">
-              <button onClick={() => router.push(href('/'))} className="hover:text-primary transition-colors">Home</button>
-              <span className="opacity-50">/</span>
-              <span className="text-foreground">Products</span>
-              {categoryName && (
-                <>
-                  <span className="opacity-50">/</span>
-                  <span className="text-foreground">{categoryName}</span>
-                </>
-              )}
-            </nav>
-            <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight text-foreground mb-3">
-              {categoryName || (currentSearch ? `Results for "${currentSearch}"` : 'All Products')}
-            </h1>
-            <p className="text-muted-foreground text-lg">
-              {totalCount > 0 ? `${totalCount} products found` : 'Explore our collection of quality products.'}
-            </p>
-          </div>
-        </div>
-      </div>
-
       <div className="container mx-auto px-4 md:px-6 py-8">
-        <div className="flex flex-col lg:flex-row gap-8">
-          <aside className="lg:w-64 flex-shrink-0">
-            <div className="lg:sticky lg:top-24 space-y-6">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <div className="flex flex-col">
+          {/* Search bar and Filter button */}
+          <div className="w-full max-w-3xl mx-auto mb-6">
+            <div className="flex gap-3 items-center">
+              {/* Search input */}
+              <div className="flex-1 flex rounded-full overflow-hidden border border-border focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary transition-all shadow-sm">
                 <input
                   type="text"
                   placeholder="Search products..."
                   defaultValue={currentSearch}
-                  className="w-full bg-background border border-border rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                  className="flex-1 bg-background px-4 py-3 text-sm focus:outline-none min-w-0"
                   onKeyDown={(e) => { if (e.key === 'Enter') updateParams({ search: e.target.value || null }); }}
                 />
+                <button
+                  onClick={(e) => {
+                    const input = e.currentTarget.previousElementSibling;
+                    updateParams({ search: input.value || null });
+                  }}
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground px-5 transition-colors"
+                >
+                  <Search className="w-5 h-5" />
+                </button>
               </div>
 
-              {categories.length > 0 && (
-                <div className="bg-background border border-border rounded-xl p-4">
-                  <h3 className="font-semibold text-sm text-foreground mb-3 flex items-center gap-2">
-                    <SlidersHorizontal className="w-4 h-4" />
-                    Categories
-                  </h3>
-                  <div className="space-y-1">
-                    <button
-                      onClick={() => updateParams({ category: null })}
-                      className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${!currentCategory ? 'bg-primary/10 text-primary font-medium' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}
-                    >
-                      All Products
-                    </button>
-                    {categories.map((cat) => (
-                      <button
-                        key={cat.id}
-                        onClick={() => updateParams({ category: cat.slug })}
-                        className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${currentCategory === cat.slug ? 'bg-primary/10 text-primary font-medium' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}
-                      >
-                        {cat.name}
-                      </button>
-                    ))}
-                  </div>
-                </div>
+              {/* Filter Dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger className="inline-flex items-center justify-center gap-2 rounded-full px-4 h-[46px] border border-border bg-background text-sm font-medium hover:bg-muted transition-colors">
+                  <SlidersHorizontal className="w-4 h-4" />
+                  <span className="hidden sm:inline">Filters</span>
+                  {hasActiveFilters && (
+                    <span className="w-2 h-2 rounded-full bg-primary" />
+                  )}
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  {/* Clear All */}
+                  <DropdownMenuItem onClick={clearAllFilters}>
+                    <X className="w-4 h-4 mr-2" />
+                    Clear All Filters
+                  </DropdownMenuItem>
+
+                  <DropdownMenuSeparator />
+
+                  {/* Category Submenu */}
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger>
+                      <Layers className="w-4 h-4 mr-2" />
+                      Category
+                      {currentCategory && <span className="ml-auto text-xs text-primary">•</span>}
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent>
+                      <DropdownMenuRadioGroup value={currentCategory} onValueChange={(val) => updateParams({ category: val || null })}>
+                        <DropdownMenuRadioItem value="">All Categories</DropdownMenuRadioItem>
+                        {categories.map((cat) => (
+                          <DropdownMenuRadioItem key={cat.id} value={cat.slug}>
+                            {cat.name}
+                          </DropdownMenuRadioItem>
+                        ))}
+                      </DropdownMenuRadioGroup>
+                    </DropdownMenuSubContent>
+                  </DropdownMenuSub>
+
+                  {/* Price Submenu */}
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger>
+                      <IndianRupee className="w-4 h-4 mr-2" />
+                      Price
+                      {(currentMinPrice || currentMaxPrice) && <span className="ml-auto text-xs text-primary">•</span>}
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent>
+                      <DropdownMenuItem onClick={() => updateParams({ min_price: null, max_price: null })}>
+                        All Prices
+                      </DropdownMenuItem>
+                      {PRICE_RANGES.map((range) => {
+                        const key = range.max ? `${range.min}-${range.max}` : `${range.min}+`;
+                        const count = filterCounts.price?.[key];
+                        const isActive = String(range.min) === currentMinPrice &&
+                          (range.max === null ? !currentMaxPrice : String(range.max) === currentMaxPrice);
+                        return (
+                          <DropdownMenuItem
+                            key={key}
+                            onClick={() => updateParams({
+                              min_price: String(range.min),
+                              max_price: range.max ? String(range.max) : null
+                            })}
+                            className={isActive ? 'bg-primary/10 text-primary' : ''}
+                          >
+                            {range.label}
+                            {count > 0 && (
+                              <span className="ml-auto text-xs text-muted-foreground">({count})</span>
+                            )}
+                          </DropdownMenuItem>
+                        );
+                      })}
+                    </DropdownMenuSubContent>
+                  </DropdownMenuSub>
+
+                  {/* Discount Submenu */}
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger>
+                      <Percent className="w-4 h-4 mr-2" />
+                      Discount
+                      {currentMinDiscount && <span className="ml-auto text-xs text-primary">•</span>}
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent>
+                      <DropdownMenuItem onClick={() => updateParams({ min_discount: null })}>
+                        All Discounts
+                      </DropdownMenuItem>
+                      {DISCOUNT_THRESHOLDS.map((threshold) => {
+                        const count = filterCounts.discount?.[String(threshold)];
+                        const isActive = currentMinDiscount === String(threshold);
+                        if (!count || count === 0) return null;
+                        return (
+                          <DropdownMenuItem
+                            key={threshold}
+                            onClick={() => updateParams({ min_discount: String(threshold) })}
+                            className={isActive ? 'bg-primary/10 text-primary' : ''}
+                          >
+                            {threshold}% and above
+                            <span className="ml-auto text-xs text-muted-foreground">({count})</span>
+                          </DropdownMenuItem>
+                        );
+                      })}
+                    </DropdownMenuSubContent>
+                  </DropdownMenuSub>
+
+                  <DropdownMenuSeparator />
+
+                  {/* Sort Submenu */}
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger>
+                      <ArrowUpDown className="w-4 h-4 mr-2" />
+                      Sort: {getSortLabel()}
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent>
+                      <DropdownMenuRadioGroup value={currentSort} onValueChange={(val) => updateParams({ sort: val })}>
+                        {SORT_OPTIONS.map((option) => (
+                          <DropdownMenuRadioItem key={option.value} value={option.value}>
+                            {option.label}
+                          </DropdownMenuRadioItem>
+                        ))}
+                      </DropdownMenuRadioGroup>
+                    </DropdownMenuSubContent>
+                  </DropdownMenuSub>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </div>
+
+          {/* Active filters pills */}
+          {hasActiveFilters && (
+            <div className="flex flex-wrap items-center gap-2 mb-6 justify-center">
+              {currentCategory && (
+                <button
+                  onClick={() => updateParams({ category: null })}
+                  className="inline-flex items-center gap-1.5 bg-primary/10 text-primary px-3 py-1.5 rounded-full text-sm font-medium hover:bg-primary/20 transition-colors"
+                >
+                  {categories.find(c => c.slug === currentCategory)?.name || currentCategory}
+                  <X className="w-3.5 h-3.5" />
+                </button>
               )}
-
-              <div className="bg-background border border-border rounded-xl p-4">
-                <h3 className="font-semibold text-sm text-foreground mb-3">Sort By</h3>
-                <select
-                  value={currentSort}
-                  onChange={(e) => updateParams({ sort: e.target.value })}
-                  className="w-full bg-muted/50 border border-border rounded-lg px-3 py-2.5 text-sm appearance-none focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all cursor-pointer"
+              {currentSearch && (
+                <button
+                  onClick={() => updateParams({ search: null })}
+                  className="inline-flex items-center gap-1.5 bg-primary/10 text-primary px-3 py-1.5 rounded-full text-sm font-medium hover:bg-primary/20 transition-colors"
                 >
-                  <option value="newest">Newest First</option>
-                  <option value="price_asc">Price: Low to High</option>
-                  <option value="price_desc">Price: High to Low</option>
-                </select>
-              </div>
+                  &quot;{currentSearch}&quot;
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+              {getPriceRangeLabel() && (
+                <button
+                  onClick={() => updateParams({ min_price: null, max_price: null })}
+                  className="inline-flex items-center gap-1.5 bg-primary/10 text-primary px-3 py-1.5 rounded-full text-sm font-medium hover:bg-primary/20 transition-colors"
+                >
+                  {getPriceRangeLabel()}
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+              {currentMinDiscount && (
+                <button
+                  onClick={() => updateParams({ min_discount: null })}
+                  className="inline-flex items-center gap-1.5 bg-primary/10 text-primary px-3 py-1.5 rounded-full text-sm font-medium hover:bg-primary/20 transition-colors"
+                >
+                  {currentMinDiscount}%+ off
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+              {currentSort !== 'newest' && (
+                <button
+                  onClick={() => updateParams({ sort: null })}
+                  className="inline-flex items-center gap-1.5 bg-primary/10 text-primary px-3 py-1.5 rounded-full text-sm font-medium hover:bg-primary/20 transition-colors"
+                >
+                  {getSortLabel()}
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+              <button
+                onClick={clearAllFilters}
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors ml-2"
+              >
+                Clear all
+              </button>
             </div>
-          </aside>
+          )}
 
-          <main className="flex-1 min-w-0">
-            {(currentCategory || currentSearch) && (
-              <div className="flex flex-wrap items-center gap-2 mb-6">
-                <span className="text-sm text-muted-foreground">Active filters:</span>
-                {currentCategory && (
-                  <button
-                    onClick={() => updateParams({ category: null })}
-                    className="inline-flex items-center gap-1.5 bg-primary/10 text-primary px-3 py-1.5 rounded-full text-sm font-medium hover:bg-primary/20 transition-colors"
-                  >
-                    {categoryName || currentCategory}
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                )}
-                {currentSearch && (
-                  <button
-                    onClick={() => updateParams({ search: null })}
-                    className="inline-flex items-center gap-1.5 bg-primary/10 text-primary px-3 py-1.5 rounded-full text-sm font-medium hover:bg-primary/20 transition-colors"
-                  >
-                    "{currentSearch}"
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                )}
-                <button
-                  onClick={() => updateParams({ category: null, search: null })}
-                  className="text-sm text-muted-foreground hover:text-foreground transition-colors ml-2"
-                >
-                  Clear all
-                </button>
-              </div>
-            )}
-
-            <div className="hidden md:flex items-center justify-between mb-6">
-              <p className="text-sm text-muted-foreground">
-                Showing {products.length} of {totalCount} products
-              </p>
-              <div className="flex items-center gap-2 bg-muted/50 rounded-lg p-1">
-                <button
-                  onClick={() => setGridSize(3)}
-                  className={`p-2 rounded-md transition-colors ${gridSize === 3 ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
-                >
-                  <Grid3X3 className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => setGridSize(4)}
-                  className={`p-2 rounded-md transition-colors ${gridSize === 4 ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
-                >
-                  <LayoutGrid className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-
+          <main>
             {loading && (
-              <div className={`grid grid-cols-1 sm:grid-cols-2 ${gridSize === 3 ? 'lg:grid-cols-3' : 'lg:grid-cols-3 xl:grid-cols-4'} gap-6`}>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {Array.from({ length: 8 }, (_, i) => (
                   <div key={`skel-${i}`} className="bg-background border border-border rounded-2xl overflow-hidden">
                     <div className="aspect-square bg-muted animate-pulse" />
@@ -221,7 +363,7 @@ export default function ProductsListClient() {
                 <p className="text-muted-foreground max-w-sm mx-auto mb-6">
                   We couldn&apos;t find any products matching your criteria. Try adjusting your filters.
                 </p>
-                <Button onClick={() => updateParams({ category: null, search: null })} className="rounded-full">
+                <Button onClick={clearAllFilters} className="rounded-full">
                   Clear All Filters
                 </Button>
               </div>
@@ -229,7 +371,7 @@ export default function ProductsListClient() {
 
             {!loading && products.length > 0 && (
               <>
-                <div className={`grid grid-cols-1 sm:grid-cols-2 ${gridSize === 3 ? 'lg:grid-cols-3' : 'lg:grid-cols-3 xl:grid-cols-4'} gap-6`}>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                   {products.map((product) => (
                     <ProductCard key={product.id} product={product} href={href} />
                   ))}

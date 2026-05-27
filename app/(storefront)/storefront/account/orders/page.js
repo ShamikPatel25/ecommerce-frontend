@@ -175,6 +175,19 @@ function OrderCard({ order, isExpanded, onToggle, href, onRefresh }) {
   const [modalConfig, setModalConfig] = useState({ type: null, itemId: null, itemName: null });
 
   const statusKey = order.status || 'pending';
+
+  // Calculate totals excluding cancelled/returned items
+  const activeItems = order.items?.filter(i => !['cancelled', 'returned'].includes(i.status)) || [];
+  const cancelledItems = order.items?.filter(i => i.status === 'cancelled') || [];
+  const returnedItems = order.items?.filter(i => i.status === 'returned') || [];
+  const activeTotal = activeItems.reduce((sum, i) => sum + Number.parseFloat(i.subtotal || 0), 0);
+  const inactiveTotal = [...cancelledItems, ...returnedItems].reduce((sum, i) => sum + Number.parseFloat(i.subtotal || 0), 0);
+
+  // Build inactive items label like "(2 cancelled + 1 returned)"
+  const inactiveLabel = [
+    cancelledItems.length > 0 ? `${cancelledItems.length} cancelled` : '',
+    returnedItems.length > 0 ? `${returnedItems.length} returned` : '',
+  ].filter(Boolean).join(' + ');
   const dateStr = new Date(order.created_at).toLocaleDateString('en-IN', {
     year: 'numeric', month: 'short', day: 'numeric',
   });
@@ -254,11 +267,14 @@ function OrderCard({ order, isExpanded, onToggle, href, onRefresh }) {
                 <span className="truncate">{dateStr} · {timeStr}</span>
               </span>
               <span className="font-medium">
-                {order.items_count ?? order.items?.length ?? 0} item{(order.items_count ?? order.items?.length ?? 0) !== 1 ? 's' : ''}
+                {activeItems.length} item{activeItems.length !== 1 ? 's' : ''}
+                {inactiveLabel && (
+                  <span className="text-red-400 ml-1">({inactiveLabel})</span>
+                )}
               </span>
             </div>
             <p className="font-black text-foreground text-lg sm:text-2xl mt-1">
-              ₹{Number.parseFloat(order.total_amount).toFixed(2)}
+              ₹{activeTotal.toFixed(2)}
             </p>
           </div>
 
@@ -310,7 +326,7 @@ function OrderCard({ order, isExpanded, onToggle, href, onRefresh }) {
                   return (
                     <div
                       key={item.id}
-                      className="flex items-center gap-4 py-3 border-b border-border/40 last:border-0 last:pb-0"
+                      className={`flex items-center gap-4 py-3 border-b border-border/40 last:border-0 last:pb-0 ${['cancelled', 'returned'].includes(item.status) ? 'opacity-60' : ''}`}
                     >
                       {/* Thumbnail */}
                       {productLink ? (
@@ -340,11 +356,11 @@ function OrderCard({ order, isExpanded, onToggle, href, onRefresh }) {
                       {/* Info */}
                       <div className="flex-1 min-w-0">
                         {productLink ? (
-                          <Link href={productLink} className="font-bold text-card-foreground line-clamp-1 hover:text-primary transition-colors">
+                          <Link href={productLink} className={`font-bold line-clamp-1 hover:text-primary transition-colors ${['cancelled', 'returned'].includes(item.status) ? 'line-through text-muted-foreground' : 'text-card-foreground'}`}>
                             {item.product_name}
                           </Link>
                         ) : (
-                          <p className="font-bold text-card-foreground line-clamp-1">{item.product_name}</p>
+                          <p className={`font-bold line-clamp-1 ${['cancelled', 'returned'].includes(item.status) ? 'line-through text-muted-foreground' : 'text-card-foreground'}`}>{item.product_name}</p>
                         )}
                         {item.variant_attrs && (
                           <p className="text-xs text-muted-foreground mt-0.5">{item.variant_attrs}</p>
@@ -356,7 +372,7 @@ function OrderCard({ order, isExpanded, onToggle, href, onRefresh }) {
 
                       {/* Subtotal & Item Actions */}
                       <div className="flex flex-col items-end gap-2 shrink-0 min-w-[80px]">
-                        <p className="font-black text-foreground">
+                        <p className={`font-black ${['cancelled', 'returned'].includes(item.status) ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
                           ₹{Number.parseFloat(item.subtotal).toFixed(2)}
                         </p>
                         
@@ -386,8 +402,10 @@ function OrderCard({ order, isExpanded, onToggle, href, onRefresh }) {
                           </div>
                         ) : (
                           <span className={`text-[10px] font-black px-2 py-1 rounded-lg uppercase tracking-wider ${
-                            item.status === 'cancelled' 
-                              ? 'bg-red-500/10 text-red-500 border border-red-500/20' 
+                            item.status === 'cancelled'
+                              ? 'bg-red-500/10 text-red-500 border border-red-500/20'
+                              : item.status === 'returned'
+                              ? 'bg-rose-500/10 text-rose-500 border border-rose-500/20'
                               : 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
                           }`}>
                             {item.status}
@@ -400,9 +418,17 @@ function OrderCard({ order, isExpanded, onToggle, href, onRefresh }) {
               </div>
 
               {/* Order total row */}
-              <div className="flex justify-between items-center py-4 border-t border-border/50 mb-6">
-                <span className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Order Total</span>
-                <span className="text-2xl font-black text-foreground">₹{Number.parseFloat(order.total_amount).toFixed(2)}</span>
+              <div className="py-4 border-t border-border/50 mb-6 space-y-2">
+                {inactiveLabel && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium text-red-400 capitalize">{inactiveLabel}</span>
+                    <span className="text-sm font-medium text-red-400 line-through">₹{inactiveTotal.toFixed(2)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Order Total</span>
+                  <span className="text-2xl font-black text-foreground">₹{activeTotal.toFixed(2)}</span>
+                </div>
               </div>
 
               {/* Notes */}

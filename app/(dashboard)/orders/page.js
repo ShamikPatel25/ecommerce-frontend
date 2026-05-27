@@ -106,17 +106,24 @@ export default function OrdersPage() {
       toast.error('No orders to export');
       return;
     }
-    const headers = ['Order #', 'Customer', 'Email', 'Phone', 'Items', 'Total', 'Status', 'Date'];
-    const rows = filtered.map((o) => [
-      o.id,
-      `"${(o.customer_name || '').replaceAll('"', '""')}"`,
-      `"${(o.customer_email || '').replaceAll('"', '""')}"`,
-      `"${(o.customer_phone || '').replaceAll('"', '""')}"`,
-      o.items_count ?? o.items?.length ?? 0,
-      Number.parseFloat(o.total_amount || 0).toFixed(2),
-      o.status,
-      o.created_at ? new Date(o.created_at).toLocaleDateString() : '',
-    ]);
+    const headers = ['Order #', 'Customer', 'Email', 'Phone', 'Active Items', 'Total Items', 'Total Price', 'Status', 'Date'];
+    const rows = filtered.map((o) => {
+      const activeCount = o.active_items_count ?? o.items_count ?? 0;
+      const totalCount = o.items_count ?? 0;
+      const isFullyCancelled = activeCount === 0 && totalCount > 0;
+      const displayTotal = isFullyCancelled ? o.total_amount : (o.active_total ?? o.total_amount ?? 0);
+      return [
+        o.id,
+        `"${(o.customer_name || '').replaceAll('"', '""')}"`,
+        `"${(o.customer_email || '').replaceAll('"', '""')}"`,
+        `"${(o.customer_phone || '').replaceAll('"', '""')}"`,
+        activeCount,
+        totalCount,
+        Number.parseFloat(displayTotal || 0).toFixed(2),
+        o.status,
+        o.created_at ? new Date(o.created_at).toLocaleDateString() : '',
+      ];
+    });
     const csv = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -231,6 +238,16 @@ export default function OrdersPage() {
                         if (order.status === 'returned') statusText = 'Returned';
                         else statusText = order.status.charAt(0).toUpperCase() + order.status.slice(1);
 
+                        // Use backend-computed active_total and active_items_count
+                        // If all items cancelled, show original total_amount
+                        const activeCount = order.active_items_count ?? order.items_count ?? 0;
+                        const totalCount = order.items_count ?? 0;
+                        const hasInactiveItems = activeCount < totalCount;
+                        const isFullyCancelled = activeCount === 0 && totalCount > 0;
+                        const displayTotal = isFullyCancelled
+                          ? (order.total_amount ?? 0)
+                          : (order.active_total ?? order.total_amount ?? 0);
+
                         return (
                           <tr
                             key={order.id}
@@ -253,12 +270,24 @@ export default function OrdersPage() {
                                 </div>
                               </div>
                             </td>
-                            <td className="admin-td text-sm text-slate-500 dark:text-gray-400 whitespace-nowrap">
-                              {order.items_count ?? 0}
+                            <td className="admin-td text-sm whitespace-nowrap">
+                              {activeCount === 0 ? (
+                                // All items cancelled - show total in gray
+                                <span className="text-slate-400 dark:text-gray-500">{totalCount}</span>
+                              ) : hasInactiveItems ? (
+                                // Some items cancelled - show active/total
+                                <span>
+                                  <span className="text-slate-900 dark:text-white font-medium">{activeCount}</span>
+                                  <span className="text-slate-400 dark:text-gray-500">/{totalCount}</span>
+                                </span>
+                              ) : (
+                                // All items active - show total in black
+                                <span className="text-slate-900 dark:text-white">{totalCount}</span>
+                              )}
                             </td>
                             <td className="admin-td">
                               <span className="text-sm font-bold text-slate-900 dark:text-white">
-                                {formatCurrency(order.total_amount || 0, activeStore?.currency)}
+                                {formatCurrency(displayTotal, activeStore?.currency)}
                               </span>
                             </td>
                             <td className="admin-td whitespace-nowrap">

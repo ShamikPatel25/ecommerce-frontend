@@ -252,7 +252,7 @@ export default function ProductDetailClient({ slug, initialVariantSku = null }) 
       maxStock: isCatalog ? variantInfo.stock : (product?.stock || 0),
     });
     setAddedToCart(true);
-    toast.success('Added to cart!');
+    toast.success('Added to cart!', { duration: 1500 });
     setTimeout(() => setAddedToCart(false), 2000);
   }
 
@@ -536,13 +536,6 @@ export default function ProductDetailClient({ slug, initialVariantSku = null }) 
                 <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Easy Returns</span>
               </div>
             </div>
-
-            {/* SKU */}
-            {variantInfo.sku && (
-              <p className="text-xs text-muted-foreground mt-6 uppercase tracking-widest font-mono">
-                SKU: {variantInfo.sku}
-              </p>
-            )}
           </div>
         </div>
       </div>

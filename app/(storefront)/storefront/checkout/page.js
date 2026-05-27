@@ -11,7 +11,7 @@ import { storefrontAPI } from '@/lib/storefrontApi';
 import { validateCartStock } from '@/lib/stockValidation';
 import { ADDRESS_LABEL_OPTIONS, getAddressIcon } from '@/lib/addressConfig';
 import { toast } from 'sonner';
-import { ArrowLeft, Loader2, ShoppingBag, Shield, Lock, CreditCard, AlertTriangle, MapPin } from 'lucide-react';
+import { ArrowLeft, Loader2, ShoppingBag, Shield, Lock, CreditCard, AlertTriangle, MapPin, Minus, Plus } from 'lucide-react';
 import { PageTransition } from '@/components/storefront/animations';
 import { useStorefrontPath } from '@/lib/useStorefrontPath';
 import { formatCurrency } from '@/lib/utils';
@@ -79,7 +79,7 @@ function parseOrderError(data) {
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { items, clearCart } = useCartStore();
+  const { items, clearCart, updateQuantity } = useCartStore();
   const updateItemStock = useCartStore((s) => s.updateItemStock);
   const { href } = useStorefrontPath();
   const storeInfo = useStoreInfo();
@@ -300,11 +300,14 @@ export default function CheckoutPage() {
                       id="customer-name"
                       type="text"
                       required
-                      readOnly={!!(customer?.first_name || customer?.last_name)}
                       value={form.customer_name}
-                      onChange={(e) => { if (!(customer?.first_name || customer?.last_name)) { setForm({ ...form, customer_name: e.target.value }); setErrors({ ...errors, customer_name: '' }); } }}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setForm((prev) => ({ ...prev, customer_name: value }));
+                        setErrors((prev) => ({ ...prev, customer_name: '' }));
+                      }}
                       placeholder="John Doe"
-                      className={`w-full px-5 py-4 rounded-xl border ${(customer?.first_name || customer?.last_name) ? 'bg-muted/50 opacity-60 cursor-not-allowed border-border focus:ring-0' : `bg-background ${errors.customer_name ? 'border-red-500 focus:ring-1 focus:ring-red-500' : 'border-border focus:border-primary focus:ring-1 focus:ring-primary'}`} focus:outline-none text-sm font-medium transition-all placeholder:text-muted-foreground/50 text-foreground`}
+                      className={`w-full px-5 py-4 rounded-xl bg-background border ${errors.customer_name ? 'border-red-500 focus:ring-1 focus:ring-red-500' : 'border-border focus:border-primary focus:ring-1 focus:ring-primary'} focus:outline-none text-sm font-medium transition-all placeholder:text-muted-foreground/50 text-foreground`}
                     />
                     {errors.customer_name && <p className="text-red-500 text-xs font-bold mt-1.5">{errors.customer_name}</p>}
                   </div>
@@ -317,11 +320,14 @@ export default function CheckoutPage() {
                         id="customer-email"
                         type="email"
                         required
-                        readOnly={!!customer?.email}
                         value={form.customer_email}
-                        onChange={(e) => { if (!customer?.email) { setForm({ ...form, customer_email: e.target.value }); setErrors({ ...errors, customer_email: '' }); } }}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          setForm((prev) => ({ ...prev, customer_email: value }));
+                          setErrors((prev) => ({ ...prev, customer_email: '' }));
+                        }}
                         placeholder="john@example.com"
-                        className={`w-full px-5 py-4 rounded-xl border ${customer?.email ? 'bg-muted/50 opacity-60 cursor-not-allowed border-border focus:ring-0' : `bg-background ${errors.customer_email ? 'border-red-500 focus:ring-1 focus:ring-red-500' : 'border-border focus:border-primary focus:ring-1 focus:ring-primary'}`} focus:outline-none text-sm font-medium transition-all placeholder:text-muted-foreground/50 text-foreground`}
+                        className={`w-full px-5 py-4 rounded-xl bg-background border ${errors.customer_email ? 'border-red-500 focus:ring-1 focus:ring-red-500' : 'border-border focus:border-primary focus:ring-1 focus:ring-primary'} focus:outline-none text-sm font-medium transition-all placeholder:text-muted-foreground/50 text-foreground`}
                       />
                       {errors.customer_email && <p className="text-red-500 text-xs font-bold mt-1.5">{errors.customer_email}</p>}
                     </div>
@@ -563,6 +569,8 @@ export default function CheckoutPage() {
                 )}
                 {items.map((item, idx) => {
                     const isOOS = (item.maxStock ?? 1) <= 0;
+                    const unitPrice = Number.parseFloat(item.unitPrice || item.price || 0);
+                    const maxStock = item.maxStock ?? 99;
                     return (
                     <motion.div
                       key={`${item.product || item.id}-${item.variant || 'base'}`}
@@ -577,19 +585,43 @@ export default function CheckoutPage() {
                         ) : (
                           <ShoppingBag className="w-5 h-5 text-muted-foreground opacity-30" />
                         )}
-                        <span className="absolute -top-1 -right-1 w-5 h-5 flex items-center justify-center bg-primary text-primary-foreground text-[10px] font-bold rounded-full shadow-md z-10">
-                          {item.quantity}
-                        </span>
                       </div>
                       <div className="flex-1 min-w-0 flex flex-col justify-center">
                         <p className="text-sm font-bold text-card-foreground line-clamp-1">{item.name}</p>
                         {item.variantLabel && <p className="text-xs text-muted-foreground font-medium mt-0.5">{item.variantLabel}</p>}
                         {isOOS && <p className="text-xs text-red-500 font-semibold mt-0.5">Out of stock</p>}
+                        {/* Quantity Controls */}
+                        {!isOOS && (
+                          <div className="flex items-center gap-2 mt-2">
+                            <button
+                              type="button"
+                              onClick={() => updateQuantity(item.product || item.id, item.variant || null, Math.max(1, item.quantity - 1))}
+                              disabled={item.quantity <= 1}
+                              className="w-6 h-6 rounded-md border border-border flex items-center justify-center text-muted-foreground hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                            >
+                              <Minus className="w-3 h-3" />
+                            </button>
+                            <span className="text-sm font-bold text-foreground min-w-[20px] text-center">{item.quantity}</span>
+                            <button
+                              type="button"
+                              onClick={() => updateQuantity(item.product || item.id, item.variant || null, Math.min(maxStock, item.quantity + 1))}
+                              disabled={item.quantity >= maxStock}
+                              className="w-6 h-6 rounded-md border border-border flex items-center justify-center text-muted-foreground hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                            >
+                              <Plus className="w-3 h-3" />
+                            </button>
+                          </div>
+                        )}
                       </div>
-                      <div className="flex items-center">
+                      <div className="flex flex-col items-end justify-center">
                         <p className={`text-sm font-black flex-shrink-0 ${isOOS ? 'text-muted-foreground line-through' : 'text-foreground'}`}>
-                          {formatCurrency((Number.parseFloat(item.unitPrice || item.price || 0)) * item.quantity, currency)}
+                          {formatCurrency(unitPrice * item.quantity, currency)}
                         </p>
+                        {item.quantity > 1 && !isOOS && (
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            {formatCurrency(unitPrice, currency)} × {item.quantity}
+                          </p>
+                        )}
                       </div>
                     </motion.div>
                     );
@@ -613,7 +645,7 @@ export default function CheckoutPage() {
                   type="submit"
                   size="lg"
                   disabled={submitting || hasOutOfStockItems || !stockValidated}
-                  className={`mt-8 w-full h-14 font-bold text-lg rounded-xl shadow-[0_0_20px_rgba(212,175,55,0.2)] hover:shadow-[0_0_30px_rgba(212,175,55,0.4)] transition-all ${hasOutOfStockItems ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  className={`mt-8 w-full h-14 font-bold text-lg rounded-xl transition-all ${hasOutOfStockItems ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
                   <AnimatePresence mode="wait">
                     {!stockValidated ? (
