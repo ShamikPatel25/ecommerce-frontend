@@ -8,7 +8,7 @@ import MediaUploader from '@/components/MediaUploader';
 import { toast } from 'sonner';
 import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
 import {
-  ArrowLeft, ChevronRight, Info, Sliders, Package,
+  ChevronLeft, ChevronRight, Info, Sliders, Package,
   Loader2, Undo2, Trash2,
 } from 'lucide-react';
 import { useStoreStore } from '@/store/storeStore';
@@ -318,16 +318,16 @@ export default function EditProductPage() {
       </nav>
 
       {/* Page Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-        <h1 className="text-3xl font-black tracking-tight text-slate-900 dark:text-white">Edit Product</h1>
-        <button
-          type="button"
-          onClick={() => router.push('/products')}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg border border-violet-500/20 bg-white dark:bg-gray-800 hover:bg-violet-500/5 transition-colors text-sm font-bold self-start md:self-auto"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back to Products
-        </button>
+      <div className="flex flex-wrap items-start justify-between gap-4 mb-2">
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            onClick={() => router.push('/products')}
+            className="flex items-center gap-1.5 text-slate-500 dark:text-gray-400 hover:text-violet-500 text-sm font-medium transition-colors"
+          >
+            <ChevronLeft className="w-7 h-7 text-slate-900 dark:text-white" strokeWidth={2.5} />
+          </button>
+          <h1 className="admin-title">Edit Product</h1>
+        </div>
       </div>
 
       {/* ── PRODUCT DETAILS FORM ── */}
@@ -368,10 +368,13 @@ export default function EditProductPage() {
               </label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-gray-500 font-medium">$</span>
-                <input id="product-price" type="number" step="0.01" min="0" required
+                <input id="product-price" type="text" inputMode="decimal" pattern="[0-9]*\.?[0-9]*" required
                   className={INPUT_CLS + ' pl-8'}
                   value={formData.price}
-                  onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');
+                    setFormData({ ...formData, price: val });
+                  }}
                 />
               </div>
             </div>
@@ -381,11 +384,14 @@ export default function EditProductPage() {
               <label htmlFor="compare-at-price" className="text-sm font-semibold text-slate-700 dark:text-gray-300">Compare at Price</label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-gray-500 font-medium">$</span>
-                <input id="compare-at-price" type="number" step="0.01" min="0"
+                <input id="compare-at-price" type="text" inputMode="decimal" pattern="[0-9]*\.?[0-9]*"
                   placeholder="Original price (optional)"
                   className={INPUT_CLS + ' pl-8'}
                   value={formData.compare_at_price}
-                  onChange={(e) => setFormData({ ...formData, compare_at_price: e.target.value })}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');
+                    setFormData({ ...formData, compare_at_price: val });
+                  }}
                 />
               </div>
             </div>
@@ -410,9 +416,12 @@ export default function EditProductPage() {
             {formData.product_type === 'single' && (
               <div className="space-y-1.5">
                 <label htmlFor="product-stock" className="text-sm font-semibold text-slate-700 dark:text-gray-300">Stock</label>
-                <input id="product-stock" type="number" min="0" className={INPUT_CLS}
+                <input id="product-stock" type="text" inputMode="numeric" className={INPUT_CLS}
                   value={formData.stock}
-                  onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/[^0-9]/g, '');
+                    setFormData({ ...formData, stock: val });
+                  }}
                 />
                 {(product?.reserved ?? 0) > 0 && (
                   <p className="text-xs text-violet-500 mt-1">{product.reserved} reserved</p>
@@ -459,12 +468,12 @@ export default function EditProductPage() {
         <div className="space-y-8 mb-8">
           {/* Select Attribute Value */}
           <section className="bg-white dark:bg-gray-800 rounded-xl border border-violet-500/10 p-6 md:p-8 shadow-sm">
-            <div className="flex items-center justify-between mb-6 pb-4 border-b border-violet-500/5">
-              <div className="flex items-center gap-2">
+            <div className="mb-6 pb-4 border-b border-violet-500/5">
+              <div className="flex items-center gap-2 mb-3">
                 <Sliders className="w-5 h-5 text-violet-500" />
-                <h2 className="text-xl font-bold text-slate-900 dark:text-white">Select Attribute Value</h2>
+                <h2 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white">Select Attribute Value</h2>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center justify-end gap-3">
                 <span className="text-sm font-semibold text-slate-700 dark:text-gray-300">Single Catalog</span>
                 <button
                   type="button"
@@ -479,27 +488,27 @@ export default function EditProductPage() {
             <div className="divide-y divide-slate-100 dark:divide-gray-700">
               {attributes.map((attr, attrIdx) => (
                 <div key={attr.id} className={`${attrIdx > 0 ? 'pt-5' : ''} ${attrIdx < attributes.length - 1 ? 'pb-5' : ''}`}>
-                  <h3 className="text-sm font-bold text-slate-800 mb-3">{attr.attribute_name}</h3>
-                  <div className="flex flex-wrap gap-3">
+                  <h3 className="text-sm font-bold text-slate-800 dark:text-gray-200 mb-3">{attr.attribute_name}</h3>
+                  <div className="flex flex-wrap gap-2 sm:gap-3">
                     {attr.attribute_values?.map((val) => {
                       const isSelected = selections[attr.attribute]?.includes(val.id);
                       return (
                         <label
                           key={val.id}
-                          className={`flex items-center gap-2.5 px-5 py-2.5 rounded-full cursor-pointer transition-all border ${
+                          className={`flex items-center gap-2 px-3 sm:px-5 py-2 sm:py-2.5 rounded-full cursor-pointer transition-all border ${
                             isSelected ? 'border-violet-500 bg-violet-500/5' : 'border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-slate-300'
                           }`}
                         >
                           {singleCatalogMode ? (
                             /* Radio circle */
-                            <span className={`w-[18px] h-[18px] rounded-full border flex items-center justify-center flex-shrink-0 transition-colors ${
+                            <span className={`w-4 h-4 sm:w-[18px] sm:h-[18px] rounded-full border flex items-center justify-center flex-shrink-0 transition-colors ${
                               isSelected ? 'border-violet-500' : 'border-slate-300'
                             }`}>
-                              {isSelected && <span className="w-2 h-2 rounded-full bg-violet-500" />}
+                              {isSelected && <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-violet-500" />}
                             </span>
                           ) : (
                             /* Checkbox square */
-                            <span className={`w-[18px] h-[18px] rounded flex items-center justify-center flex-shrink-0 transition-colors border ${
+                            <span className={`w-4 h-4 sm:w-[18px] sm:h-[18px] rounded flex items-center justify-center flex-shrink-0 transition-colors border ${
                               isSelected ? 'border-violet-500 bg-violet-500' : 'border-slate-300'
                             }`}>
                               {isSelected && (
@@ -528,7 +537,7 @@ export default function EditProductPage() {
             <div className="flex justify-end mt-6 pt-4 border-t border-slate-100 dark:border-gray-700">
               <button
                 onClick={handleAddCatalog}
-                className="px-6 py-2.5 rounded-lg font-semibold border border-violet-500 text-violet-500 hover:bg-violet-500/5 active:scale-95 transition-all text-sm"
+                className="w-full sm:w-auto px-8 py-3 rounded-lg font-bold border-2 border-violet-500 text-violet-500 hover:bg-violet-500/5 active:scale-95 transition-all"
               >
                 Add
               </button>
@@ -604,10 +613,13 @@ export default function EditProductPage() {
 
                           <td className="px-4 py-3">
                             <input
-                              type="number" min="0"
+                              type="text" inputMode="numeric"
                               value={catalog.stock ?? 0}
                               disabled={isPendingDelete}
-                              onChange={(e) => updateCatalogField(catalog.id, 'stock', e.target.value)}
+                              onChange={(e) => {
+                                const val = e.target.value.replace(/[^0-9]/g, '');
+                                updateCatalogField(catalog.id, 'stock', val);
+                              }}
                               onFocus={() => !isNew && updateCatalogField(catalog.id, 'isDirty', true)}
                               className="w-24 h-10 px-2 border border-violet-500/20 bg-violet-500/5 rounded-lg text-sm focus:outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                               placeholder="0"
@@ -619,11 +631,12 @@ export default function EditProductPage() {
 
                           <td className="px-4 py-3">
                             <input
-                              type="number" min="0" step="0.01"
+                              type="text" inputMode="decimal"
                               value={catalog.price ?? ''}
-                              disabled={isPendingDelete} 
+                              disabled={isPendingDelete}
                               onChange={(e) => {
-                                updateCatalogField(catalog.id, 'price', e.target.value);
+                                const val = e.target.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');
+                                updateCatalogField(catalog.id, 'price', val);
                                 if (!isNew) updateCatalogField(catalog.id, 'isDirty', true);
                               }}
                               className="w-28 h-10 px-2 border border-violet-500/20 bg-violet-500/5 rounded-lg text-sm focus:outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
@@ -727,7 +740,7 @@ export default function EditProductPage() {
               router.push('/products');
             }
           }}
-          className="px-8 py-3 rounded-lg font-bold border border-slate-200 dark:border-gray-700 text-slate-700 dark:text-gray-300 hover:bg-slate-100 dark:hover:bg-gray-700 transition-colors"
+          className="flex-1 sm:flex-none px-4 sm:px-8 py-3 rounded-lg font-bold border border-slate-200 dark:border-gray-700 text-slate-700 dark:text-gray-300 hover:bg-slate-100 dark:hover:bg-gray-700 transition-colors"
         >
           {pendingVariantDeletes.size > 0 ? 'Restore Deletions' : 'Cancel'}
         </button>
@@ -735,10 +748,10 @@ export default function EditProductPage() {
           type="submit"
           form="edit-product-form"
           disabled={saving}
-          className="px-12 py-3 rounded-lg font-bold bg-violet-500 text-white shadow-lg shadow-violet-500/30 hover:bg-violet-500/90 active:scale-95 transition-all disabled:opacity-50"
+          className="flex-1 sm:flex-none px-4 sm:px-12 py-3 rounded-lg font-bold bg-violet-500 text-white shadow-lg shadow-violet-500/30 hover:bg-violet-500/90 active:scale-95 transition-all disabled:opacity-50"
         >
           {saving ? (
-            <span className="flex items-center gap-2">
+            <span className="flex items-center justify-center gap-2">
               <Loader2 className="w-4 h-4 animate-spin" /> Saving...
             </span>
           ) : saveButtonLabel}

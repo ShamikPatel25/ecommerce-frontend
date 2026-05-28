@@ -6,7 +6,7 @@ import { productAPI } from '@/lib/api';
 import { formatDate } from '@/lib/utils';
 import Link from 'next/link';
 import {
-  ArrowLeft, ChevronRight, Edit, Package, Tag, Layers,
+  ChevronLeft, ChevronRight, Edit, Package, Tag, Layers,
   ImageIcon, Loader2, CheckCircle2, XCircle,
 } from 'lucide-react';
 
@@ -154,7 +154,7 @@ export default function ProductDetailPage() {
         </div>
         <div className="flex items-center gap-3 self-start md:self-auto">
           <button onClick={() => router.push('/products')} className="flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:bg-slate-50 dark:hover:bg-gray-700 transition-colors text-sm font-bold">
-            <ArrowLeft className="w-4 h-4" /> Back
+            <ChevronLeft className="w-7 h-7 text-slate-900 dark:text-white" strokeWidth={2.5} /> Back
           </button>
           <Link href={`/products/${productId}/edit`} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-violet-500 text-white hover:bg-violet-500/90 transition-colors text-sm font-bold shadow-sm">
             <Edit className="w-4 h-4" /> Edit Product

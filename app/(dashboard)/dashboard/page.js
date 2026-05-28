@@ -20,9 +20,10 @@ import {
 } from 'recharts';
 
 function useWindowWidth() {
-  const [width, setWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1024);
+  const [width, setWidth] = useState(0);
   useEffect(() => {
     const onResize = () => setWidth(window.innerWidth);
+    onResize(); // Set initial width on mount
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
   }, []);
@@ -306,12 +307,12 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
           {/* Revenue & Orders Chart */}
           <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-              <h3 className="text-[15px] font-semibold text-slate-900 dark:text-slate-100">Revenue & Orders (Last 7 Days)</h3>
+            <div className="px-4 sm:px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+              <h3 className="text-[14px] sm:text-[15px] font-semibold text-slate-900 dark:text-slate-100">Revenue & Orders (Last 7 Days)</h3>
             </div>
             <div className="p-2 sm:p-6">
-              <ResponsiveContainer width="100%" height={isMobile ? 220 : 300}>
-                <ComposedChart accessibilityLayer={false} data={revenueByDay} margin={isMobile ? { top: 5, right: 5, left: -10, bottom: 5 } : { top: 10, right: 30, left: 20, bottom: 5 }}>
+              <ResponsiveContainer width="100%" height={isMobile ? 200 : 300}>
+                <ComposedChart accessibilityLayer={false} data={revenueByDay} margin={isMobile ? { top: 10, right: 25, left: -5, bottom: 5 } : { top: 10, right: 30, left: 20, bottom: 5 }}>
                   <defs>
                     <linearGradient id="shadowRevenue" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.25} />
@@ -322,24 +323,53 @@ export default function DashboardPage() {
                       <stop offset="100%" stopColor="#3b82f6" stopOpacity={0} />
                     </linearGradient>
                   </defs>
-                  <XAxis dataKey="date" tick={{ fontSize: isMobile ? 10 : 12, fill: '#64748b' }} axisLine={{ stroke: '#e5e7eb' }} tickLine={false} />
-                  <YAxis yAxisId="revenue" tick={{ fontSize: isMobile ? 10 : 12, fill: '#64748b' }} tickFormatter={(v) => v >= 1000 ? `$${(v / 1000).toFixed(0)}k` : `$${v}`} axisLine={false} tickLine={false} width={isMobile ? 40 : 60} />
-                  {!isMobile && <YAxis yAxisId="orders" orientation="right" tick={{ fontSize: 12, fill: '#64748b' }} allowDecimals={false} axisLine={false} tickLine={false} />}
-                  <Tooltip contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '12px', color: '#334155', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }} formatter={(value, name) => name === 'Revenue' ? [formatCurrency(value, activeStore?.currency), 'Revenue'] : [value, 'Orders']} cursor={{ stroke: '#8b5cf6', strokeWidth: 1, strokeDasharray: '4 4' }} />
+                  <XAxis
+                    dataKey="date"
+                    tick={{ fontSize: isMobile ? 10 : 12, fill: '#64748b' }}
+                    axisLine={{ stroke: '#e5e7eb' }}
+                    tickLine={false}
+                    interval={0}
+                    tickFormatter={(value) => {
+                      if (!isMobile) return value;
+                      // Extract just the day number for mobile (e.g., "May 22" -> "22", "2024-05-22" -> "22")
+                      const match = value.match(/(\d{1,2})(?:\D|$)/);
+                      if (match) return match[1];
+                      return value.slice(-2);
+                    }}
+                  />
+                  <YAxis
+                    yAxisId="revenue"
+                    tick={{ fontSize: isMobile ? 9 : 12, fill: '#64748b' }}
+                    tickFormatter={(v) => v >= 1000 ? `$${(v / 1000).toFixed(0)}k` : `$${v}`}
+                    axisLine={false}
+                    tickLine={false}
+                    width={isMobile ? 32 : 60}
+                  />
+                  <YAxis
+                    yAxisId="orders"
+                    orientation="right"
+                    tick={{ fontSize: isMobile ? 9 : 12, fill: '#3b82f6' }}
+                    allowDecimals={false}
+                    axisLine={false}
+                    tickLine={false}
+                    width={isMobile ? 20 : 40}
+                  />
+                  <Tooltip contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: isMobile ? '11px' : '12px', color: '#334155', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }} formatter={(value, name) => name === 'Revenue' ? [formatCurrency(value, activeStore?.currency), 'Revenue'] : [value, 'Orders']} cursor={{ stroke: '#8b5cf6', strokeWidth: 1, strokeDasharray: '4 4' }} />
                   <Area yAxisId="revenue" type="monotone" dataKey="revenue" fill="url(#shadowRevenue)" stroke="none" tooltipType="none" />
-                  <Area yAxisId={isMobile ? 'revenue' : 'orders'} type="monotone" dataKey="orders" fill="url(#shadowOrders)" stroke="none" tooltipType="none" />
-                  <Line yAxisId="revenue" type="monotone" dataKey="revenue" stroke="#8b5cf6" strokeWidth={2.5} name="Revenue" dot={{ r: 4, fill: '#8b5cf6', stroke: '#fff', strokeWidth: 2 }} activeDot={{ r: 6, fill: '#8b5cf6' }} />
-                  <Line yAxisId={isMobile ? 'revenue' : 'orders'} type="monotone" dataKey="orders" stroke="#3b82f6" strokeWidth={2} name="Orders" dot={{ r: 3, fill: '#3b82f6', stroke: '#fff', strokeWidth: 2 }} activeDot={{ r: 5, fill: '#3b82f6' }} />
+                  <Area yAxisId="orders" type="monotone" dataKey="orders" fill="url(#shadowOrders)" stroke="none" tooltipType="none" />
+                  <Line yAxisId="revenue" type="monotone" dataKey="revenue" stroke="#8b5cf6" strokeWidth={isMobile ? 2 : 2.5} name="Revenue" dot={{ r: isMobile ? 3 : 4, fill: '#8b5cf6', stroke: '#fff', strokeWidth: 2 }} activeDot={{ r: isMobile ? 5 : 6, fill: '#8b5cf6' }} />
+                  <Line yAxisId="orders" type="monotone" dataKey="orders" stroke="#3b82f6" strokeWidth={2} name="Orders" dot={{ r: isMobile ? 2 : 3, fill: '#3b82f6', stroke: '#fff', strokeWidth: 2 }} activeDot={{ r: isMobile ? 4 : 5, fill: '#3b82f6' }} />
                 </ComposedChart>
               </ResponsiveContainer>
-              <div className="flex items-center justify-center gap-6 mt-2">
-                <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-full bg-violet-500" />
-                  <span className="text-xs text-gray-500">Revenue</span>
+              {/* Legend below chart */}
+              <div className="flex items-center justify-center gap-4 sm:gap-6 mt-2">
+                <div className="flex items-center gap-1.5 sm:gap-2">
+                  <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-violet-500" />
+                  <span className="text-[11px] sm:text-xs text-gray-500">Revenue</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-full bg-blue-500" />
-                  <span className="text-xs text-gray-500">Orders</span>
+                <div className="flex items-center gap-1.5 sm:gap-2">
+                  <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-blue-500" />
+                  <span className="text-[11px] sm:text-xs text-gray-500">Orders</span>
                 </div>
               </div>
             </div>

@@ -6,7 +6,7 @@ import { attributeAPI, categoryAPI } from '@/lib/api';
 import { useFormDraft } from '@/hooks/useFormDraft';
 import { toast } from 'sonner';
 import {
-  ArrowLeft, ChevronRight, ChevronDown, Info, List, PlusCircle, X, Loader2,
+  ChevronLeft, ChevronRight, ChevronDown, Info, List, PlusCircle, X, Loader2,
 } from 'lucide-react';
 import { useSharedDataStore } from '@/store/sharedDataStore';
 
@@ -79,16 +79,16 @@ export default function CreateAttributePage() {
       </nav>
 
       {/* Page Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-        <h1 className="text-3xl font-black tracking-tight text-slate-900 dark:text-white">Create Attribute</h1>
-        <button
-          type="button"
-          onClick={() => router.push('/attributes')}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg border border-violet-500/20 bg-white dark:bg-gray-800 hover:bg-violet-500/5 transition-colors text-sm font-bold self-start md:self-auto"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back to Attributes
-        </button>
+      <div className="flex flex-wrap items-start justify-between gap-4 mb-2">
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            onClick={() => router.push('/attributes')}
+            className="flex items-center gap-1.5 text-slate-500 dark:text-gray-400 hover:text-violet-500 text-sm font-medium transition-colors"
+          >
+            <ChevronLeft className="w-7 h-7 text-slate-900 dark:text-white" strokeWidth={2.5} />
+          </button>
+          <h1 className="admin-title">Create Attribute</h1>
+        </div>
       </div>
 
       <form id="create-attribute-form" onSubmit={handleSubmit} className="space-y-8">
@@ -200,17 +200,17 @@ export default function CreateAttributePage() {
           <button
             type="button"
             onClick={() => { clearDraft(); clearValuesDraft(); router.push('/attributes'); }}
-            className="px-8 py-3 rounded-lg font-bold border border-slate-200 dark:border-gray-700 text-slate-700 dark:text-gray-300 hover:bg-slate-100 dark:hover:bg-gray-700 transition-colors"
+            className="flex-1 sm:flex-none px-4 sm:px-8 py-3 rounded-lg font-bold border border-slate-200 dark:border-gray-700 text-slate-700 dark:text-gray-300 hover:bg-slate-100 dark:hover:bg-gray-700 transition-colors"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={submitting}
-            className="px-12 py-3 rounded-lg font-bold bg-violet-500 text-white shadow-lg shadow-violet-500/30 hover:bg-violet-500/90 active:scale-95 transition-all disabled:opacity-50"
+            className="flex-1 sm:flex-none px-4 sm:px-12 py-3 rounded-lg font-bold bg-violet-500 text-white shadow-lg shadow-violet-500/30 hover:bg-violet-500/90 active:scale-95 transition-all disabled:opacity-50"
           >
             {submitting ? (
-              <span className="flex items-center gap-2">
+              <span className="flex items-center justify-center gap-2">
                 <Loader2 className="w-4 h-4 animate-spin" /> Creating...
               </span>
             ) : 'Create Attribute'}

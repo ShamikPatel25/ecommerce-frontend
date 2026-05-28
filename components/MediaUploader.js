@@ -214,16 +214,16 @@ export default function MediaUploader({ productId, initialMedia = [], onMediaCha
 
       {/* Attribute Value Selector + Upload Button */}
       {attributeValues.length > 0 ? (
-        <div className="flex items-end gap-4">
-          <div>
+        <div className="flex flex-col sm:flex-row sm:items-end gap-3 sm:gap-4">
+          <div className="flex-1">
             <label className="text-sm font-semibold text-slate-700 dark:text-gray-300 mb-1.5 block">
               Upload images for:
             </label>
-            <div className="relative inline-block">
+            <div className="relative">
               <select
                 value={selectedAttrValue}
                 onChange={(e) => setSelectedAttrValue(e.target.value)}
-                className="appearance-none rounded-lg border border-[#8b5cf6]/20 bg-[#8b5cf6]/5 px-4 h-11 pr-10 text-sm text-slate-900 dark:text-white dark:bg-gray-700 dark:border-gray-600 focus:outline-none focus:border-[#8b5cf6] focus:ring-2 focus:ring-[#8b5cf6]/20 transition-all font-medium"
+                className="w-full appearance-none rounded-lg border border-[#8b5cf6]/20 bg-[#8b5cf6]/5 px-4 h-11 pr-10 text-sm text-slate-900 dark:text-white dark:bg-gray-700 dark:border-gray-600 focus:outline-none focus:border-[#8b5cf6] focus:ring-2 focus:ring-[#8b5cf6]/20 transition-all font-medium"
               >
                 <option value="">General (Product Main)</option>
                 {attributeValues.map(av => (
@@ -239,7 +239,7 @@ export default function MediaUploader({ productId, initialMedia = [], onMediaCha
             type="button"
             onClick={() => inputRef.current?.click()}
             disabled={uploading}
-            className="flex items-center gap-2 cursor-pointer rounded-lg h-11 px-6 bg-violet-500 text-white text-sm font-bold shadow-lg shadow-violet-500/20 hover:bg-violet-600 transition-all disabled:opacity-60 disabled:cursor-wait"
+            className="w-full sm:w-auto flex items-center justify-center gap-2 cursor-pointer rounded-lg h-11 px-6 bg-violet-500 text-white text-sm font-bold shadow-lg shadow-violet-500/20 hover:bg-violet-600 transition-all disabled:opacity-60 disabled:cursor-wait"
           >
             {uploading ? (
               <>
@@ -268,7 +268,7 @@ export default function MediaUploader({ productId, initialMedia = [], onMediaCha
             type="button"
             onClick={() => inputRef.current?.click()}
             disabled={uploading}
-            className="flex items-center gap-2 cursor-pointer rounded-lg h-11 px-6 bg-violet-500 text-white text-sm font-bold shadow-lg shadow-violet-500/20 hover:bg-violet-600 transition-all disabled:opacity-60 disabled:cursor-wait"
+            className="w-full sm:w-auto flex items-center justify-center gap-2 cursor-pointer rounded-lg h-11 px-6 bg-violet-500 text-white text-sm font-bold shadow-lg shadow-violet-500/20 hover:bg-violet-600 transition-all disabled:opacity-60 disabled:cursor-wait"
           >
             {uploading ? (
               <>

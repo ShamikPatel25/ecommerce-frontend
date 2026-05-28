@@ -5,7 +5,7 @@ import { authAPI } from '@/lib/api';
 import { useFormDraft } from '@/hooks/useFormDraft';
 import { useAuthStore } from '@/store/authStore';
 import { toast } from 'sonner';
-import { User, Loader2, Save, ArrowLeft, ChevronRight } from 'lucide-react';
+import { User, Loader2, Save, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 const INPUT_CLS =
@@ -123,16 +123,16 @@ export default function SettingsPage() {
       </nav>
 
       {/* Page Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-        <h1 className="text-3xl font-black tracking-tight text-slate-900 dark:text-white">Edit Profile</h1>
-        <button
-          type="button"
-          onClick={() => router.push('/dashboard')}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg border border-violet-500/20 bg-white dark:bg-gray-800 hover:bg-violet-500/5 transition-colors text-sm font-bold self-start md:self-auto"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back to Dashboard
-        </button>
+      <div className="flex flex-wrap items-start justify-between gap-4 mb-2">
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            onClick={() => router.push('/dashboard')}
+            className="flex items-center gap-1.5 text-slate-500 dark:text-gray-400 hover:text-violet-500 text-sm font-medium transition-colors"
+          >
+            <ChevronLeft className="w-7 h-7 text-slate-900 dark:text-white" strokeWidth={2.5} />
+          </button>
+          <h1 className="admin-title">Edit Profile</h1>
+        </div>
       </div>
 
         <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden shadow-sm">
@@ -208,7 +208,7 @@ export default function SettingsPage() {
                 <button
                   type="submit"
                   disabled={savingProfile}
-                  className="flex items-center gap-2 bg-violet-500 text-white font-bold rounded-lg px-8 py-3 shadow-lg shadow-violet-500/30 hover:bg-violet-500/90 active:scale-95 transition-all disabled:opacity-50"
+                  className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-violet-500 text-white font-bold rounded-lg px-4 sm:px-8 py-3 shadow-lg shadow-violet-500/30 hover:bg-violet-500/90 active:scale-95 transition-all disabled:opacity-50"
                 >
                   {savingProfile ? (
                     <>

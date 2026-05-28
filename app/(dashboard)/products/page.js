@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { productAPI, categoryAPI } from '@/lib/api';
 import { toast } from 'sonner';
 import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
-import { Plus, Search, MoreHorizontal, Trash2, Eye, EyeOff, Star, SlidersHorizontal } from 'lucide-react';
+import { Plus, Search, MoreHorizontal, Trash2, Eye, EyeOff, Star, SlidersHorizontal, Pencil } from 'lucide-react';
 import Pagination from '@/components/dashboard/Pagination';
 import { formatCurrency } from '@/lib/utils';
 import { useStoreStore } from '@/store/storeStore';
@@ -383,6 +383,16 @@ export default function ProductsPage() {
                                   <MoreHorizontal size={18} />
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end" sideOffset={8} className="w-44 rounded-xl shadow-lg border border-slate-200 dark:border-gray-700 p-1.5 bg-white dark:bg-gray-800 z-[100]">
+                                  <DropdownMenuItem
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      router.push(`/products/${product.id}/edit`);
+                                    }}
+                                    className="cursor-pointer flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-700 dark:text-gray-300 hover:bg-slate-50 dark:hover:bg-gray-700"
+                                  >
+                                    <Pencil size={16} className="text-slate-400 dark:text-gray-500" />
+                                    <span>Edit</span>
+                                  </DropdownMenuItem>
                                   <DropdownMenuItem
                                     onClick={(e) => {
                                       e.stopPropagation();

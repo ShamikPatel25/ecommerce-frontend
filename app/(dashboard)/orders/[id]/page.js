@@ -5,7 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { orderAPI } from '@/lib/api';
 import { toast } from 'sonner';
 import {
-  ArrowLeft, ChevronRight, Printer, Truck, Package,
+  ChevronLeft, ChevronRight, Printer, Truck, Package,
   Mail, Phone, MapPin, Save, CheckCircle2, Clock,
   ChevronDown, Loader2, XCircle, RotateCcw,
 } from 'lucide-react';
@@ -340,7 +340,7 @@ export default function OrderDetailPage() {
               onClick={() => router.push('/orders')}
               className="flex items-center gap-1.5 text-slate-500 dark:text-gray-400 hover:text-violet-500 text-sm font-medium transition-colors"
             >
-              <ArrowLeft className="w-4 h-4" />
+              <ChevronLeft className="w-7 h-7 text-slate-900 dark:text-white" strokeWidth={2.5} />
             </button>
             <h1 className="admin-title">
               Order #{order.id}

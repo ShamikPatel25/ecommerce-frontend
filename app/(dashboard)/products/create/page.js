@@ -6,7 +6,7 @@ import { productAPI, categoryAPI, attributeAPI } from '@/lib/api';
 import { useFormDraft } from '@/hooks/useFormDraft';
 import { toast } from 'sonner';
 import {
-  ArrowLeft, ChevronRight, Info, ImageIcon, ChevronDown,
+  ChevronLeft, ChevronRight, Info, ImageIcon, ChevronDown,
   CloudUpload, Plus, Loader2, Sliders, Package, Trash2, Star,
 } from 'lucide-react';
 import { useDashboardStore } from '@/store/dashboardStore';
@@ -151,7 +151,7 @@ const renderStep1ActionButton = (productType, submitting, attributes, selectedAt
         type="button"
         onClick={onGenerateCatalog}
         disabled={attributes.length === 0 || selectedAttributes.length === 0}
-        className="px-12 py-3 rounded-lg font-bold bg-violet-500 text-white shadow-lg shadow-violet-500/30 hover:bg-violet-500/90 active:scale-95 transition-all disabled:opacity-50"
+        className="flex-1 flex items-center justify-center px-4 py-3 rounded-lg font-bold bg-violet-500 text-white shadow-lg shadow-violet-500/30 hover:bg-violet-500/90 active:scale-95 transition-all disabled:opacity-50"
       >
         Generate Catalog
       </button>
@@ -161,10 +161,10 @@ const renderStep1ActionButton = (productType, submitting, attributes, selectedAt
     <button
       type="submit"
       disabled={submitting}
-      className="px-12 py-3 rounded-lg font-bold bg-violet-500 text-white shadow-lg shadow-violet-500/30 hover:bg-violet-500/90 active:scale-95 transition-all disabled:opacity-50"
+      className="flex-1 flex items-center justify-center px-4 py-3 rounded-lg font-bold bg-violet-500 text-white shadow-lg shadow-violet-500/30 hover:bg-violet-500/90 active:scale-95 transition-all disabled:opacity-50"
     >
       {submitting ? (
-        <span className="flex items-center gap-2">
+        <span className="flex items-center justify-center gap-2">
           <Loader2 className="w-4 h-4 animate-spin" /> Creating&hellip;
         </span>
       ) : 'Create Product'}
@@ -218,14 +218,21 @@ export default function CreateProductPage() {
   }, [fetchCategoriesData]);
 
   /* ── fetch attributes when category changes ── */
-  const fetchAttributes = async (categoryId) => {
+  const fetchAttributes = useCallback(async (categoryId) => {
     try {
       const res  = await attributeAPI.byCategory(categoryId);
       setAttributes(res.data?.attributes || []);
     } catch {
       setAttributes([]);
     }
-  };
+  }, []);
+
+  // Fetch attributes on initial load if category is restored from draft
+  useEffect(() => {
+    if (formData.category && formData.product_type === 'catalog') {
+      fetchAttributes(formData.category);
+    }
+  }, [formData.category, formData.product_type, fetchAttributes]);
 
   const handleCategoryChange = (categoryId) => {
     setFormData({ ...formData, category: categoryId });
@@ -710,7 +717,7 @@ export default function CreateProductPage() {
             onClick={() => setStep(1)}
             className="flex items-center gap-2 px-4 py-2 rounded-lg border border-violet-500/20 bg-white dark:bg-gray-800 dark:border-gray-600 hover:bg-violet-500/5 transition-colors text-sm font-bold self-start md:self-auto"
           >
-            <ArrowLeft className="w-4 h-4" />
+            <ChevronLeft className="w-7 h-7 text-slate-900 dark:text-white" strokeWidth={2.5} />
             Back
           </button>
         </div>
@@ -718,14 +725,13 @@ export default function CreateProductPage() {
         {/* Select Values Card */}
         <section className="bg-white dark:bg-gray-800 rounded-xl border border-violet-500/10 dark:border-gray-700 p-6 md:p-8 shadow-sm mb-8">
           {/* Header + Toggle */}
-          <div className="flex items-center justify-between mb-6 pb-4 border-b border-violet-500/5 dark:border-gray-700">
-            <div className="flex items-center gap-2">
+          <div className="mb-6 pb-4 border-b border-violet-500/5 dark:border-gray-700">
+            <div className="flex items-center gap-2 mb-3">
               <Sliders className="w-5 h-5 text-violet-500" />
-              <h2 className="text-xl font-bold text-slate-900 dark:text-white">Select Attribute Value</h2>
+              <h2 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white">Select Attribute Value</h2>
             </div>
-
             {/* Single Catalog Toggle */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center justify-end gap-3">
               <span className="text-sm font-semibold text-slate-700 dark:text-gray-300">Single Catalog</span>
               <button
                 type="button"
@@ -747,20 +753,20 @@ export default function CreateProductPage() {
 
                 {singleMode ? (
                   /* ── Radio buttons ── */
-                  <div className="flex flex-wrap gap-3">
+                  <div className="flex flex-wrap gap-2 sm:gap-3">
                     {attr.values?.map((v) => {
                       const isSelected = String(comboSelections[attr.id]) === String(v.id);
                       return (
                         <label
                           key={v.id}
-                          className={`flex items-center gap-2.5 px-5 py-2.5 rounded-full cursor-pointer transition-all border ${
+                          className={`flex items-center gap-2 px-3 sm:px-5 py-2 sm:py-2.5 rounded-full cursor-pointer transition-all border ${
                             isSelected ? 'border-violet-500 bg-violet-500/5' : 'border-slate-200 dark:border-gray-600 bg-white dark:bg-gray-800 hover:border-slate-300 dark:hover:border-gray-500'
                           }`}
                         >
-                          <span className={`w-[18px] h-[18px] rounded-full border flex items-center justify-center flex-shrink-0 transition-colors ${
+                          <span className={`w-4 h-4 sm:w-[18px] sm:h-[18px] rounded-full border flex items-center justify-center flex-shrink-0 transition-colors ${
                             isSelected ? 'border-violet-500' : 'border-slate-300 dark:border-gray-500'
                           }`}>
-                            {isSelected && <span className="w-2 h-2 rounded-full bg-violet-500" />}
+                            {isSelected && <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-violet-500" />}
                           </span>
                           <input
                             type="radio"
@@ -777,18 +783,18 @@ export default function CreateProductPage() {
                   </div>
                 ) : (
                   /* ── Checkboxes ── */
-                  <div className="flex flex-wrap gap-3">
+                  <div className="flex flex-wrap gap-2 sm:gap-3">
                     {attr.values?.map((v) => {
                       const currentSel = comboSelections[attr.id] || [];
                       const isChecked = currentSel.includes(String(v.id));
                       return (
                         <label
                           key={v.id}
-                          className={`flex items-center gap-2.5 px-5 py-2.5 rounded-full cursor-pointer transition-all border ${
+                          className={`flex items-center gap-2 px-3 sm:px-5 py-2 sm:py-2.5 rounded-full cursor-pointer transition-all border ${
                             isChecked ? 'border-violet-500 bg-violet-500/5' : 'border-slate-200 dark:border-gray-600 bg-white dark:bg-gray-800 hover:border-slate-300 dark:hover:border-gray-500'
                           }`}
                         >
-                          <span className={`w-[18px] h-[18px] rounded flex items-center justify-center flex-shrink-0 transition-colors border ${
+                          <span className={`w-4 h-4 sm:w-[18px] sm:h-[18px] rounded flex items-center justify-center flex-shrink-0 transition-colors border ${
                             isChecked ? 'border-violet-500 bg-violet-500' : 'border-slate-300 dark:border-gray-500'
                           }`}>
                             {isChecked && (
@@ -818,7 +824,7 @@ export default function CreateProductPage() {
             <button
               type="button"
               onClick={handleAddCombo}
-              className="px-6 py-2.5 rounded-lg font-semibold border border-violet-500 text-violet-500 hover:bg-violet-500/5 active:scale-95 transition-all text-sm"
+              className="w-full sm:w-auto px-8 py-3 rounded-lg font-bold border-2 border-violet-500 text-violet-500 hover:bg-violet-500/5 active:scale-95 transition-all"
             >
               Add
             </button>
@@ -874,22 +880,27 @@ export default function CreateProductPage() {
                       })}
                       <td className="py-3 px-3">
                         <input
-                          type="number"
-                          step="0.01"
-                          min="0"
+                          type="text"
+                          inputMode="decimal"
                           placeholder={formData.price || '0.00'}
                           value={combo.price}
-                          onChange={(e) => updateComboField(idx, 'price', e.target.value)}
+                          onChange={(e) => {
+                            const val = e.target.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');
+                            updateComboField(idx, 'price', val);
+                          }}
                           className="w-24 px-2 py-1.5 rounded-md border border-violet-500/20 bg-violet-500/5 text-sm focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/20 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                         />
                       </td>
                       <td className="py-3 px-3">
                         <input
-                          type="number"
-                          min="0"
+                          type="text"
+                          inputMode="numeric"
                           placeholder="0"
                           value={combo.stock}
-                          onChange={(e) => updateComboField(idx, 'stock', e.target.value)}
+                          onChange={(e) => {
+                            const val = e.target.value.replace(/[^0-9]/g, '');
+                            updateComboField(idx, 'stock', val);
+                          }}
                           className="w-20 px-2 py-1.5 rounded-md border border-violet-500/20 bg-violet-500/5 text-sm focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/20 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                         />
                       </td>
@@ -911,14 +922,14 @@ export default function CreateProductPage() {
         </section>
 
         {/* Action Buttons */}
-        <div className="flex items-center justify-end gap-3">
+        <div className="flex gap-3">
           <button
             type="button"
             onClick={() => {
               clearFormDraft(); clearSelAttrDraft(); clearCombosDraft(); clearComboSelDraft(); clearStepDraft();
               router.push('/products');
             }}
-            className="px-8 py-3 rounded-lg font-bold border border-slate-200 dark:border-gray-600 text-slate-700 dark:text-gray-300 hover:bg-slate-100 dark:hover:bg-gray-700 transition-colors"
+            className="flex-1 flex items-center justify-center px-4 py-3 rounded-lg font-bold border border-slate-200 dark:border-gray-600 text-slate-700 dark:text-gray-300 hover:bg-slate-100 dark:hover:bg-gray-700 transition-colors"
           >
             Cancel
           </button>
@@ -926,10 +937,10 @@ export default function CreateProductPage() {
             type="button"
             onClick={handleSubmit}
             disabled={submitting || catalogCombos.length === 0}
-            className="px-12 py-3 rounded-lg font-bold bg-violet-500 text-white shadow-lg shadow-violet-500/30 hover:bg-violet-500/90 active:scale-95 transition-all disabled:opacity-50"
+            className="flex-1 flex items-center justify-center px-4 py-3 rounded-lg font-bold bg-violet-500 text-white shadow-lg shadow-violet-500/30 hover:bg-violet-500/90 active:scale-95 transition-all disabled:opacity-50"
           >
             {submitting ? (
-              <span className="flex items-center gap-2">
+              <span className="flex items-center justify-center gap-2">
                 <Loader2 className="w-4 h-4 animate-spin" /> Creating&hellip;
               </span>
             ) : 'Create Product'}
@@ -957,19 +968,16 @@ export default function CreateProductPage() {
       </nav>
 
       {/* Page Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-        <h1 className="text-3xl font-black tracking-tight text-slate-900 dark:text-white">Create New Product</h1>
-        <button
-          type="button"
-          onClick={() => {
-            clearFormDraft(); clearSelAttrDraft(); clearStepDraft(); clearCombosDraft(); clearComboSelDraft();
-            router.push('/products');
-          }}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg border border-violet-500/20 bg-white dark:bg-gray-800 dark:border-gray-600 hover:bg-violet-500/5 transition-colors text-sm font-bold self-start md:self-auto"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back to Products
-        </button>
+      <div className="flex flex-wrap items-start justify-between gap-4 mb-2">
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            onClick={() => router.push('/products')}
+            className="flex items-center gap-1.5 text-slate-500 dark:text-gray-400 hover:text-violet-500 text-sm font-medium transition-colors"
+          >
+            <ChevronLeft className="w-7 h-7 text-slate-900 dark:text-white" strokeWidth={2.5} />
+          </button>
+          <h1 className="admin-title">Create New Product</h1>
+        </div>
       </div>
 
       <form id="create-product-form" onSubmit={handleSubmit} className="space-y-8">
@@ -1019,11 +1027,17 @@ export default function CreateProductPage() {
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-gray-500 font-medium">$</span>
                 <input
                   id="product-price"
-                  type="number" step="0.01" min="0" required
+                  type="text"
+                  inputMode="decimal"
+                  pattern="[0-9]*\.?[0-9]*"
+                  required
                   placeholder="0.00"
                   className={INPUT_CLS + ' pl-8'}
                   value={formData.price}
-                  onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');
+                    setFormData({ ...formData, price: val });
+                  }}
                 />
               </div>
             </div>
@@ -1034,11 +1048,16 @@ export default function CreateProductPage() {
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-gray-500 font-medium">$</span>
                 <input
                   id="product-compare-price"
-                  type="number" step="0.01" min="0"
+                  type="text"
+                  inputMode="decimal"
+                  pattern="[0-9]*\.?[0-9]*"
                   placeholder="Original price (optional)"
                   className={INPUT_CLS + ' pl-8'}
                   value={formData.compare_at_price}
-                  onChange={(e) => setFormData({ ...formData, compare_at_price: e.target.value })}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');
+                    setFormData({ ...formData, compare_at_price: val });
+                  }}
                 />
               </div>
             </div>
@@ -1092,11 +1111,15 @@ export default function CreateProductPage() {
                 <label htmlFor="product-stock" className="text-sm font-semibold text-slate-700 dark:text-gray-300">Stock</label>
                 <input
                   id="product-stock"
-                  type="number" min="0"
+                  type="text"
+                  inputMode="numeric"
                   placeholder="0"
                   className={INPUT_CLS}
                   value={formData.stock}
-                  onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/[^0-9]/g, '');
+                    setFormData({ ...formData, stock: val });
+                  }}
                 />
               </div>
             )}
@@ -1249,14 +1272,14 @@ export default function CreateProductPage() {
         )}
 
         {/* ── Action Buttons ── */}
-        <div className="flex items-center justify-end gap-3 pt-2">
+        <div className="flex gap-3 pt-2">
           <button
             type="button"
             onClick={() => {
               clearFormDraft(); clearSelAttrDraft(); clearStepDraft(); clearCombosDraft(); clearComboSelDraft();
               router.push('/products');
             }}
-            className="px-8 py-3 rounded-lg font-bold border border-slate-200 dark:border-gray-600 text-slate-700 dark:text-gray-300 hover:bg-slate-100 dark:hover:bg-gray-700 transition-colors"
+            className="flex-1 flex items-center justify-center px-4 py-3 rounded-lg font-bold border border-slate-200 dark:border-gray-600 text-slate-700 dark:text-gray-300 hover:bg-slate-100 dark:hover:bg-gray-700 transition-colors"
           >
             Cancel
           </button>
