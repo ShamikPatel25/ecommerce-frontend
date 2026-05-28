@@ -10,12 +10,13 @@ import { useStorefrontPath } from '@/lib/useStorefrontPath';
 import {
   User, PackageX, Package, Calendar, ChevronDown, ChevronUp,
   Box, ShoppingBag, Truck, CheckCircle2, Clock, XCircle,
-  RotateCcw, AlertCircle, RefreshCw, ArrowRight, Loader2,
+  RotateCcw, AlertCircle, RefreshCw, ArrowRight,
 } from 'lucide-react';
 import ConfirmActionModal from '@/components/storefront/ConfirmActionModal';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { formatCurrency } from '@/lib/utils';
 
 /* ─────────────────────────────────────── */
 /*  Status metadata                        */
@@ -274,7 +275,7 @@ function OrderCard({ order, isExpanded, onToggle, href, onRefresh }) {
               </span>
             </div>
             <p className="font-black text-foreground text-lg sm:text-2xl mt-1">
-              ₹{activeTotal.toFixed(2)}
+              {formatCurrency(activeTotal)}
             </p>
           </div>
 
@@ -373,7 +374,7 @@ function OrderCard({ order, isExpanded, onToggle, href, onRefresh }) {
                       {/* Subtotal & Item Actions */}
                       <div className="flex flex-col items-end gap-2 shrink-0 min-w-[80px]">
                         <p className={`font-black ${['cancelled', 'returned'].includes(item.status) ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
-                          ₹{Number.parseFloat(item.subtotal).toFixed(2)}
+                          {formatCurrency(Number.parseFloat(item.subtotal))}
                         </p>
                         
                         {/* Item level buttons */}
@@ -422,12 +423,12 @@ function OrderCard({ order, isExpanded, onToggle, href, onRefresh }) {
                 {inactiveLabel && (
                   <div className="flex justify-between items-center">
                     <span className="text-sm font-medium text-red-400 capitalize">{inactiveLabel}</span>
-                    <span className="text-sm font-medium text-red-400 line-through">₹{inactiveTotal.toFixed(2)}</span>
+                    <span className="text-sm font-medium text-red-400 line-through">{formatCurrency(inactiveTotal)}</span>
                   </div>
                 )}
                 <div className="flex justify-between items-center">
                   <span className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Order Total</span>
-                  <span className="text-2xl font-black text-foreground">₹{activeTotal.toFixed(2)}</span>
+                  <span className="text-2xl font-black text-foreground">{formatCurrency(activeTotal)}</span>
                 </div>
               </div>
 

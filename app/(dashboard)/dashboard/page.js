@@ -7,6 +7,7 @@ import { categoryAPI, productAPI, orderAPI } from '@/lib/api';
 import { useStoreStore } from '@/store/storeStore';
 import { useDashboardStore } from '@/store/dashboardStore';
 import { formatCurrency } from '@/lib/utils';
+import { PIE_COLORS } from '@/lib/constants';
 import { toast } from 'sonner';
 import Link from 'next/link';
 import {
@@ -36,8 +37,6 @@ const STATUS_STYLES = {
   delivered: 'bg-blue-500/10 text-blue-400 border border-blue-500/20',
   cancelled: 'bg-red-500/10 text-red-400 border border-red-500/20',
 };
-
-const PIE_COLORS = ['#8b5cf6', '#a78bfa', '#7c3aed', '#6d28d9', '#c4b5fd', '#5b21b6'];
 
 function getInitials(name) {
   if (!name) return '??';

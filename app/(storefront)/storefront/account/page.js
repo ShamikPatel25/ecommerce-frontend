@@ -14,12 +14,14 @@ export default function AccountPage() {
   const [addresses, setAddresses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({ first_name: '', last_name: '', phone: '' });
+  const [form, setForm] = useState({ first_name: '', last_name: '', email: '', phone: '' });
   const [phoneError, setPhoneError] = useState('');
+  const [emailError, setEmailError] = useState('');
   const [editingAddress, setEditingAddress] = useState(null);
   const [addressForm, setAddressForm] = useState({ label: 'home', address_line_1: '', address_line_2: '', city: '', state: '', postal_code: '', country: 'India' });
   const [addressSaving, setAddressSaving] = useState(false);
   const [addressErrors, setAddressErrors] = useState({});
+  const [deleteAddressId, setDeleteAddressId] = useState(null);
 
   const customer = useStorefrontAuthStore((s) => s.customer);
   const accessToken = useStorefrontAuthStore((s) => s.accessToken);
@@ -43,6 +45,7 @@ export default function AccountPage() {
       setForm({
         first_name: profileRes.data.first_name || '',
         last_name: profileRes.data.last_name || '',
+        email: profileRes.data.email || '',
         phone: profileRes.data.phone || '',
       });
     } catch {
@@ -70,7 +73,25 @@ export default function AccountPage() {
     }
   };
 
+  const handleEmailChange = (e) => {
+    const value = e.target.value;
+    setForm({ ...form, email: value });
+    if (value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+      setEmailError('Enter a valid email address');
+    } else {
+      setEmailError('');
+    }
+  };
+
   const handleProfileSave = async () => {
+    if (!form.email || !form.email.trim()) {
+      setEmailError('Email is required');
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
+      setEmailError('Enter a valid email address');
+      return;
+    }
     if (form.phone && form.phone.length < 10) {
       setPhoneError('Phone number must be at least 10 digits');
       return;
@@ -85,8 +106,9 @@ export default function AccountPage() {
       setProfile(res.data);
       if (setCustomer) setCustomer(res.data);
       toast.success('Profile updated');
-    } catch {
-      toast.error('Failed to update profile');
+    } catch (err) {
+      const msg = err?.response?.data?.email?.[0] || err?.response?.data?.detail || 'Failed to update profile';
+      toast.error(msg);
     } finally {
       setSaving(false);
     }
@@ -180,13 +202,16 @@ export default function AccountPage() {
     }
   };
 
-  const handleAddressDelete = async (id) => {
+  const handleAddressDelete = async () => {
+    if (!deleteAddressId) return;
     try {
-      await storefrontAPI.deleteAddress(id);
-      setAddresses((prev) => prev.filter((a) => a.id !== id));
+      await storefrontAPI.deleteAddress(deleteAddressId);
+      setAddresses((prev) => prev.filter((a) => a.id !== deleteAddressId));
       toast.success('Address deleted');
     } catch {
       toast.error('Failed to delete address');
+    } finally {
+      setDeleteAddressId(null);
     }
   };
 
@@ -249,11 +274,15 @@ export default function AccountPage() {
                   <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50" />
                   <input
                     type="email"
-                    value={data.email || ''}
-                    disabled
-                    className="w-full pl-10 pr-3.5 py-2.5 rounded-lg bg-muted/30 border-0 text-sm text-muted-foreground cursor-not-allowed"
+                    value={form.email}
+                    onChange={handleEmailChange}
+                    className={`w-full pl-10 pr-3.5 py-2.5 rounded-lg bg-muted/50 border-0 focus:ring-2 focus:ring-primary/20 focus:bg-background text-sm text-foreground transition-all placeholder:text-muted-foreground/60 ${emailError ? 'ring-2 ring-red-500/50' : ''}`}
+                    placeholder="Enter email"
                   />
                 </div>
+                {emailError && (
+                  <p className="text-xs text-red-500 mt-1.5">{emailError}</p>
+                )}
               </div>
               <div>
                 <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1.5 block">Phone</label>
@@ -276,7 +305,7 @@ export default function AccountPage() {
             <div className="flex justify-end mt-6">
               <button
                 onClick={handleProfileSave}
-                disabled={saving || !!phoneError}
+                disabled={saving || !!phoneError || !!emailError}
                 className="px-5 py-2 bg-primary text-primary-foreground rounded-lg font-medium text-sm hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center gap-2"
               >
                 {saving && <Loader2 className="w-4 h-4 animate-spin" />}
@@ -464,38 +493,40 @@ export default function AccountPage() {
                   return (
                     <div
                       key={addr.id}
-                      className="flex items-start gap-4 p-4 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors group"
+                      className="flex items-start gap-4"
                     >
                       <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
                         <Icon className="w-4 h-4 text-primary" />
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="font-medium text-foreground text-sm capitalize">{addr.label}</span>
-                          {addr.is_default && (
-                            <span className="text-[10px] font-medium bg-primary/10 text-primary px-2 py-0.5 rounded-full">Default</span>
-                          )}
+                      <div className="flex-1 flex items-start gap-4 p-4 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="font-medium text-foreground text-sm capitalize">{addr.label}</span>
+                            {addr.is_default && (
+                              <span className="text-[10px] font-medium bg-primary/10 text-primary px-2 py-0.5 rounded-full">Default</span>
+                            )}
+                          </div>
+                          <p className="text-sm text-muted-foreground leading-relaxed">
+                            {addr.address_line_1}
+                            {addr.address_line_2 && `, ${addr.address_line_2}`}
+                            <br />
+                            {addr.city}, {addr.state} {addr.postal_code}
+                          </p>
                         </div>
-                        <p className="text-sm text-muted-foreground leading-relaxed">
-                          {addr.address_line_1}
-                          {addr.address_line_2 && `, ${addr.address_line_2}`}
-                          <br />
-                          {addr.city}, {addr.state} {addr.postal_code}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button
-                          onClick={() => openAddressForm(addr)}
-                          className="p-2 rounded-lg hover:bg-background text-muted-foreground hover:text-primary transition-colors"
-                        >
-                          <Pencil className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleAddressDelete(addr.id)}
-                          className="p-2 rounded-lg hover:bg-background text-muted-foreground hover:text-red-500 transition-colors"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => openAddressForm(addr)}
+                            className="p-2 rounded-lg hover:bg-background text-muted-foreground hover:text-primary transition-colors"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => setDeleteAddressId(addr.id)}
+                            className="p-2 rounded-lg hover:bg-background text-muted-foreground hover:text-red-500 transition-colors"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       </div>
                     </div>
                   );
@@ -504,7 +535,41 @@ export default function AccountPage() {
             )}
           </div>
         </div>
+
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {deleteAddressId && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-background rounded-2xl shadow-xl max-w-sm w-full p-6 border border-border">
+            <div className="flex justify-center mb-4">
+              <div className="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+                <Trash2 className="w-6 h-6 text-red-600 dark:text-red-400" />
+              </div>
+            </div>
+            <h3 className="text-lg font-semibold text-center text-foreground mb-2">Delete Address?</h3>
+            <p className="text-sm text-muted-foreground text-center mb-6">
+              Are you sure you want to delete this address? This action cannot be undone.
+            </p>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setDeleteAddressId(null)}
+                className="flex-1 px-4 py-2.5 rounded-lg border border-border bg-background text-foreground font-medium hover:bg-muted transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleAddressDelete}
+                className="flex-1 px-4 py-2.5 rounded-lg bg-red-600 text-white font-medium hover:bg-red-700 transition-colors"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -7,8 +7,8 @@ import { useStoreStore } from '@/store/storeStore';
 import { useState, useEffect, useRef } from 'react';
 import { useThemeStore } from '@/store/themeStore';
 import {
-  Sun, Moon, LayoutGrid, Activity, ShoppingBag, Package,
-  FolderOpen, Tag, Users, Home, Bell, Settings,
+  Sun, Moon, LayoutGrid, ShoppingBag, Package,
+  FolderOpen, Tag, Users, Home, Settings,
   ChevronDown, LogOut, Lock, Plus, X, Menu, BookOpen, User,
 } from 'lucide-react';
 import NotificationBell from '@/components/NotificationBell';

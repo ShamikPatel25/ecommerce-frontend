@@ -9,17 +9,10 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import Pagination from '@/components/dashboard/Pagination';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, formatDate } from '@/lib/utils';
 import { useStoreStore } from '@/store/storeStore';
 
 const PER_PAGE = 10;
-
-function formatDate(iso) {
-  if (!iso) return '—';
-  return new Date(iso).toLocaleDateString('en-US', {
-    month: 'short', day: 'numeric', year: 'numeric',
-  });
-}
 
 /* unique key for each aggregated customer row */
 function customerKey(c) {
@@ -73,19 +66,25 @@ export default function CustomersPage() {
   // Reset to page 1 when search changes
   useEffect(() => {
     setCurrentPage(1);
+    setExpandedKey(null);
+    setCustomerOrders([]);
   }, [searchQuery]);
 
-  /* ── expand / collapse row ── */
-  const toggleExpand = async (customer) => {
-    const key = customerKey(customer);
+  // Reset expanded state when page changes
+  useEffect(() => {
+    setExpandedKey(null);
+    setCustomerOrders([]);
+  }, [currentPage]);
 
-    if (expandedKey === key) {
+  /* ── expand / collapse row ── */
+  const toggleExpand = async (customer, rowIndex) => {
+    if (expandedKey === rowIndex) {
       setExpandedKey(null);
       setCustomerOrders([]);
       return;
     }
 
-    setExpandedKey(key);
+    setExpandedKey(rowIndex);
     setCustomerOrders([]);
     setLoadingOrders(true);
     try {
@@ -175,11 +174,11 @@ export default function CustomersPage() {
                     <tbody className="admin-tbody">
                       {paginatedCustomers.map((customer, idx) => {
                         const key = customerKey(customer);
-                        const isExpanded = expandedKey === key;
+                        const isExpanded = expandedKey === idx;
                         return (
                           <Fragment key={key + `-${idx}`}>
                             <tr
-                              onClick={() => toggleExpand(customer)}
+                              onClick={() => toggleExpand(customer, idx)}
                               className={`admin-tr group ${isExpanded ? 'bg-orange-50/50 dark:bg-orange-900/10' : ''}`}
                             >
                               <td className="admin-td text-left">

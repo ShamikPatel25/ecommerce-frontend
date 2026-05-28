@@ -21,11 +21,6 @@ import { Button, buttonVariants } from '@/components/ui/button';
 function validateCheckoutForm(form) {
   const errs = {};
   if (!form.customer_name.trim()) errs.customer_name = 'Full name is required';
-  if (!form.customer_email.trim()) {
-    errs.customer_email = 'Email is required';
-  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.customer_email)) {
-    errs.customer_email = 'Enter a valid email address';
-  }
   if (!form.customer_phone.trim()) {
     errs.customer_phone = 'Phone number is required';
   } else if (!/^\d{10}$/.test(form.customer_phone)) {
@@ -94,7 +89,6 @@ export default function CheckoutPage() {
   const [selectedAddressId, setSelectedAddressId] = useState(null);
   const [form, setForm] = useState({
     customer_name: '',
-    customer_email: '',
     customer_phone: '',
     notes: '',
     address_line_1: '',
@@ -127,7 +121,6 @@ export default function CheckoutPage() {
       setForm((prev) => ({
         ...prev,
         customer_name: prev.customer_name || [customer.first_name, customer.last_name].filter(Boolean).join(' '),
-        customer_email: prev.customer_email || customer.email || '',
         customer_phone: prev.customer_phone || customer.phone || '',
       }));
     }
@@ -221,7 +214,7 @@ export default function CheckoutPage() {
 
     const orderData = {
       customer_name: form.customer_name,
-      customer_email: form.customer_email,
+      customer_email: customer?.email || '',
       customer_phone: form.customer_phone,
       notes: form.notes || undefined,
       address_line_1: form.address_line_1,
@@ -292,44 +285,25 @@ export default function CheckoutPage() {
                   <h2 className="font-black text-card-foreground text-2xl tracking-tight">Customer Information</h2>
                 </div>
                 <div className="space-y-6">
-                  <div className="space-y-2">
-                    <label htmlFor="customer-name" className="block text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                      Full Name <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      id="customer-name"
-                      type="text"
-                      required
-                      value={form.customer_name}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        setForm((prev) => ({ ...prev, customer_name: value }));
-                        setErrors((prev) => ({ ...prev, customer_name: '' }));
-                      }}
-                      placeholder="John Doe"
-                      className={`w-full px-5 py-4 rounded-xl bg-background border ${errors.customer_name ? 'border-red-500 focus:ring-1 focus:ring-red-500' : 'border-border focus:border-primary focus:ring-1 focus:ring-primary'} focus:outline-none text-sm font-medium transition-all placeholder:text-muted-foreground/50 text-foreground`}
-                    />
-                    {errors.customer_name && <p className="text-red-500 text-xs font-bold mt-1.5">{errors.customer_name}</p>}
-                  </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
-                      <label htmlFor="customer-email" className="block text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                        Email <span className="text-red-500">*</span>
+                      <label htmlFor="customer-name" className="block text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                        Full Name <span className="text-red-500">*</span>
                       </label>
                       <input
-                        id="customer-email"
-                        type="email"
+                        id="customer-name"
+                        type="text"
                         required
-                        value={form.customer_email}
+                        value={form.customer_name}
                         onChange={(e) => {
                           const value = e.target.value;
-                          setForm((prev) => ({ ...prev, customer_email: value }));
-                          setErrors((prev) => ({ ...prev, customer_email: '' }));
+                          setForm((prev) => ({ ...prev, customer_name: value }));
+                          setErrors((prev) => ({ ...prev, customer_name: '' }));
                         }}
-                        placeholder="john@example.com"
-                        className={`w-full px-5 py-4 rounded-xl bg-background border ${errors.customer_email ? 'border-red-500 focus:ring-1 focus:ring-red-500' : 'border-border focus:border-primary focus:ring-1 focus:ring-primary'} focus:outline-none text-sm font-medium transition-all placeholder:text-muted-foreground/50 text-foreground`}
+                        placeholder="John Doe"
+                        className={`w-full px-5 py-4 rounded-xl bg-background border ${errors.customer_name ? 'border-red-500 focus:ring-1 focus:ring-red-500' : 'border-border focus:border-primary focus:ring-1 focus:ring-primary'} focus:outline-none text-sm font-medium transition-all placeholder:text-muted-foreground/50 text-foreground`}
                       />
-                      {errors.customer_email && <p className="text-red-500 text-xs font-bold mt-1.5">{errors.customer_email}</p>}
+                      {errors.customer_name && <p className="text-red-500 text-xs font-bold mt-1.5">{errors.customer_name}</p>}
                     </div>
                     <div className="space-y-2">
                       <label htmlFor="customer-phone" className="block text-xs font-bold text-muted-foreground uppercase tracking-wider">
