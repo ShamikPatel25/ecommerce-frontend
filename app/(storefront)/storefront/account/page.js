@@ -3,10 +3,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { storefrontAPI } from '@/lib/storefrontApi';
 import { useStorefrontAuthStore } from '@/store/storefrontAuthStore';
-import { useRouter } from 'next/navigation';
-import { useStorefrontPath } from '@/lib/useStorefrontPath';
 import { ADDRESS_LABEL_ICONS, ADDRESS_LABEL_OPTIONS } from '@/lib/addressConfig';
-import { User, Mail, Phone, Loader2, MapPin, Plus, Pencil, Trash2, Check, X, ChevronRight } from 'lucide-react';
+import { Mail, Phone, Loader2, MapPin, Plus, Pencil, Trash2, Check } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function AccountPage() {
@@ -24,14 +22,7 @@ export default function AccountPage() {
   const [deleteAddressId, setDeleteAddressId] = useState(null);
 
   const customer = useStorefrontAuthStore((s) => s.customer);
-  const accessToken = useStorefrontAuthStore((s) => s.accessToken);
   const setCustomer = useStorefrontAuthStore((s) => s.setCustomer);
-  const isLoggedIn = !!(customer && accessToken);
-  const router = useRouter();
-  const { href } = useStorefrontPath();
-  const [isMounted, setIsMounted] = useState(false);
-
-  useEffect(() => { setIsMounted(true); }, []);
 
   const fetchData = useCallback(async () => {
     try {
@@ -56,10 +47,8 @@ export default function AccountPage() {
   }, []);
 
   useEffect(() => {
-    if (!isMounted) return;
-    if (!isLoggedIn) { router.push(href('/')); return; }
     fetchData();
-  }, [isMounted, isLoggedIn]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [fetchData]);
 
   const handlePhoneChange = (e) => {
     const value = e.target.value.replace(/\D/g, '').slice(0, 15);
@@ -215,9 +204,9 @@ export default function AccountPage() {
     }
   };
 
-  if (!isMounted || loading) {
+  if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="min-h-[50vh] flex items-center justify-center">
         <Loader2 className="w-6 h-6 animate-spin text-primary" />
       </div>
     );
@@ -226,23 +215,15 @@ export default function AccountPage() {
   const data = profile || customer || {};
 
   return (
-    <div className="min-h-screen bg-muted/30">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
-        {/* Compact Header */}
-        <div className="flex items-center gap-4 mb-8">
-          <div className="w-14 h-14 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xl font-bold shadow-sm">
-            {(data.first_name || data.email || '?').charAt(0).toUpperCase()}
-          </div>
-          <div>
-            <h1 className="text-xl font-bold text-foreground">
-              {data.first_name ? `${data.first_name} ${data.last_name || ''}`.trim() : 'My Account'}
-            </h1>
-            <p className="text-sm text-muted-foreground">{data.email}</p>
-          </div>
-        </div>
+    <div className="p-4 sm:p-6 lg:p-8">
+      {/* Page Title - Mobile hidden since layout has it */}
+      <div className="hidden md:block mb-6">
+        <h1 className="text-2xl font-bold text-foreground">Profile</h1>
+        <p className="text-sm text-muted-foreground mt-1">Manage your personal information</p>
+      </div>
 
-        {/* Profile Card */}
-        <div className="bg-background rounded-2xl shadow-sm border border-border overflow-hidden mb-6">
+      {/* Profile Card */}
+      <div className="bg-background rounded-2xl shadow-sm border border-border overflow-hidden mb-6">
           <div className="px-6 py-4 border-b border-border">
             <h2 className="font-semibold text-foreground">Personal Information</h2>
           </div>
@@ -535,8 +516,6 @@ export default function AccountPage() {
             )}
           </div>
         </div>
-
-      </div>
 
       {/* Delete Confirmation Modal */}
       {deleteAddressId && (

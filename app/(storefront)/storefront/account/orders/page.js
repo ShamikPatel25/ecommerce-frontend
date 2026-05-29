@@ -1,14 +1,13 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { storefrontAPI } from '@/lib/storefrontApi';
 import { useStorefrontAuthStore } from '@/store/storefrontAuthStore';
 import { useStorefrontPath } from '@/lib/useStorefrontPath';
 import {
-  User, PackageX, Package, Calendar, ChevronDown, ChevronUp,
+  PackageX, Package, Calendar, ChevronDown, ChevronUp,
   Box, ShoppingBag, Truck, CheckCircle2, Clock, XCircle,
   RotateCcw, AlertCircle, RefreshCw, ArrowRight,
 } from 'lucide-react';
@@ -527,7 +526,6 @@ function OrderCard({ order, isExpanded, onToggle, href, onRefresh }) {
 /*  Main Page                              */
 /* ─────────────────────────────────────── */
 export default function StorefrontOrdersPage() {
-  const router = useRouter();
   const { href } = useStorefrontPath();
   const customer = useStorefrontAuthStore((s) => s.customer);
   const accessToken = useStorefrontAuthStore((s) => s.accessToken);
@@ -536,7 +534,6 @@ export default function StorefrontOrdersPage() {
   const [error, setError] = useState(null);
   const [expandedOrder, setExpandedOrder] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
-  const [isMounted, setIsMounted] = useState(false);
 
   const fetchOrders = (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
@@ -555,43 +552,28 @@ export default function StorefrontOrdersPage() {
   };
 
   useEffect(() => {
-    setIsMounted(true); // eslint-disable-line react-hooks/set-state-in-effect -- hydration guard
-  }, []);
-
-  // Once mounted, check auth and fetch orders.
-  // accessToken is reactive — when the token changes (login/logout/refresh),
-  // this effect re-runs automatically.
-  /* eslint-disable react-hooks/set-state-in-effect -- fetch on mount / redirect flow */
-  useEffect(() => {
-    if (!isMounted) return;
     if (accessToken) {
       fetchOrders();
-    } else {
-      setLoading(false);
-      router.push(href('/account/login?redirect=' + encodeURIComponent(href('/account/orders'))));
     }
-  }, [isMounted, accessToken]); // eslint-disable-line react-hooks/exhaustive-deps
-  /* eslint-enable react-hooks/set-state-in-effect */
+  }, [accessToken]);
 
-  /* ── Skeleton: shown while not yet mounted / hydrating / fetching ── */
-  if (!isMounted || loading) {
+  /* ── Skeleton: shown while fetching ── */
+  if (loading) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-6 sm:py-8">
-        <div className="mb-12 space-y-3">
-          <div className="h-4 w-24 bg-muted/50 rounded-full animate-pulse" />
-          <div className="h-10 w-56 bg-muted/50 rounded-2xl animate-pulse" />
-          <div className="h-4 w-48 bg-muted/40 rounded-full animate-pulse" />
+      <div className="p-4 sm:p-6 lg:p-8">
+        <div className="mb-8 space-y-3">
+          <div className="h-8 w-40 bg-muted/50 rounded-xl animate-pulse" />
+          <div className="h-4 w-32 bg-muted/40 rounded-full animate-pulse" />
         </div>
         {[1, 2, 3].map((i) => (
-          <div key={i} className="bg-card border border-border rounded-3xl p-6 mb-6 animate-pulse">
+          <div key={i} className="bg-card border border-border rounded-2xl p-5 mb-4 animate-pulse">
             <div className="flex gap-4">
-              <div className="w-14 h-14 rounded-2xl bg-muted/50" />
+              <div className="w-12 h-12 rounded-xl bg-muted/50" />
               <div className="flex-1 space-y-2">
                 <div className="h-4 w-32 bg-muted/50 rounded-full" />
-                <div className="h-6 w-40 bg-muted/50 rounded-lg" />
-                <div className="h-3 w-24 bg-muted/40 rounded-full" />
+                <div className="h-5 w-40 bg-muted/50 rounded-lg" />
               </div>
-              <div className="h-8 w-20 bg-muted/50 rounded-lg self-start" />
+              <div className="h-7 w-20 bg-muted/50 rounded-lg self-start" />
             </div>
           </div>
         ))}
@@ -603,14 +585,14 @@ export default function StorefrontOrdersPage() {
   /* ── Error state ── */
   if (error) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-6 sm:py-8">
-        <div className="flex flex-col items-center justify-center py-24 px-4 text-center bg-card border border-red-500/20 rounded-3xl shadow-xl">
-          <AlertCircle className="w-16 h-16 text-red-400 mb-6" />
-          <h3 className="text-2xl font-black text-foreground mb-3">Couldn&apos;t Load Orders</h3>
-          <p className="text-muted-foreground mb-8 max-w-sm">{error}</p>
+      <div className="p-4 sm:p-6 lg:p-8">
+        <div className="flex flex-col items-center justify-center py-16 px-4 text-center bg-card border border-red-500/20 rounded-2xl">
+          <AlertCircle className="w-12 h-12 text-red-400 mb-4" />
+          <h3 className="text-xl font-bold text-foreground mb-2">Couldn&apos;t Load Orders</h3>
+          <p className="text-sm text-muted-foreground mb-6 max-w-sm">{error}</p>
           <Button
             onClick={() => { setLoading(true); setError(null); fetchOrders(); }}
-            className="rounded-full gap-2 font-bold px-8"
+            className="rounded-xl gap-2 font-medium"
           >
             <RefreshCw className="w-4 h-4" /> Try Again
           </Button>
@@ -620,69 +602,34 @@ export default function StorefrontOrdersPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-6 sm:py-8">
+    <div className="p-4 sm:p-6 lg:p-8">
       {/* ── Page Header ── */}
-      <div className="mb-10 flex flex-col md:flex-row md:items-end md:justify-between gap-4">
-        <div className="space-y-2">
-          <div className="flex items-center gap-2 text-primary text-xs font-bold uppercase tracking-widest">
-            <User className="w-4 h-4" /> My Account
-          </div>
-          <h1 className="text-4xl md:text-5xl font-black text-foreground tracking-tight">
-            My Orders
-          </h1>
-          {customer && (
-            <p className="text-muted-foreground">
-              Logged in as <span className="text-foreground font-semibold">{customer.email}</span>
-            </p>
-          )}
+      <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">My Orders</h1>
+          <p className="text-sm text-muted-foreground mt-1">Track and manage your orders</p>
         </div>
 
-        {/* Stats pill */}
+        {/* Refresh button */}
         {orders.length > 0 && (
-          <div className="flex items-center gap-4 bg-card border border-border rounded-2xl px-5 py-3 shadow-sm self-start">
-            <div className="text-center">
-              <p className="text-2xl font-black text-foreground">{orders.length}</p>
-              <p className="text-xs text-muted-foreground font-medium">Total Orders</p>
-            </div>
-            <div className="w-px h-8 bg-border" />
-            <div className="text-center">
-              <p className="text-2xl font-black text-emerald-400">
-                {orders.filter((o) => o.status === 'delivered').length}
-              </p>
-              <p className="text-xs text-muted-foreground font-medium">Delivered</p>
-            </div>
-            <div className="w-px h-8 bg-border" />
-            <div className="text-center">
-              <p className="text-2xl font-black text-yellow-400">
-                {orders.filter((o) => ['pending', 'confirmed', 'processing', 'shipped'].includes(o.status)).length}
-              </p>
-              <p className="text-xs text-muted-foreground font-medium">Active</p>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Refresh button */}
-      {orders.length > 0 && (
-        <div className="flex justify-end mb-6">
           <button
             type="button"
             onClick={() => fetchOrders(true)}
             disabled={refreshing}
-            className="flex items-center gap-2 text-xs font-bold text-muted-foreground hover:text-primary transition-colors disabled:opacity-50"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-muted hover:bg-muted/80 text-sm font-medium text-foreground transition-colors disabled:opacity-50"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
             Refresh
           </button>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* ── Empty State ── */}
       {orders.length === 0 ? (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col items-center justify-center py-28 px-8 text-center bg-card border border-border rounded-3xl shadow-2xl"
+          className="flex flex-col items-center justify-center py-16 px-6 text-center bg-card border border-border rounded-2xl"
         >
           <div className="relative mb-8">
             <div className="w-28 h-28 rounded-[2rem] bg-muted/30 border border-border flex items-center justify-center">

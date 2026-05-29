@@ -5,11 +5,9 @@ import { useRouter, useParams } from 'next/navigation';
 import { storeAPI } from '@/lib/api';
 import { useFormDraft } from '@/hooks/useFormDraft';
 import { useStoreStore } from '@/store/storeStore';
-import StoreDeactivatedModal from '@/components/StoreDeactivatedModal';
 import { toast } from 'sonner';
 import {
   ChevronLeft, ChevronRight, ChevronDown, Loader2, Store,
-  CheckCircle2, AlertCircle,
 } from 'lucide-react';
 
 const INPUT_CLS =
@@ -18,7 +16,17 @@ const INPUT_CLS =
   'focus:ring-2 focus:ring-violet-500/20 transition-all ' +
   'dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder:text-gray-500';
 
+const INPUT_ERROR_CLS =
+  'w-full rounded-lg border border-red-500 bg-red-50 px-4 py-3 text-slate-900 ' +
+  'placeholder:text-slate-400 focus:outline-none focus:border-red-500 ' +
+  'focus:ring-2 focus:ring-red-500/20 transition-all ' +
+  'dark:bg-red-900/20 dark:border-red-500 dark:text-white dark:placeholder:text-gray-500';
+
 const SELECT_CLS = INPUT_CLS + ' appearance-none pr-10';
+
+const MAX_NAME_LENGTH = 30;
+const MAX_DESCRIPTION_LENGTH = 300;
+const MIN_LENGTH = 3;
 
 export default function EditStorePage() {
   const router  = useRouter();
@@ -27,27 +35,55 @@ export default function EditStorePage() {
 
   const [loading, setLoading] = useState(true);
   const [saving,  setSaving]  = useState(false);
-  const [showDeactivatedModal, setShowDeactivatedModal] = useState(false);
+  const [errors, setErrors] = useState({});
+  const [originalData, setOriginalData] = useState(null);
   const { activeStore, setActiveStore, setStores: setGlobalStores } = useStoreStore();
   const [formData, setFormData, clearDraft] = useFormDraft(`store-edit-${storeId}`, {
     name:        '',
     subdomain:   '',
     description: '',
     currency:    'INR',
-    is_active:   true,
   });
+
+  const validateStoreName = (name) => {
+    if (!name || !name.trim()) {
+      return 'Store name is required';
+    }
+    if (name.trim().length < MIN_LENGTH) {
+      return `Store name must be at least ${MIN_LENGTH} characters`;
+    }
+    if (name.length > MAX_NAME_LENGTH) {
+      return `Store name cannot exceed ${MAX_NAME_LENGTH} characters`;
+    }
+    if (/[-+_/\\@#$%^&*()=\[\]{}|;:'",.<>?`~!]/.test(name)) {
+      return 'Store name cannot contain special characters';
+    }
+    return null;
+  };
+
+  const handleNameChange = (e) => {
+    const value = e.target.value;
+    if (value.length <= MAX_NAME_LENGTH) {
+      const filtered = value.replace(/[-+_/\\@#$%^&*()=\[\]{}|;:'",.<>?`~!]/g, '');
+      setFormData({ ...formData, name: filtered });
+      if (errors.name) {
+        setErrors({ ...errors, name: null });
+      }
+    }
+  };
 
   /* ── fetch ── */
   const fetchStore = useCallback(async () => {
     try {
       const { data: s } = await storeAPI.get(storeId);
-      setFormData({
+      const storeData = {
         name:        s.name        || '',
         subdomain:   s.subdomain   || '',
         description: s.description || '',
-        currency:    s.currency    || 'USD',
-        is_active:   s.is_active   ?? true,
-      });
+        currency:    s.currency    || 'INR',
+      };
+      setFormData(storeData);
+      setOriginalData(storeData);
     } catch {
       toast.error('Failed to load store');
       router.push('/stores');
@@ -56,6 +92,12 @@ export default function EditStorePage() {
     }
   }, [storeId, router, setFormData]);
 
+  const hasChanges = originalData && (
+    formData.name !== originalData.name ||
+    formData.description !== originalData.description ||
+    formData.currency !== originalData.currency
+  );
+
   useEffect(() => {
     fetchStore();
   }, [storeId, fetchStore]);
@@ -63,29 +105,59 @@ export default function EditStorePage() {
   /* ── submit ── */
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    const nameError = validateStoreName(formData.name);
+
+    if (nameError) {
+      setErrors({ name: nameError });
+      toast.error(nameError);
+      return;
+    }
+
     setSaving(true);
     try {
-      await storeAPI.update(storeId, formData);
-      toast.success('Store settings saved!');
+      const updateData = {
+        name: formData.name,
+        subdomain: formData.subdomain,
+        description: formData.description,
+        currency: formData.currency,
+      };
+      await storeAPI.update(storeId, updateData);
+      toast.success(`"${formData.name}" updated successfully`);
       clearDraft();
 
-      // If we deactivated the currently active store, auto-switch
-      if (!formData.is_active && activeStore?.id === Number(storeId)) {
+      // Update active store if this is the active one
+      if (activeStore?.id === Number(storeId)) {
         const res = await storeAPI.list();
         const data = res.data;
         const allStores = Array.isArray(data) ? data : data?.results || [];
         setGlobalStores(allStores);
-
-        const otherActive = allStores.find(s => s.is_active && s.id !== Number(storeId));
-        if (otherActive) {
-          setActiveStore(otherActive);
-          globalThis.location.reload();
-        } else {
-          setShowDeactivatedModal(true);
+        const updatedStore = allStores.find(s => s.id === Number(storeId));
+        if (updatedStore) {
+          setActiveStore(updatedStore);
         }
       }
+
+      // Redirect to stores list
+      router.push('/stores');
     } catch (err) {
-      toast.error(err.response?.data?.subdomain?.[0] || 'Something went wrong');
+      const errData = err.response?.data;
+      let errorMsg = 'Failed to save changes. Please try again.';
+
+      if (errData) {
+        if (errData.name?.[0]) {
+          errorMsg = `Store name: ${errData.name[0]}`;
+        } else if (errData.description?.[0]) {
+          errorMsg = `Description: ${errData.description[0]}`;
+        } else if (errData.currency?.[0]) {
+          errorMsg = `Currency: ${errData.currency[0]}`;
+        } else if (errData.detail) {
+          errorMsg = errData.detail;
+        } else if (errData.non_field_errors?.[0]) {
+          errorMsg = errData.non_field_errors[0];
+        }
+      }
+      toast.error(errorMsg);
     } finally {
       setSaving(false);
     }
@@ -135,22 +207,30 @@ export default function EditStorePage() {
             {/* Store Name */}
             <div className="space-y-1.5">
               <label className="text-sm font-semibold text-slate-700 dark:text-gray-300">
-                Store Name <span className="text-violet-500">*</span>
+                Store Name <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
-                className={INPUT_CLS}
+                className={errors.name ? INPUT_ERROR_CLS : INPUT_CLS}
                 placeholder="My Awesome Store"
                 value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                required
+                onChange={handleNameChange}
+                maxLength={MAX_NAME_LENGTH}
               />
+              <div className="flex items-center justify-between">
+                {errors.name ? (
+                  <p className="text-xs text-red-500">{errors.name}</p>
+                ) : (
+                  <p className="text-xs text-slate-400 dark:text-gray-500">Min {MIN_LENGTH} characters, no special characters</p>
+                )}
+                <span className="text-xs text-slate-400 dark:text-gray-500">{formData.name.length}/{MAX_NAME_LENGTH}</span>
+              </div>
             </div>
 
             {/* Currency */}
             <div className="space-y-1.5">
               <label className="text-sm font-semibold text-slate-700 dark:text-gray-300">
-                Currency <span className="text-violet-500">*</span>
+                Currency
               </label>
               <div className="relative">
                 <select
@@ -182,43 +262,6 @@ export default function EditStorePage() {
             <p className="text-xs text-slate-400 dark:text-gray-500">Subdomain is permanent and cannot be changed after creation.</p>
           </div>
 
-          {/* Store Status */}
-          <div className="mt-6 space-y-1.5">
-            <label className="text-sm font-semibold text-slate-700 dark:text-gray-300">
-              Store Status
-            </label>
-            <div
-              onClick={() => setFormData((p) => ({ ...p, is_active: !p.is_active }))}
-              className={`flex items-center justify-between px-4 py-2.5 rounded-lg border-2 cursor-pointer select-none transition-all ${
-                formData.is_active
-                  ? 'border-green-200 bg-green-50 dark:border-green-700 dark:bg-green-900/20'
-                  : 'border-slate-200 bg-white dark:border-gray-600 dark:bg-gray-700'
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                {formData.is_active ? (
-                  <CheckCircle2 className="w-4 h-4 text-green-600" />
-                ) : (
-                  <AlertCircle className="w-4 h-4 text-slate-400 dark:text-gray-500" />
-                )}
-                <span className={`text-sm font-semibold ${formData.is_active ? 'text-green-700 dark:text-green-400' : 'text-slate-500 dark:text-gray-400'}`}>
-                  {formData.is_active ? 'Active' : 'Inactive'}
-                </span>
-              </div>
-              <div
-                className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
-                  formData.is_active ? 'bg-green-500' : 'bg-slate-300 dark:bg-gray-500'
-                }`}
-              >
-                <span
-                  className={`inline-block h-4 w-4 rounded-full bg-white dark:bg-gray-800 shadow-sm transition-transform ${
-                    formData.is_active ? 'translate-x-4' : 'translate-x-0.5'
-                  }`}
-                />
-              </div>
-            </div>
-          </div>
-
           {/* Description */}
           <div className="mt-6 space-y-1.5">
             <label className="text-sm font-semibold text-slate-700 dark:text-gray-300">Description</label>
@@ -227,8 +270,16 @@ export default function EditStorePage() {
               rows={4}
               placeholder="Describe your store..."
               value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              onChange={(e) => {
+                if (e.target.value.length <= MAX_DESCRIPTION_LENGTH) {
+                  setFormData({ ...formData, description: e.target.value });
+                }
+              }}
+              maxLength={MAX_DESCRIPTION_LENGTH}
             />
+            <div className="flex justify-end">
+              <span className="text-xs text-slate-400 dark:text-gray-500">{formData.description.length}/{MAX_DESCRIPTION_LENGTH}</span>
+            </div>
           </div>
         </section>
 
@@ -243,8 +294,8 @@ export default function EditStorePage() {
           </button>
           <button
             type="submit"
-            disabled={saving}
-            className="flex-1 sm:flex-none px-4 sm:px-12 py-3 rounded-lg font-bold bg-violet-500 text-white shadow-lg shadow-violet-500/30 hover:bg-violet-500/90 active:scale-95 transition-all disabled:opacity-50"
+            disabled={saving || !hasChanges}
+            className="flex-1 sm:flex-none px-4 sm:px-12 py-3 rounded-lg font-bold bg-violet-500 text-white shadow-lg shadow-violet-500/30 hover:bg-violet-500/90 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {saving ? (
               <span className="flex items-center justify-center gap-2">
@@ -254,11 +305,6 @@ export default function EditStorePage() {
           </button>
         </div>
       </form>
-
-      <StoreDeactivatedModal
-        open={showDeactivatedModal}
-        onClose={() => setShowDeactivatedModal(false)}
-      />
       </div>
     </div>
   );

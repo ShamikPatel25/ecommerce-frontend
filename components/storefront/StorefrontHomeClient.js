@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
-import { ArrowRight, Truck, ShieldCheck, RefreshCw, Clock, Star, ChevronRight, Sparkles } from 'lucide-react';
+import { ArrowRight, Truck, ShieldCheck, RefreshCw, Clock, Star, ChevronRight, Sparkles, TrendingUp, Zap, Gift, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ProductCard } from '@/components/storefront/shared/ProductCard';
 import { TestimonialsCarousel } from '@/components/storefront/shared/TestimonialsCarousel';
@@ -39,7 +38,6 @@ export default function StorefrontHomeClient() {
   const [store, setStore] = useState(null);
   const [featured, setFeatured] = useState([]);
   const [newArrivals, setNewArrivals] = useState([]);
-  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const { href } = useStorefrontPath();
 
@@ -47,15 +45,13 @@ export default function StorefrontHomeClient() {
     Promise.all([
       storefrontAPI.getStoreInfo().catch(() => ({ data: null })),
       storefrontAPI.getProducts({ page_size: 30, sort: 'newest' }).catch(() => ({ data: { results: [] } })),
-      storefrontAPI.getCategories().catch(() => ({ data: [] })),
-    ]).then(([storeRes, productsRes, catRes]) => {
+    ]).then(([storeRes, productsRes]) => {
       setStore(storeRes.data);
 
       const allProducts = productsRes.data?.results || productsRes.data || [];
       const shuffled = [...allProducts].sort(() => 0.5 - Math.random());
       setFeatured(shuffled.slice(0, 8));
       setNewArrivals(allProducts.slice(0, 4));
-      setCategories(catRes.data || []);
       setLoading(false);
     });
   }, []);
@@ -72,102 +68,114 @@ export default function StorefrontHomeClient() {
   }
 
   const storeName = store?.name || 'Store';
-  const displayCategories = categories.length > 0 ? categories.slice(0, 6) : [];
+
+  const quickActions = [
+    { icon: TrendingUp, label: 'Trending', color: 'bg-rose-500', href: '/products?sort=popular' },
+    { icon: Zap, label: 'New', color: 'bg-amber-500', href: '/products?sort=newest' },
+    { icon: Gift, label: 'Deals', color: 'bg-emerald-500', href: '/products' },
+    { icon: Package, label: 'All', color: 'bg-blue-500', href: '/products' },
+  ];
 
   const features = [
-    { icon: Truck, title: 'Free Shipping', desc: `Orders over ${formatCurrency(50, store?.currency)}` },
-    { icon: ShieldCheck, title: 'Secure Payment', desc: '100% protected' },
-    { icon: RefreshCw, title: 'Easy Returns', desc: '30-day policy' },
-    { icon: Clock, title: 'Fast Delivery', desc: '2-5 business days' },
+    { icon: Truck, title: 'Free Shipping', desc: `${formatCurrency(50, store?.currency)}+` },
+    { icon: ShieldCheck, title: 'Secure', desc: '100% Safe' },
+    { icon: RefreshCw, title: 'Returns', desc: '30 Days' },
+    { icon: Clock, title: 'Fast', desc: '2-5 Days' },
   ];
 
   return (
-    <div className="flex flex-col">
-      <section className="relative min-h-[90vh] flex items-center bg-gradient-to-br from-primary/5 via-background to-accent/5 overflow-hidden">
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute -top-40 -right-40 w-80 h-80 bg-primary/10 rounded-full blur-3xl" />
-          <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-accent/10 rounded-full blur-3xl" />
-        </div>
+    <div className="flex flex-col bg-background">
+      {/* Hero Section - Mobile Optimized */}
+      <section className="relative overflow-hidden">
+        {/* Background gradient */}
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-primary/5 to-background" />
 
-        <div className="container mx-auto px-4 md:px-6 relative z-10">
-          <div className="grid lg:grid-cols-2 gap-12 items-center py-20">
-            <div className="text-center lg:text-left">
-              <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-sm font-medium text-primary mb-6">
-                <Sparkles className="w-4 h-4" />
-                Welcome to {storeName}
-              </div>
+        {/* Decorative circles */}
+        <div className="absolute top-0 right-0 w-32 h-32 bg-primary/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+        <div className="absolute bottom-0 left-0 w-40 h-40 bg-accent/20 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
 
-              <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-bold tracking-tight text-foreground mb-6 leading-[1.1]">
-                Discover Quality
-                <span className="block text-primary">Products You Love</span>
-              </h1>
-
-              <p className="text-lg text-muted-foreground mb-8 max-w-xl mx-auto lg:mx-0">
-                {store?.description || 'Explore our curated collection of premium products. Quality you can trust, prices you\'ll love, and service that exceeds expectations.'}
-              </p>
-
-              <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-                <Link href={href('/products')}>
-                  <Button size="lg" className="h-14 px-8 text-base rounded-full shadow-lg shadow-primary/25 w-full sm:w-auto">
-                    Shop Now
-                    <ArrowRight className="w-5 h-5 ml-2" />
-                  </Button>
-                </Link>
-                <Link href="#categories">
-                  <Button size="lg" variant="outline" className="h-14 px-8 text-base rounded-full w-full sm:w-auto">
-                    Browse Categories
-                  </Button>
-                </Link>
-              </div>
-
-              <div className="flex items-center gap-8 mt-10 justify-center lg:justify-start">
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-foreground">10K+</p>
-                  <p className="text-sm text-muted-foreground">Happy Customers</p>
+        <div className="relative px-4 pt-6 pb-8 sm:px-6 sm:pt-10 sm:pb-12 lg:py-20">
+          <div className="max-w-7xl mx-auto">
+            <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
+              {/* Text Content */}
+              <div className="text-center lg:text-left">
+                {/* Badge */}
+                <div className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 border border-primary/20 px-3 py-1 text-xs font-semibold text-primary mb-4">
+                  <Sparkles className="w-3 h-3" />
+                  <span>Welcome to {storeName}</span>
                 </div>
-                <div className="w-px h-10 bg-border" />
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-foreground">500+</p>
-                  <p className="text-sm text-muted-foreground">Products</p>
-                </div>
-                <div className="w-px h-10 bg-border" />
-                <div className="flex items-center gap-1">
-                  <Star className="w-5 h-5 fill-amber-400 text-amber-400" />
-                  <p className="text-2xl font-bold text-foreground">4.9</p>
-                  <p className="text-sm text-muted-foreground ml-1">Rating</p>
-                </div>
-              </div>
-            </div>
 
-            <div className="relative hidden lg:block">
-              <div className="relative aspect-square max-w-lg mx-auto">
-                <div className="absolute inset-4 bg-gradient-to-br from-primary/20 to-accent/20 rounded-3xl transform rotate-6" />
-                <div className="absolute inset-0 bg-background rounded-3xl shadow-2xl overflow-hidden border border-border/50">
-                  {/* eslint-disable-next-line @next/next/no-img-element -- external hero image */}
-                  <img
-                    src="https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800&q=80"
-                    alt="Featured products"
-                    className="w-full h-full object-cover"
-                  />
+                {/* Heading */}
+                <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold tracking-tight text-foreground mb-3 sm:mb-4 leading-tight">
+                  Discover{' '}
+                  <span className="text-primary">Quality</span>
+                  <br className="hidden sm:block" />
+                  <span className="sm:hidden"> </span>
+                  Products You Love
+                </h1>
+
+                {/* Description - Hidden on very small screens */}
+                <p className="text-sm sm:text-base text-muted-foreground mb-5 sm:mb-6 max-w-md mx-auto lg:mx-0 line-clamp-2 sm:line-clamp-none">
+                  {store?.description || 'Premium products, unbeatable prices, and exceptional service.'}
+                </p>
+
+                {/* CTA Buttons */}
+                <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-3 justify-center lg:justify-start">
+                  <Link href={href('/products')} className="w-full sm:w-auto">
+                    <Button size="lg" className="w-full sm:w-auto h-11 sm:h-12 px-6 sm:px-8 text-sm font-semibold rounded-xl shadow-lg shadow-primary/20">
+                      Shop Now
+                      <ArrowRight className="w-4 h-4 ml-2" />
+                    </Button>
+                  </Link>
+                  <Link href={href('/products')} className="w-full sm:w-auto">
+                    <Button size="lg" variant="outline" className="w-full sm:w-auto h-11 sm:h-12 px-6 sm:px-8 text-sm font-semibold rounded-xl">
+                      Explore All
+                    </Button>
+                  </Link>
                 </div>
-                <div className="absolute -bottom-6 -left-6 bg-background rounded-2xl shadow-xl p-4 border border-border/50">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-accent/20 rounded-full flex items-center justify-center">
-                      <Truck className="w-6 h-6 text-accent" />
-                    </div>
-                    <div>
-                      <p className="font-semibold text-foreground">Free Delivery</p>
-                      <p className="text-sm text-muted-foreground">On all orders</p>
-                    </div>
+
+                {/* Stats - Compact for mobile */}
+                <div className="flex items-center justify-center lg:justify-start gap-6 sm:gap-8 mt-6 sm:mt-8">
+                  <div className="text-center">
+                    <p className="text-lg sm:text-xl font-bold text-foreground">10K+</p>
+                    <p className="text-[10px] sm:text-xs text-muted-foreground">Customers</p>
+                  </div>
+                  <div className="w-px h-8 bg-border" />
+                  <div className="text-center">
+                    <p className="text-lg sm:text-xl font-bold text-foreground">500+</p>
+                    <p className="text-[10px] sm:text-xs text-muted-foreground">Products</p>
+                  </div>
+                  <div className="w-px h-8 bg-border" />
+                  <div className="flex items-center gap-1">
+                    <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
+                    <p className="text-lg sm:text-xl font-bold text-foreground">4.9</p>
                   </div>
                 </div>
-                <div className="absolute -top-4 -right-4 bg-background rounded-2xl shadow-xl p-4 border border-border/50">
-                  <div className="flex items-center gap-2">
-                    {[...Array(5)].map((_, i) => (
-                      <Star key={i} className="w-4 h-4 fill-amber-400 text-amber-400" />
-                    ))}
+              </div>
+
+              {/* Hero Image - Desktop only */}
+              <div className="relative hidden lg:block">
+                <div className="relative aspect-square max-w-lg mx-auto">
+                  <div className="absolute inset-4 bg-gradient-to-br from-primary/20 to-accent/20 rounded-3xl transform rotate-6" />
+                  <div className="absolute inset-0 bg-background rounded-3xl shadow-2xl overflow-hidden border border-border/50">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src="https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800&q=80"
+                      alt="Featured products"
+                      className="w-full h-full object-cover"
+                    />
                   </div>
-                  <p className="text-sm text-muted-foreground mt-1">Trusted by thousands</p>
+                  <div className="absolute -bottom-6 -left-6 bg-background rounded-2xl shadow-xl p-4 border border-border/50">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-emerald-500/20 rounded-full flex items-center justify-center">
+                        <Truck className="w-5 h-5 text-emerald-600" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-sm text-foreground">Free Delivery</p>
+                        <p className="text-xs text-muted-foreground">On all orders</p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -175,17 +183,38 @@ export default function StorefrontHomeClient() {
         </div>
       </section>
 
-      <section className="py-6 bg-muted/30 border-y border-border/50">
-        <div className="container mx-auto px-4 md:px-6">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      {/* Quick Actions - Mobile App Style */}
+      <section className="px-4 py-4 sm:py-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid grid-cols-4 gap-3 sm:gap-4">
+            {quickActions.map((action, idx) => (
+              <Link
+                key={idx}
+                href={href(action.href)}
+                className="flex flex-col items-center gap-2 p-3 sm:p-4 rounded-2xl bg-muted/50 hover:bg-muted transition-colors"
+              >
+                <div className={`w-10 h-10 sm:w-12 sm:h-12 ${action.color} rounded-xl flex items-center justify-center shadow-lg`}>
+                  <action.icon className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                </div>
+                <span className="text-[11px] sm:text-xs font-medium text-foreground">{action.label}</span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Features Strip - Horizontal scroll on mobile */}
+      <section className="px-4 py-3 sm:py-4 border-y border-border/50 bg-muted/30">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex gap-4 overflow-x-auto scrollbar-hide pb-1 sm:grid sm:grid-cols-4 sm:gap-4 sm:overflow-visible">
             {features.map((feature, idx) => (
-              <div key={idx} className="flex items-center gap-3 p-4">
-                <div className="flex-shrink-0 w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                  <feature.icon className="w-5 h-5 text-primary" />
+              <div key={idx} className="flex items-center gap-2.5 min-w-[140px] sm:min-w-0">
+                <div className="flex-shrink-0 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                  <feature.icon className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-sm text-foreground">{feature.title}</h3>
-                  <p className="text-xs text-muted-foreground">{feature.desc}</p>
+                  <p className="text-xs sm:text-sm font-semibold text-foreground whitespace-nowrap">{feature.title}</p>
+                  <p className="text-[10px] sm:text-xs text-muted-foreground">{feature.desc}</p>
                 </div>
               </div>
             ))}
@@ -193,126 +222,89 @@ export default function StorefrontHomeClient() {
         </div>
       </section>
 
-      {displayCategories.length > 0 && (
-        <section id="categories" className="py-16 md:py-24 bg-background scroll-mt-20">
-          <div className="container mx-auto px-4 md:px-6">
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-10">
+      {/* Best Sellers */}
+      {featured.length > 0 && (
+        <section className="px-4 py-8 sm:py-12 lg:py-16">
+          <div className="max-w-7xl mx-auto">
+            {/* Section Header */}
+            <div className="flex items-center justify-between mb-5 sm:mb-6">
               <div>
-                <p className="text-primary font-medium text-sm uppercase tracking-wider mb-2">Categories</p>
-                <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-foreground">Shop by Category</h2>
+                <div className="flex items-center gap-2 mb-1">
+                  <TrendingUp className="w-4 h-4 text-primary" />
+                  <span className="text-xs font-semibold text-primary uppercase tracking-wide">Trending</span>
+                </div>
+                <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">Best Sellers</h2>
               </div>
-              <Link href={href('/products')} className="text-primary font-medium text-sm flex items-center gap-1 hover:gap-2 transition-all">
-                View All Categories
+              <Link href={href('/products')} className="text-sm font-medium text-primary flex items-center gap-1 hover:gap-2 transition-all">
+                <span className="hidden sm:inline">View All</span>
                 <ChevronRight className="w-4 h-4" />
               </Link>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-              {displayCategories.map((category) => (
-                <Link
-                  key={category.id}
-                  href={href(`/products?category=${category.slug}`)}
-                  className="group relative aspect-square rounded-2xl overflow-hidden bg-gradient-to-br from-muted to-muted/50 border border-border/50 hover:border-primary/30 transition-all hover:shadow-lg"
-                >
-                  {category.image ? (
-                    <Image
-                      src={category.image}
-                      alt={category.name}
-                      fill
-                      className="object-cover opacity-80 group-hover:opacity-100 group-hover:scale-110 transition-all duration-500"
-                    />
-                  ) : (
-                    <div className="absolute inset-0 flex items-center justify-center text-6xl font-bold text-muted-foreground/20">
-                      {category.name?.charAt(0)}
-                    </div>
-                  )}
-                  <div className="absolute inset-0 bg-gradient-to-t from-foreground/80 via-foreground/20 to-transparent" />
-                  <div className="absolute inset-x-0 bottom-0 p-4">
-                    <h3 className="text-white font-semibold text-sm md:text-base">{category.name}</h3>
-                    <p className="text-white/70 text-xs mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                      Shop now →
-                    </p>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
-
-      {featured.length > 0 && (
-        <section className="py-16 md:py-24 bg-muted/20">
-          <div className="container mx-auto px-4 md:px-6">
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-10">
-              <div>
-                <p className="text-primary font-medium text-sm uppercase tracking-wider mb-2">Featured</p>
-                <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-foreground">Best Sellers</h2>
-                <p className="text-muted-foreground mt-2 max-w-xl">
-                  Discover our most popular products loved by customers worldwide.
-                </p>
-              </div>
-              <Link href={href('/products')}>
-                <Button variant="outline" className="rounded-full group">
-                  View All Products
-                  <ArrowRight className="w-4 h-4 ml-2 transition-transform group-hover:translate-x-1" />
-                </Button>
-              </Link>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {featured.map((product) => (
+            {/* Products Grid - 2 cols mobile, 4 cols desktop */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
+              {featured.slice(0, 4).map((product) => (
                 <ProductCard key={product.id} product={product} href={href} />
               ))}
             </div>
+
+            {/* Show more products on larger screens */}
+            {featured.length > 4 && (
+              <div className="hidden sm:grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mt-3 sm:mt-4 lg:mt-6">
+                {featured.slice(4, 8).map((product) => (
+                  <ProductCard key={product.id} product={product} href={href} />
+                ))}
+              </div>
+            )}
+
+            {/* Mobile: View All Button */}
+            <div className="mt-6 sm:hidden">
+              <Link href={href('/products')} className="block">
+                <Button variant="outline" className="w-full h-11 rounded-xl font-medium">
+                  View All Products
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </Button>
+              </Link>
+            </div>
           </div>
         </section>
       )}
 
-      <section className="py-16 md:py-24 bg-background">
-        <div className="container mx-auto px-4 md:px-6">
-          <div className="relative rounded-3xl overflow-hidden bg-gradient-to-r from-primary to-primary/80">
+      {/* Promo Banner - Mobile Optimized */}
+      <section className="px-4 py-6 sm:py-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="relative rounded-2xl sm:rounded-3xl overflow-hidden bg-gradient-to-r from-primary to-primary/80">
+            {/* Decorative elements */}
             <div className="absolute inset-0 opacity-10">
-              <div className="absolute top-0 left-0 w-40 h-40 bg-white rounded-full -translate-x-1/2 -translate-y-1/2" />
-              <div className="absolute bottom-0 right-0 w-60 h-60 bg-white rounded-full translate-x-1/2 translate-y-1/2" />
+              <div className="absolute top-0 left-0 w-32 h-32 bg-white rounded-full -translate-x-1/2 -translate-y-1/2" />
+              <div className="absolute bottom-0 right-0 w-48 h-48 bg-white rounded-full translate-x-1/4 translate-y-1/4" />
             </div>
 
-            <div className="relative grid md:grid-cols-2 gap-8 items-center p-8 md:p-12 lg:p-16">
-              <div className="text-white">
-                <h2 className="text-3xl md:text-4xl font-bold mb-4">
-                  Quality Products,<br />Exceptional Service
+            <div className="relative p-6 sm:p-8 lg:p-12">
+              <div className="max-w-lg">
+                <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white mb-2 sm:mb-3">
+                  Quality Products, Great Prices
                 </h2>
-                <p className="text-white/80 text-lg mb-8 max-w-md">
-                  We believe in providing the best products at competitive prices. Every item is carefully selected to ensure your satisfaction.
+                <p className="text-white/80 text-sm sm:text-base mb-5 sm:mb-6 line-clamp-2">
+                  Premium selection at prices you&apos;ll love. Shop now and save!
                 </p>
                 <Link href={href('/products')}>
-                  <Button size="lg" variant="secondary" className="rounded-full h-12 px-8 font-medium">
+                  <Button size="lg" variant="secondary" className="h-10 sm:h-11 px-6 rounded-xl font-semibold text-sm">
                     Start Shopping
-                    <ArrowRight className="w-5 h-5 ml-2" />
+                    <ArrowRight className="w-4 h-4 ml-2" />
                   </Button>
                 </Link>
               </div>
-              <div className="hidden md:flex justify-center">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-4">
-                    <div className="bg-white/20 backdrop-blur-sm rounded-2xl p-6 text-white">
-                      <p className="text-3xl font-bold">100%</p>
-                      <p className="text-white/80 text-sm">Satisfaction Guaranteed</p>
-                    </div>
-                    <div className="bg-white/20 backdrop-blur-sm rounded-2xl p-6 text-white">
-                      <p className="text-3xl font-bold">24/7</p>
-                      <p className="text-white/80 text-sm">Customer Support</p>
-                    </div>
-                  </div>
-                  <div className="space-y-4 pt-8">
-                    <div className="bg-white/20 backdrop-blur-sm rounded-2xl p-6 text-white">
-                      <p className="text-3xl font-bold">Fast</p>
-                      <p className="text-white/80 text-sm">Shipping Worldwide</p>
-                    </div>
-                    <div className="bg-white/20 backdrop-blur-sm rounded-2xl p-6 text-white">
-                      <p className="text-3xl font-bold">Easy</p>
-                      <p className="text-white/80 text-sm">Returns & Refunds</p>
-                    </div>
-                  </div>
+
+              {/* Stats for desktop */}
+              <div className="hidden md:flex absolute right-8 top-1/2 -translate-y-1/2 gap-4">
+                <div className="bg-white/20 backdrop-blur-sm rounded-xl p-4 text-white text-center">
+                  <p className="text-2xl font-bold">100%</p>
+                  <p className="text-xs text-white/80">Satisfaction</p>
+                </div>
+                <div className="bg-white/20 backdrop-blur-sm rounded-xl p-4 text-white text-center">
+                  <p className="text-2xl font-bold">24/7</p>
+                  <p className="text-xs text-white/80">Support</p>
                 </div>
               </div>
             </div>
@@ -320,21 +312,27 @@ export default function StorefrontHomeClient() {
         </div>
       </section>
 
+      {/* New Arrivals */}
       {newArrivals.length > 0 && (
-        <section className="py-16 md:py-24 bg-muted/20">
-          <div className="container mx-auto px-4 md:px-6">
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-10">
+        <section className="px-4 py-8 sm:py-12 lg:py-16 bg-muted/30">
+          <div className="max-w-7xl mx-auto">
+            {/* Section Header */}
+            <div className="flex items-center justify-between mb-5 sm:mb-6">
               <div>
-                <p className="text-primary font-medium text-sm uppercase tracking-wider mb-2">Just In</p>
-                <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-foreground">New Arrivals</h2>
+                <div className="flex items-center gap-2 mb-1">
+                  <Zap className="w-4 h-4 text-amber-500" />
+                  <span className="text-xs font-semibold text-amber-600 uppercase tracking-wide">Just In</span>
+                </div>
+                <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">New Arrivals</h2>
               </div>
-              <Link href={href('/products?sort=newest')} className="text-primary font-medium text-sm flex items-center gap-1 hover:gap-2 transition-all">
-                See All New Products
+              <Link href={href('/products?sort=newest')} className="text-sm font-medium text-primary flex items-center gap-1 hover:gap-2 transition-all">
+                <span className="hidden sm:inline">See All</span>
                 <ChevronRight className="w-4 h-4" />
               </Link>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {/* Products Grid */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
               {newArrivals.map((product) => (
                 <ProductCard key={product.id} product={product} href={href} />
               ))}
@@ -343,13 +341,17 @@ export default function StorefrontHomeClient() {
         </section>
       )}
 
-      <section className="py-16 md:py-24 bg-background">
-        <div className="container mx-auto px-4 md:px-6">
-          <div className="text-center mb-12">
-            <p className="text-primary font-medium text-sm uppercase tracking-wider mb-2">Testimonials</p>
-            <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-foreground mb-4">What Our Customers Say</h2>
-            <p className="text-muted-foreground max-w-2xl mx-auto">
-              Don&apos;t just take our word for it. Here&apos;s what our happy customers have to say about their experience.
+      {/* Testimonials */}
+      <section className="px-4 py-10 sm:py-14 lg:py-20">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-8 sm:mb-10">
+            <div className="flex items-center justify-center gap-2 mb-2">
+              <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
+              <span className="text-xs font-semibold text-primary uppercase tracking-wide">Reviews</span>
+            </div>
+            <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground mb-2">What Customers Say</h2>
+            <p className="text-sm text-muted-foreground max-w-md mx-auto">
+              Trusted by thousands of happy customers worldwide
             </p>
           </div>
 
@@ -357,18 +359,19 @@ export default function StorefrontHomeClient() {
         </div>
       </section>
 
-      <section className="py-16 md:py-24 bg-muted/30 border-t border-border/50">
-        <div className="container mx-auto px-4 md:px-6 text-center">
-          <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-foreground mb-4">
-            Ready to Start Shopping?
+      {/* Final CTA */}
+      <section className="px-4 py-10 sm:py-14 lg:py-20 bg-muted/30 border-t border-border/50">
+        <div className="max-w-2xl mx-auto text-center">
+          <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground mb-3">
+            Ready to Shop?
           </h2>
-          <p className="text-muted-foreground mb-8 max-w-xl mx-auto">
-            Join thousands of satisfied customers and discover why they love shopping with us.
+          <p className="text-sm sm:text-base text-muted-foreground mb-6">
+            Join thousands of satisfied customers today
           </p>
           <Link href={href('/products')}>
-            <Button size="lg" className="h-14 px-10 text-base rounded-full shadow-lg shadow-primary/25">
+            <Button size="lg" className="h-12 px-8 text-sm font-semibold rounded-xl shadow-lg shadow-primary/20">
               Explore Products
-              <ArrowRight className="w-5 h-5 ml-2" />
+              <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
           </Link>
         </div>

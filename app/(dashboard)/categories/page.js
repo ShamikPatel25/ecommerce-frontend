@@ -314,11 +314,11 @@ export default function CategoriesPage() {
                       </td>
 
                       {/* Actions */}
-                      <td className="admin-td whitespace-nowrap">
+                      <td className="admin-td whitespace-nowrap text-center">
                         <DropdownMenu>
                           <DropdownMenuTrigger
                             onClick={(e) => e.stopPropagation()}
-                            className="inline-flex items-center justify-center size-8 rounded-lg text-slate-400 dark:text-gray-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-gray-700 transition-all opacity-100 lg:opacity-40 lg:group-hover:opacity-100"
+                            className="inline-flex items-center justify-center size-8 rounded-lg text-slate-600 dark:text-gray-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-gray-700 transition-all"
                           >
                             <MoreHorizontal size={18} />
                           </DropdownMenuTrigger>

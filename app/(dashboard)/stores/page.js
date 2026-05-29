@@ -133,7 +133,6 @@ export default function StoresPage() {
         <div className="admin-page-header">
           <div>
             <h2 className="admin-title">Stores</h2>
-            <p className="admin-subtitle">Manage your stores, domains, and settings.</p>
           </div>
           <button
             onClick={() => router.push('/stores/create')}
@@ -173,9 +172,9 @@ export default function StoresPage() {
                     <tr className="admin-thead-row">
                       <th className="admin-th text-left">Store</th>
                       <th className="admin-th text-left">Description</th>
-                      <th className="admin-th">Currency</th>
-                      <th className="admin-th">Status</th>
-                      <th className="admin-th w-20">Actions</th>
+                      <th className="admin-th text-center">Currency</th>
+                      <th className="admin-th text-center">Status</th>
+                      <th className="admin-th text-center w-20">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="admin-tbody">
@@ -208,12 +207,14 @@ export default function StoresPage() {
                           </td>
 
                           {/* Description */}
-                          <td className="admin-td text-left">
-                            <span className="text-slate-500 dark:text-gray-400 text-sm">{store.description || '—'}</span>
+                          <td className="admin-td text-left max-w-[200px]">
+                            <span className="text-slate-500 dark:text-gray-400 text-sm block truncate">
+                              {store.description || '—'}
+                            </span>
                           </td>
 
                           {/* Currency */}
-                          <td className="admin-td text-left">
+                          <td className="admin-td text-center">
                             <span className="font-mono text-xs bg-slate-100 dark:bg-gray-700 px-2 py-1 rounded text-slate-600 dark:text-gray-300 font-semibold">{store.currency}</span>
                           </td>
 
@@ -230,11 +231,11 @@ export default function StoresPage() {
                           </td>
 
                           {/* Actions */}
-                          <td className="admin-td">
+                          <td className="admin-td text-center">
                             <DropdownMenu>
                               <DropdownMenuTrigger
                                 onClick={(e) => e.stopPropagation()}
-                                className="inline-flex items-center justify-center size-8 rounded-lg text-slate-400 dark:text-gray-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-gray-700 transition-all opacity-100 lg:opacity-40 lg:group-hover:opacity-100"
+                                className="inline-flex items-center justify-center size-8 rounded-lg text-slate-600 dark:text-gray-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-gray-700 transition-all"
                               >
                                 <MoreHorizontal size={18} />
                               </DropdownMenuTrigger>

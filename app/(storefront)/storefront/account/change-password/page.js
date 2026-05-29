@@ -1,11 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { storefrontAPI } from '@/lib/storefrontApi';
-import { useStorefrontAuthStore } from '@/store/storefrontAuthStore';
 import { useRouter } from 'next/navigation';
 import { useStorefrontPath } from '@/lib/useStorefrontPath';
-import { Shield, Loader2, Eye, EyeOff, Check } from 'lucide-react';
+import { Loader2, Eye, EyeOff, Check } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function ChangePasswordPage() {
@@ -20,20 +19,8 @@ export default function ChangePasswordPage() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [errors, setErrors] = useState({});
 
-  const customer = useStorefrontAuthStore((s) => s.customer);
-  const accessToken = useStorefrontAuthStore((s) => s.accessToken);
-  const isLoggedIn = !!(customer && accessToken);
   const router = useRouter();
   const { href } = useStorefrontPath();
-  const [isMounted, setIsMounted] = useState(false);
-
-  useEffect(() => { setIsMounted(true); }, []);
-
-  useEffect(() => {
-    if (isMounted && !isLoggedIn) {
-      router.push(href('/'));
-    }
-  }, [isMounted, isLoggedIn, router, href]);
 
   const getPasswordStrength = (password) => {
     if (!password) return { score: 0, label: '', color: '' };
@@ -103,22 +90,11 @@ export default function ChangePasswordPage() {
     );
   };
 
-  if (!isMounted) {
-    return (
-      <div className="min-h-screen bg-muted/30 flex items-center justify-center">
-        <Loader2 className="w-6 h-6 animate-spin text-primary" />
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-muted/30">
-      <div className="max-w-md mx-auto px-4 sm:px-6 py-10 sm:py-16">
+    <div className="p-4 sm:p-6 lg:p-8">
+      <div className="max-w-md">
         {/* Header */}
-        <div className="text-center mb-8">
-          <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
-            <Shield className="w-7 h-7 text-primary" />
-          </div>
+        <div className="mb-6">
           <h1 className="text-2xl font-bold text-foreground">Change Password</h1>
           <p className="text-sm text-muted-foreground mt-1">Keep your account secure</p>
         </div>

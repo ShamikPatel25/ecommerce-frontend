@@ -1,9 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
 import { useStoreStore } from '@/store/storeStore';
+import { storeAPI } from '@/lib/api';
 import { useState, useEffect, useRef } from 'react';
 import { useThemeStore } from '@/store/themeStore';
 import {
@@ -17,6 +18,7 @@ import StoreDeactivatedModal from '@/components/StoreDeactivatedModal';
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const { user, logout } = useAuthStore();
   const { activeStore, stores, setActiveStore, setStores } = useStoreStore();
   const { theme, toggleTheme } = useThemeStore();
@@ -26,8 +28,32 @@ export default function Sidebar() {
   // Dropdowns
   const [storeDropdownOpen, setStoreDropdownOpen] = useState(false);
   const [showDeactivatedModal, setShowDeactivatedModal] = useState(false);
+  const [loadingStores, setLoadingStores] = useState(false);
   const storeDropdownRef = useRef(null);
   const settingsAccountRef = useRef(null);
+
+  // Fetch stores when dropdown opens
+  const fetchStores = async () => {
+    if (loadingStores) return;
+    setLoadingStores(true);
+    try {
+      const res = await storeAPI.myStores();
+      const storeList = res.data?.stores || res.data || [];
+      setStores(storeList);
+    } catch (error) {
+      console.error('Failed to fetch stores:', error);
+    } finally {
+      setLoadingStores(false);
+    }
+  };
+
+  const handleDropdownToggle = () => {
+    const newState = !storeDropdownOpen;
+    setStoreDropdownOpen(newState);
+    if (newState) {
+      fetchStores();
+    }
+  };
 
   // Close sidebar on route change (mobile)
   /* eslint-disable react-hooks/set-state-in-effect -- reset UI on route change */
@@ -49,18 +75,20 @@ export default function Sidebar() {
     return () => document.removeEventListener('pointerdown', handleClick);
   }, []);
 
-  // Stores are fetched and resolved by the DashboardLayout.
-  // Sidebar reads from Zustand — no duplicate fetch needed.
-
   const handleStoreSwitch = (store) => {
     if (!store.is_active) {
       setStoreDropdownOpen(false);
       setShowDeactivatedModal(true);
       return;
     }
+    if (activeStore?.id === store.id) {
+      setStoreDropdownOpen(false);
+      return;
+    }
     setActiveStore(store);
     setStoreDropdownOpen(false);
-    globalThis.location.reload();
+    // Use router replace with timestamp to force page refresh without full reload
+    router.replace(`${pathname}?_t=${Date.now()}`);
   };
 
   // Pending orders count for badge
@@ -138,7 +166,7 @@ export default function Sidebar() {
         ) : (
         <>
         <button
-          onClick={() => setStoreDropdownOpen(!storeDropdownOpen)}
+          onClick={handleDropdownToggle}
           className="flex items-center gap-3 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg px-3 py-2 transition-colors"
         >
           <div className="w-8 h-8 bg-violet-500 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0">
@@ -160,7 +188,9 @@ export default function Sidebar() {
               <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Switch Store</p>
             </div>
             <div className="max-h-48 overflow-y-auto">
-              {stores.length === 0 ? (
+              {loadingStores ? (
+                <div className="px-3 py-3 text-xs text-gray-500 text-center">Loading stores...</div>
+              ) : stores.length === 0 ? (
                 <p className="px-3 py-3 text-xs text-gray-500 text-center">No stores found</p>
               ) : (
                 stores.map((store) => {

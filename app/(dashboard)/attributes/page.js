@@ -5,9 +5,15 @@ import { useRouter } from 'next/navigation';
 import { attributeAPI, categoryAPI } from '@/lib/api';
 import { toast } from 'sonner';
 import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
-import { Plus, Search, Trash2, Tag } from 'lucide-react';
+import { Plus, Search, Trash2, Tag, MoreHorizontal, Pencil } from 'lucide-react';
 import Pagination from '@/components/dashboard/Pagination';
 import { useSharedDataStore } from '@/store/sharedDataStore';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from '@/components/ui/dropdown-menu';
 
 const PER_PAGE = 10;
 
@@ -134,8 +140,8 @@ export default function AttributesPage() {
                       <th className="admin-th text-left">Attribute</th>
                       <th className="admin-th text-left">Category</th>
                       <th className="admin-th text-left">Values</th>
-                      <th className="admin-th">Count</th>
-                      <th className="admin-th w-20">Actions</th>
+                      <th className="admin-th text-center">Count</th>
+                      <th className="admin-th text-center w-20">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="admin-tbody">
@@ -203,16 +209,37 @@ export default function AttributesPage() {
                           </td>
 
                           {/* Actions */}
-                          <td className="admin-td">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setDeleteModal({ open: true, attr });
-                              }}
-                              className="inline-flex items-center justify-center size-8 rounded-lg text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all opacity-100 lg:opacity-0 lg:group-hover:opacity-100"
-                            >
-                              <Trash2 size={16} />
-                            </button>
+                          <td className="admin-td text-center">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger
+                                onClick={(e) => e.stopPropagation()}
+                                className="inline-flex items-center justify-center size-8 rounded-lg text-slate-600 dark:text-gray-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-gray-700 transition-all"
+                              >
+                                <MoreHorizontal size={18} />
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" sideOffset={8} className="w-44 rounded-xl shadow-lg border border-slate-200 dark:border-gray-700 p-1.5 bg-white dark:bg-gray-800 z-[100]">
+                                <DropdownMenuItem
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    router.push(`/attributes/${attr.id}/edit`);
+                                  }}
+                                  className="cursor-pointer flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-700 dark:text-gray-300 hover:bg-slate-50 dark:hover:bg-gray-700"
+                                >
+                                  <Pencil size={16} className="text-slate-400 dark:text-gray-500" />
+                                  <span>Edit</span>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setDeleteModal({ open: true, attr });
+                                  }}
+                                  className="cursor-pointer flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50"
+                                >
+                                  <Trash2 size={16} />
+                                  <span>Delete</span>
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           </td>
                         </tr>
                       ))

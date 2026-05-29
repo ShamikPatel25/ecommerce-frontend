@@ -9,6 +9,7 @@ import AuthModal from '@/components/storefront/AuthModal';
 import CartSidebar from '@/components/storefront/CartSidebar';
 import { ThemeProvider } from '@/components/storefront/shared/theme-provider';
 import { Navbar } from '@/components/storefront/shared/Navbar';
+import { BottomNav } from '@/components/storefront/shared/BottomNav';
 import { Footer } from '@/components/storefront/shared/Footer';
 
 import '@/app/provision-theme.css';
@@ -74,11 +75,17 @@ export default function StorefrontClientLayout({ children }) {
             onOpenCart={() => setCartOpen(true)}
           />
 
-          <main className="flex-grow pt-16">
+          <main className="flex-grow pt-14 md:pt-16 pb-20 md:pb-0">
             {children}
           </main>
 
           <Footer store={store} categories={categories} href={href} />
+
+          {/* Mobile Bottom Navigation */}
+          <BottomNav
+            onOpenAuth={(tab = 'signin') => { setAuthTab(tab); setAuthOpen(true); }}
+            onOpenCart={() => setCartOpen(true)}
+          />
 
           <AuthModal open={authOpen} onClose={closeAuth} initialTab={authTab} />
           <CartSidebar open={cartOpen} onClose={closeCart} />
