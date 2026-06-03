@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
-import { categoryAPI, productAPI, orderAPI } from '@/lib/api';
+import { categoryAPI, productAPI, orderAPI, isCancelledError } from '@/lib/api';
 import { useStoreStore } from '@/store/storeStore';
 import { useDashboardStore } from '@/store/dashboardStore';
 import { formatCurrency } from '@/lib/utils';
@@ -116,8 +116,10 @@ export default function DashboardPage() {
         statusData: statusChartData,
         topProducts: nextTop,
       });
-    } catch {
-      toast.error('Failed to load dashboard data');
+    } catch (err) {
+      if (!isCancelledError(err)) {
+        toast.error('Failed to load dashboard data');
+      }
     } finally {
       setLoading(false);
     }

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { storeAPI } from '@/lib/api';
 import { useStoreStore } from '@/store/storeStore';
+import { useFormDraft } from '@/hooks/useFormDraft';
 import { toast } from 'sonner';
 import {
   ChevronLeft, ChevronRight, ChevronDown, Loader2, Store,
@@ -33,7 +34,7 @@ export default function CreateStorePage() {
   const { setActiveStore, setStores } = useStoreStore();
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState({});
-  const [formData, setFormData] = useState({
+  const [formData, setFormData, clearDraft] = useFormDraft('store-create', {
     name: '',
     subdomain: '',
     description: '',
@@ -95,6 +96,11 @@ export default function CreateStorePage() {
     }
   };
 
+  const handleBack = () => {
+    clearDraft();
+    router.push('/stores');
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -121,6 +127,7 @@ export default function CreateStorePage() {
       const res = await storeAPI.create(formData);
       const newStore = res.data?.store || res.data;
       toast.success('Store created successfully!');
+      clearDraft();
       if (newStore?.id) {
         const storesRes = await storeAPI.myStores();
         const storeList = storesRes.data?.stores || storesRes.data || [];
@@ -156,7 +163,7 @@ export default function CreateStorePage() {
 
       {/* Breadcrumbs */}
       <nav className="flex items-center gap-1.5 text-sm text-slate-500 dark:text-gray-400 mb-4">
-        <button onClick={() => router.push('/stores')} className="hover:text-violet-500 transition-colors">
+        <button onClick={handleBack} className="hover:text-violet-500 transition-colors">
           Stores
         </button>
         <ChevronRight className="w-3.5 h-3.5" />
@@ -167,7 +174,7 @@ export default function CreateStorePage() {
       <div className="flex flex-wrap items-start justify-between gap-4 mb-2">
         <div className="flex flex-wrap items-center gap-3">
           <button
-            onClick={() => router.push('/stores')}
+            onClick={handleBack}
             className="flex items-center gap-1.5 text-slate-500 dark:text-gray-400 hover:text-violet-500 text-sm font-medium transition-colors"
           >
             <ChevronLeft className="w-7 h-7 text-slate-900 dark:text-white" strokeWidth={2.5} />
@@ -176,7 +183,7 @@ export default function CreateStorePage() {
         </div>
       </div>
 
-      <form id="create-store-form" onSubmit={handleSubmit} className="space-y-8">
+      <form id="create-store-form" onSubmit={handleSubmit} noValidate className="space-y-8">
         <section className="bg-white dark:bg-gray-800 rounded-xl border border-violet-500/10 dark:border-gray-700 p-6 md:p-8 shadow-sm">
           <div className="flex items-center gap-2 mb-6 pb-4 border-b border-violet-500/5 dark:border-gray-700">
             <Store className="w-5 h-5 text-violet-500" />
@@ -189,22 +196,18 @@ export default function CreateStorePage() {
               <label className="text-sm font-semibold text-slate-700 dark:text-gray-300">
                 Store Name <span className="text-red-500">*</span>
               </label>
-              <input
-                type="text"
-                className={errors.name ? INPUT_ERROR_CLS : INPUT_CLS}
-                placeholder="My Awesome Store"
-                value={formData.name}
-                onChange={handleNameChange}
-                maxLength={MAX_NAME_LENGTH}
-              />
-              <div className="flex items-center justify-between">
-                {errors.name ? (
-                  <p className="text-xs text-red-500">{errors.name}</p>
-                ) : (
-                  <p className="text-xs text-slate-400 dark:text-gray-500">Min {MIN_LENGTH} characters, no special characters</p>
-                )}
-                <span className="text-xs text-slate-400 dark:text-gray-500">{formData.name.length}/{MAX_NAME_LENGTH}</span>
+              <div className="relative">
+                <input
+                  type="text"
+                  className={(errors.name ? INPUT_ERROR_CLS : INPUT_CLS) + ' pr-14'}
+                  placeholder="My Awesome Store"
+                  value={formData.name}
+                  onChange={handleNameChange}
+                  maxLength={MAX_NAME_LENGTH}
+                />
+                <span className="absolute right-3 bottom-1 text-xs text-slate-400 dark:text-gray-500 pointer-events-none">{formData.name.length}/{MAX_NAME_LENGTH}</span>
               </div>
+              {errors.name && <p className="text-xs text-red-500">{errors.name}</p>}
             </div>
 
             {/* Currency */}
@@ -233,52 +236,48 @@ export default function CreateStorePage() {
             <label className="text-sm font-semibold text-slate-700 dark:text-gray-300">
               Subdomain <span className="text-red-500">*</span>
             </label>
-            <div className={`flex items-center rounded-lg border overflow-hidden focus-within:ring-2 transition-all ${
-              errors.subdomain
-                ? 'border-red-500 focus-within:ring-red-500/20 focus-within:border-red-500'
-                : 'border-violet-500/20 dark:border-gray-600 focus-within:ring-violet-500/20 focus-within:border-violet-500'
-            }`}>
-              <input
-                type="text"
-                className={`flex-1 px-4 py-3 focus:outline-none text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-gray-500 min-w-0 ${
-                  errors.subdomain
-                    ? 'bg-red-50 dark:bg-red-900/20'
-                    : 'bg-violet-500/5 dark:bg-gray-700'
-                }`}
-                placeholder="mystore"
-                value={formData.subdomain}
-                onChange={handleSubdomainChange}
-                maxLength={MAX_SUBDOMAIN_LENGTH}
-              />
-              <span className="px-4 py-3 bg-slate-50 dark:bg-gray-700/50 text-slate-400 dark:text-gray-500 text-sm border-l border-violet-500/10 dark:border-gray-600 whitespace-nowrap">.localhost:3000</span>
+            <div className="relative">
+              <div className={`flex items-center rounded-lg border overflow-hidden focus-within:ring-2 transition-all ${
+                errors.subdomain
+                  ? 'border-red-500 focus-within:ring-red-500/20 focus-within:border-red-500'
+                  : 'border-violet-500/20 dark:border-gray-600 focus-within:ring-violet-500/20 focus-within:border-violet-500'
+              }`}>
+                <input
+                  type="text"
+                  className={`flex-1 px-4 py-3 focus:outline-none text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-gray-500 min-w-0 pr-14 ${
+                    errors.subdomain
+                      ? 'bg-red-50 dark:bg-red-900/20'
+                      : 'bg-violet-500/5 dark:bg-gray-700'
+                  }`}
+                  placeholder="mystore"
+                  value={formData.subdomain}
+                  onChange={handleSubdomainChange}
+                  maxLength={MAX_SUBDOMAIN_LENGTH}
+                />
+                <span className="px-4 py-3 bg-slate-50 dark:bg-gray-700/50 text-slate-400 dark:text-gray-500 text-sm border-l border-violet-500/10 dark:border-gray-600 whitespace-nowrap">.localhost:3000</span>
+              </div>
+              <span className="absolute right-28 bottom-1 text-xs text-slate-400 dark:text-gray-500 pointer-events-none">{formData.subdomain.length}/{MAX_SUBDOMAIN_LENGTH}</span>
             </div>
-            <div className="flex items-center justify-between">
-              {errors.subdomain ? (
-                <p className="text-xs text-red-500">{errors.subdomain}</p>
-              ) : (
-                <p className="text-xs text-slate-400 dark:text-gray-500">Lowercase letters, numbers and underscores only</p>
-              )}
-              <span className="text-xs text-slate-400 dark:text-gray-500">{formData.subdomain.length}/{MAX_SUBDOMAIN_LENGTH}</span>
-            </div>
+            {errors.subdomain && <p className="text-xs text-red-500">{errors.subdomain}</p>}
           </div>
 
           {/* Description */}
           <div className="mt-6 space-y-1.5">
             <label className="text-sm font-semibold text-slate-700 dark:text-gray-300">Description</label>
-            <textarea
-              className={INPUT_CLS + ' resize-none'}
-              rows={4}
-              placeholder="Describe your store..."
-              value={formData.description}
-              onChange={(e) => {
-                if (e.target.value.length <= MAX_DESCRIPTION_LENGTH) {
-                  setFormData({ ...formData, description: e.target.value });
-                }
-              }}
-              maxLength={MAX_DESCRIPTION_LENGTH}
-            />
-            <div className="flex justify-end">
-              <span className="text-xs text-slate-400 dark:text-gray-500">{formData.description.length}/{MAX_DESCRIPTION_LENGTH}</span>
+            <div className="relative">
+              <textarea
+                className={INPUT_CLS + ' resize-none pr-16'}
+                rows={4}
+                placeholder="Describe your store..."
+                value={formData.description}
+                onChange={(e) => {
+                  if (e.target.value.length <= MAX_DESCRIPTION_LENGTH) {
+                    setFormData({ ...formData, description: e.target.value });
+                  }
+                }}
+                maxLength={MAX_DESCRIPTION_LENGTH}
+              />
+              <span className="absolute right-3 bottom-1 text-xs text-slate-400 dark:text-gray-500 pointer-events-none">{formData.description.length}/{MAX_DESCRIPTION_LENGTH}</span>
             </div>
           </div>
         </section>
@@ -287,7 +286,7 @@ export default function CreateStorePage() {
         <div className="flex items-center justify-end gap-3 pt-2">
           <button
             type="button"
-            onClick={() => router.push('/stores')}
+            onClick={handleBack}
             className="flex-1 sm:flex-none px-4 sm:px-8 py-3 rounded-lg font-bold border border-slate-200 dark:border-gray-700 text-slate-700 dark:text-gray-300 hover:bg-slate-100 dark:hover:bg-gray-700 transition-colors"
           >
             Cancel

@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback, Fragment } from 'react';
-import { orderAPI } from '@/lib/api';
+import { useState, useEffect, useCallback, Fragment, useRef } from 'react';
+import { orderAPI, isCancelledError } from '@/lib/api';
 import { toast } from 'sonner';
 import {
   Search, Users, ChevronDown, ChevronUp,
@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import Pagination from '@/components/dashboard/Pagination';
+import DataError from '@/components/dashboard/DataError';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { useStoreStore } from '@/store/storeStore';
 
@@ -37,23 +38,33 @@ export default function CustomersPage() {
   const { activeStore } = useStoreStore();
   const [customers,      setCustomers]      = useState([]);
   const [loading,        setLoading]        = useState(true);
+  const [error,          setError]          = useState(false);
   const [searchQuery,    setSearchQuery]    = useState('');
   const [currentPage,    setCurrentPage]    = useState(1);
   const [expandedKey,    setExpandedKey]    = useState(null);
   const [customerOrders, setCustomerOrders] = useState([]);
   const [loadingOrders,  setLoadingOrders]  = useState(false);
+  const fetchingRef = useRef(false);
+  const lastSearchRef = useRef('');
 
   /* ── fetch customers ── */
   const fetchCustomers = useCallback(async (search = '') => {
+    if (fetchingRef.current && lastSearchRef.current === search) return;
+    fetchingRef.current = true;
+    lastSearchRef.current = search;
     setLoading(true);
+    setError(false);
     try {
       const res  = await orderAPI.customers(search);
       const data = res.data;
       setCustomers(Array.isArray(data) ? data : (data?.results || []));
-    } catch {
-      toast.error('Failed to load customers');
+    } catch (err) {
+      if (!isCancelledError(err)) {
+        setError(true);
+      }
     } finally {
       setLoading(false);
+      fetchingRef.current = false;
     }
   }, []);
 
@@ -147,6 +158,8 @@ export default function CustomersPage() {
             <div className="admin-loading">
               <div className="admin-spinner"></div>
             </div>
+          ) : error ? (
+            <DataError message="Failed to load customers" onRetry={() => fetchCustomers(searchQuery)} retrying={loading} />
           ) : (
             <>
               {paginatedCustomers.length === 0 ? (

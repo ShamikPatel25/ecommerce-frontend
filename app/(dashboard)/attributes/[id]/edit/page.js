@@ -12,6 +12,21 @@ import {
 } from 'lucide-react';
 import { useSharedDataStore } from '@/store/sharedDataStore';
 
+const INPUT_CLS =
+  'w-full h-12 rounded-lg border border-violet-500/20 bg-violet-500/5 px-4 text-slate-900 ' +
+  'focus:outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 transition-all ' +
+  'dark:bg-gray-700 dark:border-gray-600 dark:text-white';
+
+const INPUT_ERROR_CLS =
+  'w-full h-12 rounded-lg border border-red-500 bg-red-50 px-4 text-slate-900 ' +
+  'focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition-all ' +
+  'dark:bg-red-900/20 dark:border-red-500 dark:text-white';
+
+const SELECT_CLS = INPUT_CLS + ' pr-10 appearance-none';
+const SELECT_ERROR_CLS = INPUT_ERROR_CLS + ' pr-10 appearance-none';
+
+const MAX_NAME_LENGTH = 50;
+
 export default function EditAttributePage() {
   const router      = useRouter();
   const params      = useParams();
@@ -23,9 +38,11 @@ export default function EditAttributePage() {
   const { fetchCategories, categories } = useSharedDataStore();
   const [newValue,     setNewValue]     = useState('');
   const [formData,     setFormData, clearDraft]     = useFormDraft(`attribute-edit-${attributeId}`, { name: '', category: '' });
+  const [originalData, setOriginalData] = useState(null);
   const [pendingDeletes, setPendingDeletes] = useState(new Set());
   const [pendingAdds,    setPendingAdds]    = useState([]);
-  const [confirmDialog,  setConfirmDialog]  = useState(null);  
+  const [confirmDialog,  setConfirmDialog]  = useState(null);
+  const [errors, setErrors] = useState({});  
 
   /* ── fetch ── */
   const fetchData = useCallback(async () => {
@@ -36,7 +53,9 @@ export default function EditAttributePage() {
       ]);
       const a = attrRes.data;
       setAttribute(a);
-      setFormData({ name: a.name || '', category: String(a.category || '') });
+      const initialData = { name: a.name || '', category: String(a.category || '') };
+      setFormData(initialData);
+      setOriginalData(initialData);
     } catch {
       toast.error('Failed to load attribute');
       router.push('/attributes');
@@ -73,40 +92,111 @@ export default function EditAttributePage() {
   /* ── save ── */
   const handleSave = async (e) => {
     e.preventDefault();
+    setErrors({});
+
+    if (!formData.name.trim()) {
+      setErrors({ name: 'Attribute name is required' });
+      toast.error('Attribute name is required');
+      return;
+    }
+    if (!formData.category) {
+      setErrors({ category: 'Please select a category' });
+      toast.error('Please select a category');
+      return;
+    }
+
     setSaving(true);
     try {
       await attributeAPI.update(attributeId, formData);
+
+      let deleteErrors = [];
+      let addErrors = [];
+
       // Delete pending values
       if (pendingDeletes.size > 0) {
-        const deleteResults = await Promise.allSettled(
-          [...pendingDeletes].map((id) =>
-            attributeAPI.deleteValue(attributeId, id)
-          )
-        );
-        const failedDeletes = deleteResults.filter(r => r.status === 'rejected');
-        if (failedDeletes.length > 0) {
-          const errorMsg = failedDeletes[0].reason?.response?.data?.detail || 'Some values could not be deleted because they are in use by products.';
-          toast.error(errorMsg);
-        }
-        setPendingDeletes(new Set());
+        const deletePromises = [...pendingDeletes].map(async (valueId) => {
+          try {
+            await attributeAPI.deleteValue(attributeId, valueId);
+            return { success: true, valueId };
+          } catch (err) {
+            return { success: false, valueId, error: err.response?.data?.detail || err.response?.data?.error || 'Delete failed' };
+          }
+        });
+        const deleteResults = await Promise.all(deletePromises);
+        deleteErrors = deleteResults.filter(r => !r.success);
       }
+
       // Add pending new values
       if (pendingAdds.length > 0) {
-        await Promise.all(
-          pendingAdds.map((a) =>
-            attributeAPI.addValue(attributeId, a.value).catch(() => null)
-          )
-        );
-        setPendingAdds([]);
+        const addPromises = pendingAdds.map(async (item) => {
+          try {
+            await attributeAPI.addValue(attributeId, item.value);
+            return { success: true, value: item.value };
+          } catch (err) {
+            return { success: false, value: item.value, error: err.response?.data?.detail || 'Add failed' };
+          }
+        });
+        const addResults = await Promise.all(addPromises);
+        addErrors = addResults.filter(r => !r.success);
       }
-      toast.success('Attribute saved!');
+
+      // Show errors if any
+      if (deleteErrors.length > 0) {
+        toast.error(deleteErrors[0].error);
+      }
+      if (addErrors.length > 0) {
+        toast.error(addErrors[0].error);
+      }
+
+      // Clear pending states
+      setPendingDeletes(new Set());
+      setPendingAdds([]);
+
+      if (deleteErrors.length === 0 && addErrors.length === 0) {
+        toast.success('Attribute saved!');
+      }
+
       clearDraft();
-      // Refresh attribute data in-place without re-fetching categories
+      // Refresh attribute data
       const res = await attributeAPI.get(attributeId);
       setAttribute(res.data);
-      setFormData({ name: res.data.name || '', category: String(res.data.category || '') });
+      const updatedData = { name: res.data.name || '', category: String(res.data.category || '') };
+      setFormData(updatedData);
+      setOriginalData(updatedData);
     } catch (error) {
-      toast.error(error.response?.data?.name?.[0] || 'Failed to save');
+      const d = error.response?.data;
+      const status = error.response?.status;
+
+      if (d?.name?.[0]) {
+        setErrors({ name: d.name[0] });
+        toast.error(d.name[0]);
+      } else if (d?.category?.[0]) {
+        setErrors({ category: d.category[0] });
+        toast.error(d.category[0]);
+      } else if (d?.non_field_errors?.[0]) {
+        const msg = d.non_field_errors[0];
+        if (msg.toLowerCase().includes('unique') || msg.toLowerCase().includes('already exists')) {
+          toast.error('An attribute with this name already exists in this category');
+        } else {
+          toast.error(msg);
+        }
+      } else if (d?.detail) {
+        const detail = typeof d.detail === 'string' ? d.detail.toLowerCase() : '';
+        if (detail.includes('unique') || detail.includes('already exists') || detail.includes('duplicate')) {
+          toast.error('An attribute with this name already exists in this category');
+        } else {
+          toast.error(d.detail);
+        }
+      } else if (status === 500 || status === 400) {
+        const errorStr = JSON.stringify(d || '').toLowerCase();
+        if (errorStr.includes('unique') || errorStr.includes('duplicate') || errorStr.includes('already exists')) {
+          toast.error('An attribute with this name already exists in this category');
+        } else {
+          toast.error('An attribute with this name may already exist in this category');
+        }
+      } else {
+        toast.error('Failed to save attribute');
+      }
     } finally {
       setSaving(false);
     }
@@ -150,6 +240,12 @@ export default function EditAttributePage() {
   const rootCategories = categories.filter((c) => !c.parent);
   const pendingCount = pendingDeletes.size;
   const pendingAddCount = pendingAdds.length;
+  const hasChanges = originalData && (
+    formData.name !== originalData.name ||
+    formData.category !== originalData.category ||
+    pendingCount > 0 ||
+    pendingAddCount > 0
+  );
 
   /* ──────────────────────────────────────────────────────────────── */
   return (
@@ -188,29 +284,45 @@ export default function EditAttributePage() {
           <h2 className="text-lg font-bold text-slate-900 dark:text-white">Attribute Information</h2>
         </div>
 
-        <form id="edit-attribute-form" onSubmit={handleSave}>
+        <form id="edit-attribute-form" onSubmit={handleSave} noValidate>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Name */}
             <div className="space-y-1.5">
-              <label className="text-sm font-semibold text-slate-700 dark:text-gray-300">Attribute Name</label>
-              <input
-                type="text"
-                required
-                className="w-full h-12 rounded-lg border border-violet-500/20 bg-violet-500/5 px-4 text-slate-900 focus:outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 transition-all dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              />
-              <p className="text-xs text-slate-400 dark:text-gray-500">The public label shown to customers.</p>
+              <label className="text-sm font-semibold text-slate-700 dark:text-gray-300">
+                Attribute Name <span className="text-red-500">*</span>
+              </label>
+              <div className="relative">
+                <input
+                  type="text"
+                  className={(errors.name ? INPUT_ERROR_CLS : INPUT_CLS) + ' pr-14'}
+                  value={formData.name}
+                  maxLength={MAX_NAME_LENGTH}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/[^a-zA-Z0-9- ]/g, '');
+                    if (value.length <= MAX_NAME_LENGTH) {
+                      setFormData({ ...formData, name: value });
+                      if (errors.name) setErrors({ ...errors, name: null });
+                    }
+                  }}
+                />
+                <span className="absolute right-3 bottom-1 text-xs text-slate-400 dark:text-gray-500 pointer-events-none">{formData.name.length}/{MAX_NAME_LENGTH}</span>
+              </div>
+              {errors.name && <p className="text-xs text-red-500">{errors.name}</p>}
             </div>
 
             {/* Category */}
             <div className="space-y-1.5">
-              <label className="text-sm font-semibold text-slate-700 dark:text-gray-300">Category</label>
+              <label className="text-sm font-semibold text-slate-700 dark:text-gray-300">
+                Category <span className="text-red-500">*</span>
+              </label>
               <div className="relative">
                 <select
-                  className="w-full h-12 rounded-lg border border-violet-500/20 bg-violet-500/5 px-4 pr-10 appearance-none text-slate-900 focus:outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 transition-all dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  className={errors.category ? SELECT_ERROR_CLS : SELECT_CLS}
                   value={formData.category}
-                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                  onChange={(e) => {
+                    setFormData({ ...formData, category: e.target.value });
+                    if (errors.category) setErrors({ ...errors, category: null });
+                  }}
                 >
                   <option value="">Select Category</option>
                   {rootCategories.map((c) => (
@@ -219,7 +331,7 @@ export default function EditAttributePage() {
                 </select>
                 <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-gray-500 pointer-events-none" />
               </div>
-              <p className="text-xs text-slate-400 dark:text-gray-500">Used for filtering and organization.</p>
+              {errors.category && <p className="text-xs text-red-500">{errors.category}</p>}
             </div>
           </div>
         </form>
@@ -234,22 +346,6 @@ export default function EditAttributePage() {
             <List className="w-5 h-5 text-violet-500" />
             <h2 className="text-lg font-bold text-slate-900 dark:text-white">Attribute Values</h2>
           </div>
-          {(pendingCount > 0 || pendingAddCount > 0) && (
-            <div className="flex items-center gap-3">
-              {pendingAddCount > 0 && (
-                <div className="flex items-center gap-1.5 rounded-full bg-green-100 dark:bg-green-900/30 border border-green-200 dark:border-green-800 px-3 py-1 text-xs font-bold text-green-600 dark:text-green-400">
-                  <PlusCircle className="w-3 h-3" />
-                  {pendingAddCount} NEW
-                </div>
-              )}
-              {pendingCount > 0 && (
-                <div className="flex items-center gap-1.5 rounded-full bg-red-100 dark:bg-red-900/30 border border-red-200 dark:border-red-800 px-3 py-1 text-xs font-bold text-red-600 dark:text-red-400">
-                  <X className="w-3 h-3" />
-                  {pendingCount} PENDING DELETION{pendingCount > 1 ? 'S' : ''}
-                </div>
-              )}
-            </div>
-          )}
         </div>
 
         {/* Add value */}
@@ -258,10 +354,10 @@ export default function EditAttributePage() {
             <PlusCircle className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-gray-500" />
             <input
               type="text"
-              placeholder="Add new value (e.g. XL, Red, 10oz)"
+              placeholder="Add value (e.g. XL, Red, 10oz)"
               className="w-full h-12 rounded-lg border border-violet-500/20 bg-violet-500/5 pl-10 pr-4 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 transition-all dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder:text-gray-500"
               value={newValue}
-              onChange={(e) => setNewValue(e.target.value)}
+              onChange={(e) => setNewValue(e.target.value.replace(/[^a-zA-Z0-9- ]/g, ''))}
               onKeyDown={handleKeyDown}
             />
           </div>
@@ -384,8 +480,8 @@ export default function EditAttributePage() {
         <button
           type="submit"
           form="edit-attribute-form"
-          disabled={saving}
-          className="flex-1 sm:flex-none px-4 sm:px-12 py-3 rounded-lg font-bold bg-violet-500 text-white shadow-lg shadow-violet-500/30 hover:bg-violet-500/90 active:scale-95 transition-all disabled:opacity-50"
+          disabled={saving || !hasChanges}
+          className="flex-1 sm:flex-none px-4 sm:px-12 py-3 rounded-lg font-bold bg-violet-500 text-white shadow-lg shadow-violet-500/30 hover:bg-violet-500/90 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {saving ? (
             <span className="flex items-center justify-center gap-2">

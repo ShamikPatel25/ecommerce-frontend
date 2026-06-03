@@ -43,7 +43,7 @@ export function Navbar({ storeName, onOpenAuth, onOpenCart }) {
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
-    setIsMounted(true);
+    queueMicrotask(() => setIsMounted(true));
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 20);
     };

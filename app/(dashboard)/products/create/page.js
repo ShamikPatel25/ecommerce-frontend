@@ -19,7 +19,18 @@ const INPUT_CLS =
   'focus:ring-2 focus:ring-violet-500/20 transition-all ' +
   'dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder:text-gray-500';
 
+const INPUT_ERROR_CLS =
+  'w-full rounded-lg border border-red-500 bg-red-50 px-4 py-3 text-slate-900 ' +
+  'placeholder:text-slate-400 focus:outline-none focus:border-red-500 ' +
+  'focus:ring-2 focus:ring-red-500/20 transition-all ' +
+  'dark:bg-red-900/20 dark:border-red-500 dark:text-white dark:placeholder:text-gray-500';
+
 const SELECT_CLS = INPUT_CLS + ' appearance-none pr-10';
+const SELECT_ERROR_CLS = INPUT_ERROR_CLS + ' appearance-none pr-10';
+
+const MAX_NAME_LENGTH = 100;
+const MAX_SKU_LENGTH = 30;
+const MAX_DESCRIPTION_LENGTH = 500;
 
 /* ── Pure utility helpers (outside component) ────────────── */
 
@@ -206,6 +217,7 @@ export default function CreateProductPage() {
     is_active:        true,
   });
   const [skuError, setSkuError] = useState('');
+  const [errors, setErrors] = useState({});
 
   /* ── fetch categories ── */
   const fetchCategoriesData = useCallback(async () => {
@@ -216,6 +228,15 @@ export default function CreateProductPage() {
   useEffect(() => {
     fetchCategoriesData();
   }, [fetchCategoriesData]);
+
+  const handleBack = () => {
+    clearFormDraft();
+    clearSelAttrDraft();
+    clearStepDraft();
+    clearCombosDraft();
+    clearComboSelDraft();
+    router.push('/products');
+  };
 
   /* ── fetch attributes when category changes ── */
   const fetchAttributes = useCallback(async (categoryId) => {
@@ -323,6 +344,9 @@ export default function CreateProductPage() {
   /* ── Combo builders (extracted to reduce cognitive complexity) ── */
 
   const buildSingleCombo = (selectedAttrs) => {
+    console.log('buildSingleCombo - selectedAttrs:', selectedAttrs.map(a => ({ id: a.id, name: a.name })));
+    console.log('buildSingleCombo - comboSelections:', comboSelections);
+
     for (const attr of selectedAttrs) {
       if (!comboSelections[attr.id]) {
         toast.error(`Please select a value for "${attr.name}"`);
@@ -332,8 +356,11 @@ export default function CreateProductPage() {
 
     const values = selectedAttrs.map((attr) => {
       const val = attr.values.find((v) => String(v.id) === String(comboSelections[attr.id]));
+      console.log(`buildSingleCombo - attr ${attr.name}: looking for value ${comboSelections[attr.id]}, found:`, val);
       return { attrId: attr.id, attrName: attr.name, valId: val.id, valName: val.value };
     });
+
+    console.log('buildSingleCombo - final values:', values);
 
     const key = comboKey(values);
     if (catalogCombos.some((c) => comboKey(c.values) === key)) {
@@ -382,7 +409,7 @@ export default function CreateProductPage() {
   };
 
   const handleAddCombo = () => {
-    const selectedAttrs = attributes.filter((a) => selectedAttributes.includes(a.id));
+    const selectedAttrs = attributes.filter((a) => selectedAttributes.map(id => String(id)).includes(String(a.id)));
 
     if (singleMode) {
       const combo = buildSingleCombo(selectedAttrs);
@@ -419,6 +446,33 @@ export default function CreateProductPage() {
   /* ── Submit helpers (extracted to reduce cognitive complexity) ── */
 
   const validateForm = async () => {
+    // Validate required fields one at a time
+    if (!formData.name.trim()) {
+      setErrors({ name: 'Product name is required' });
+      toast.error('Product name is required');
+      return false;
+    }
+    if (!formData.sku.trim()) {
+      setErrors({ sku: 'SKU is required' });
+      toast.error('SKU is required');
+      return false;
+    }
+    if (!formData.price || Number.parseFloat(formData.price) <= 0) {
+      setErrors({ price: 'Price is required' });
+      toast.error('Price is required');
+      return false;
+    }
+    if (!formData.category) {
+      setErrors({ category: 'Category is required' });
+      toast.error('Category is required');
+      return false;
+    }
+    if (formData.compare_at_price && Number.parseFloat(formData.compare_at_price) <= Number.parseFloat(formData.price)) {
+      setErrors({ compare_at_price: 'Compare price must be higher than selling price' });
+      toast.error('Compare price must be higher than selling price');
+      return false;
+    }
+
     if (formData.product_type === 'catalog') {
       if (step === 1) { handleGenerateCatalog(); return false; }
       if (catalogCombos.length === 0) {
@@ -501,10 +555,23 @@ export default function CreateProductPage() {
   };
 
   const createVariants = async (productId) => {
+    console.log('=== DEBUG createVariants ===');
+    console.log('catalogCombos:', JSON.stringify(catalogCombos, null, 2));
+    console.log('selectedAttributes (raw):', selectedAttributes);
+    console.log('attributes available:', attributes.map(a => ({ id: a.id, name: a.name })));
+
+    // Get unique attribute IDs from the combos values
+    const attrIdsFromCombos = [...new Set(
+      catalogCombos.flatMap(c => c.values.map(v => v.attrId))
+    )];
+    console.log('Attribute IDs from combos:', attrIdsFromCombos);
+
     try {
-      await productAPI.selectAttributes(productId, selectedAttributes);
-    } catch {
-      toast.error('Product created but failed to attach attributes.');
+      await productAPI.selectAttributes(productId, attrIdsFromCombos);
+    } catch (err) {
+      console.error('selectAttributes error:', err.response?.data, err.response?.status);
+      const msg = err.response?.data?.error || 'Failed to attach attributes';
+      toast.error(`Product created but ${msg}`);
       return false;
     }
 
@@ -514,13 +581,16 @@ export default function CreateProductPage() {
         price: c.price ? Number.parseFloat(c.price).toFixed(2) : null,
         stock: Number.parseInt(c.stock, 10) || 0,
       }));
+      console.log('Sending combinations:', JSON.stringify(combinations, null, 2));
       await productAPI.generateCatalog(productId, {
         single_catalog_mode: false,
         selected_combinations: combinations,
       });
       toast.success('Product & catalog variants created!');
-    } catch {
-      toast.error('Product created but catalog generation failed.');
+    } catch (err) {
+      console.error('generateCatalog error:', err.response?.data);
+      const msg = err.response?.data?.error || JSON.stringify(err.response?.data) || 'Catalog generation failed';
+      toast.error(`Product created but ${msg}`);
     }
 
     return true;
@@ -529,6 +599,8 @@ export default function CreateProductPage() {
   /* ── Final submit (Create Product) ── */
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setErrors({});
+    setSkuError('');
 
     const isValid = await validateForm();
     if (!isValid) return;
@@ -567,8 +639,36 @@ export default function CreateProductPage() {
     } catch (error) {
       const errData = error.response?.data;
       if (errData && typeof errData === 'object') {
-        const first = Object.values(errData)[0];
-        toast.error(Array.isArray(first) ? first[0] : 'Failed to create product');
+        const newErrors = {};
+        let firstErrorMsg = 'Failed to create product';
+
+        // Map API field errors to form errors and find first error message
+        if (errData.name?.[0]) {
+          newErrors.name = errData.name[0];
+          firstErrorMsg = errData.name[0];
+        }
+        if (errData.sku?.[0]) {
+          newErrors.sku = errData.sku[0];
+          setSkuError(errData.sku[0]);
+          if (firstErrorMsg === 'Failed to create product') firstErrorMsg = errData.sku[0];
+        }
+        if (errData.price?.[0]) {
+          newErrors.price = errData.price[0];
+          if (firstErrorMsg === 'Failed to create product') firstErrorMsg = errData.price[0];
+        }
+        if (errData.category?.[0]) {
+          newErrors.category = errData.category[0];
+          if (firstErrorMsg === 'Failed to create product') firstErrorMsg = errData.category[0];
+        }
+        if (errData.non_field_errors?.[0] && firstErrorMsg === 'Failed to create product') {
+          firstErrorMsg = errData.non_field_errors[0];
+        }
+        if (errData.detail && firstErrorMsg === 'Failed to create product') {
+          firstErrorMsg = errData.detail;
+        }
+
+        setErrors(newErrors);
+        toast.error(firstErrorMsg);
       } else {
         toast.error('Failed to create product');
       }
@@ -681,7 +781,7 @@ export default function CreateProductPage() {
     </div>
   );
 
-  const selectedAttrObjects = attributes.filter((a) => selectedAttributes.includes(a.id));
+  const selectedAttrObjects = attributes.filter((a) => selectedAttributes.map(id => String(id)).includes(String(a.id)));
 
   /* ════════════════════════════════════════════════════════════════ */
   /*  STEP 2: Select Attribute Values                                */
@@ -693,7 +793,7 @@ export default function CreateProductPage() {
 
         {/* Breadcrumbs */}
         <nav className="flex items-center gap-1.5 text-sm text-slate-500 dark:text-gray-400 mb-4">
-          <button onClick={() => router.push('/products')} className="hover:text-violet-500 transition-colors">
+          <button onClick={handleBack} className="hover:text-violet-500 transition-colors">
             Products
           </button>
           <ChevronRight className="w-3.5 h-3.5" />
@@ -869,7 +969,7 @@ export default function CreateProductPage() {
                     <tr key={comboKey(combo.values)} className="border-b border-slate-50 dark:border-gray-700 hover:bg-violet-500/5 transition-colors">
                       <td className="py-3 px-3 text-slate-400 dark:text-gray-500 font-mono">{idx + 1}</td>
                       {selectedAttrObjects.map((attr) => {
-                        const val = combo.values.find((v) => v.attrId === attr.id);
+                        const val = combo.values.find((v) => String(v.attrId) === String(attr.id));
                         return (
                           <td key={attr.id} className="py-3 px-3">
                             <span className="px-2.5 py-1 bg-violet-500/10 text-violet-500 rounded-md font-semibold text-xs">
@@ -925,10 +1025,7 @@ export default function CreateProductPage() {
         <div className="flex gap-3">
           <button
             type="button"
-            onClick={() => {
-              clearFormDraft(); clearSelAttrDraft(); clearCombosDraft(); clearComboSelDraft(); clearStepDraft();
-              router.push('/products');
-            }}
+            onClick={handleBack}
             className="flex-1 flex items-center justify-center px-4 py-3 rounded-lg font-bold border border-slate-200 dark:border-gray-600 text-slate-700 dark:text-gray-300 hover:bg-slate-100 dark:hover:bg-gray-700 transition-colors"
           >
             Cancel
@@ -960,7 +1057,7 @@ export default function CreateProductPage() {
 
       {/* Breadcrumbs */}
       <nav className="flex items-center gap-1.5 text-sm text-slate-500 dark:text-gray-400 mb-4">
-        <button onClick={() => router.push('/products')} className="hover:text-violet-500 transition-colors">
+        <button onClick={handleBack} className="hover:text-violet-500 transition-colors">
           Products
         </button>
         <ChevronRight className="w-3.5 h-3.5" />
@@ -971,7 +1068,7 @@ export default function CreateProductPage() {
       <div className="flex flex-wrap items-start justify-between gap-4 mb-2">
         <div className="flex flex-wrap items-center gap-3">
           <button
-            onClick={() => router.push('/products')}
+            onClick={handleBack}
             className="flex items-center gap-1.5 text-slate-500 dark:text-gray-400 hover:text-violet-500 text-sm font-medium transition-colors"
           >
             <ChevronLeft className="w-7 h-7 text-slate-900 dark:text-white" strokeWidth={2.5} />
@@ -980,7 +1077,7 @@ export default function CreateProductPage() {
         </div>
       </div>
 
-      <form id="create-product-form" onSubmit={handleSubmit} className="space-y-8">
+      <form id="create-product-form" onSubmit={handleSubmit} noValidate className="space-y-8">
 
         {/* ── Section 1: Basic Information ────────────────────── */}
         <section className="bg-white dark:bg-gray-800 rounded-xl border border-violet-500/10 dark:border-gray-700 p-6 md:p-8 shadow-sm">
@@ -992,54 +1089,77 @@ export default function CreateProductPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-1.5">
               <label htmlFor="product-name" className="text-sm font-semibold text-slate-700 dark:text-gray-300">
-                Product Name <span className="text-violet-500">*</span>
+                Product Name <span className="text-red-500">*</span>
               </label>
-              <input
-                id="product-name"
-                type="text" required
-                placeholder="e.g. Wireless Noise Cancelling Headphones"
-                className={INPUT_CLS}
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              />
+              <div className="relative">
+                <input
+                  id="product-name"
+                  type="text"
+                  placeholder="e.g. Wireless Noise Cancelling Headphones"
+                  className={(errors.name ? INPUT_ERROR_CLS : INPUT_CLS) + ' pr-16'}
+                  value={formData.name}
+                  maxLength={MAX_NAME_LENGTH}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/[^a-zA-Z0-9- ]/g, '');
+                    if (value.length <= MAX_NAME_LENGTH) {
+                      setFormData({ ...formData, name: value });
+                      if (errors.name) setErrors({ ...errors, name: null });
+                    }
+                  }}
+                />
+                <span className="absolute right-3 bottom-1 text-xs text-slate-400 dark:text-gray-500 pointer-events-none">{formData.name.length}/{MAX_NAME_LENGTH}</span>
+              </div>
+              {errors.name && <p className="text-xs text-red-500">{errors.name}</p>}
             </div>
 
             <div className="space-y-1.5">
               <label htmlFor="product-sku" className="text-sm font-semibold text-slate-700 dark:text-gray-300">
-                SKU <span className="text-violet-500">*</span>
+                SKU <span className="text-red-500">*</span>
               </label>
-              <input
-                id="product-sku"
-                type="text" required
-                placeholder="barcode-123-xyz"
-                className={`${INPUT_CLS} ${skuError ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' : ''}`}
-                value={formData.sku}
-                onChange={(e) => { setFormData({ ...formData, sku: e.target.value }); setSkuError(''); }}
-              />
-              {skuError && <p className="text-xs text-red-500 font-medium">{skuError}</p>}
+              <div className="relative">
+                <input
+                  id="product-sku"
+                  type="text"
+                  placeholder="barcode-123-xyz"
+                  className={(skuError || errors.sku ? INPUT_ERROR_CLS : INPUT_CLS) + ' pr-14'}
+                  value={formData.sku}
+                  maxLength={MAX_SKU_LENGTH}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/[^a-zA-Z0-9-]/g, '');
+                    if (value.length <= MAX_SKU_LENGTH) {
+                      setFormData({ ...formData, sku: value });
+                      setSkuError('');
+                      if (errors.sku) setErrors({ ...errors, sku: null });
+                    }
+                  }}
+                />
+                <span className="absolute right-3 bottom-1 text-xs text-slate-400 dark:text-gray-500 pointer-events-none">{formData.sku.length}/{MAX_SKU_LENGTH}</span>
+              </div>
+              {(skuError || errors.sku) && <p className="text-xs text-red-500 font-medium">{skuError || errors.sku}</p>}
             </div>
 
             <div className="space-y-1.5">
               <label htmlFor="product-price" className="text-sm font-semibold text-slate-700 dark:text-gray-300">
-                Price (USD) <span className="text-violet-500">*</span>
+                Price (USD) <span className="text-red-500">*</span>
               </label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-gray-500 font-medium">$</span>
                 <input
                   id="product-price"
                   type="text"
-                  inputMode="decimal"
-                  pattern="[0-9]*\.?[0-9]*"
-                  required
-                  placeholder="0.00"
-                  className={INPUT_CLS + ' pl-8'}
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  placeholder="0"
+                  className={(errors.price ? INPUT_ERROR_CLS : INPUT_CLS) + ' pl-8'}
                   value={formData.price}
                   onChange={(e) => {
-                    const val = e.target.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');
+                    const val = e.target.value.replace(/[^0-9]/g, '');
                     setFormData({ ...formData, price: val });
+                    if (errors.price) setErrors({ ...errors, price: null });
                   }}
                 />
               </div>
+              {errors.price && <p className="text-xs text-red-500">{errors.price}</p>}
             </div>
 
             <div className="space-y-1.5">
@@ -1049,30 +1169,35 @@ export default function CreateProductPage() {
                 <input
                   id="product-compare-price"
                   type="text"
-                  inputMode="decimal"
-                  pattern="[0-9]*\.?[0-9]*"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
                   placeholder="Original price (optional)"
-                  className={INPUT_CLS + ' pl-8'}
+                  className={(errors.compare_at_price ? INPUT_ERROR_CLS : INPUT_CLS) + ' pl-8'}
                   value={formData.compare_at_price}
                   onChange={(e) => {
-                    const val = e.target.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');
+                    const val = e.target.value.replace(/[^0-9]/g, '');
                     setFormData({ ...formData, compare_at_price: val });
+                    if (errors.compare_at_price) setErrors({ ...errors, compare_at_price: null });
                   }}
                 />
               </div>
+              {errors.compare_at_price && <p className="text-xs text-red-500">{errors.compare_at_price}</p>}
             </div>
 
             <div className="space-y-1.5">
               <label htmlFor="product-category" className="text-sm font-semibold text-slate-700 dark:text-gray-300">
-                Category {formData.product_type === 'catalog' && <span className="text-violet-500">*</span>}
+                Category <span className="text-red-500">*</span>
               </label>
               <div className="relative">
                 <select
                   id="product-category"
-                  className={SELECT_CLS}
+                  className={errors.category ? SELECT_ERROR_CLS : SELECT_CLS}
                   value={formData.category}
-                  onChange={(e) => handleCategoryChange(e.target.value)}
-                  required={formData.product_type === 'catalog'}
+                  onChange={(e) => {
+                    handleCategoryChange(e.target.value);
+                    if (errors.category) setErrors({ ...errors, category: null });
+                  }}
+                  required
                 >
                   <option value="">Select a category</option>
                   {categories.map((c) => (
@@ -1081,11 +1206,12 @@ export default function CreateProductPage() {
                 </select>
                 <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-gray-500 pointer-events-none" />
               </div>
+              {errors.category && <p className="text-xs text-red-500">{errors.category}</p>}
             </div>
 
             <div className="space-y-1.5">
               <label htmlFor="product-type" className="text-sm font-semibold text-slate-700 dark:text-gray-300">
-                Product Type <span className="text-violet-500">*</span>
+                Product Type <span className="text-red-500">*</span>
               </label>
               <div className="relative">
                 <select
@@ -1126,14 +1252,23 @@ export default function CreateProductPage() {
 
             <div className="md:col-span-2 space-y-1.5">
               <label htmlFor="product-description" className="text-sm font-semibold text-slate-700 dark:text-gray-300">Description</label>
-              <textarea
-                id="product-description"
-                rows={4}
-                placeholder="Describe your product in detail..."
-                className={INPUT_CLS + ' resize-none'}
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              />
+              <div className="relative">
+                <textarea
+                  id="product-description"
+                  rows={4}
+                  placeholder="Describe your product in detail..."
+                  className={INPUT_CLS + ' resize-none pr-16'}
+                  value={formData.description}
+                  maxLength={MAX_DESCRIPTION_LENGTH}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (value.length <= MAX_DESCRIPTION_LENGTH) {
+                      setFormData({ ...formData, description: value });
+                    }
+                  }}
+                />
+                <span className="absolute right-3 bottom-1 text-xs text-slate-400 dark:text-gray-500 pointer-events-none">{formData.description.length}/{MAX_DESCRIPTION_LENGTH}</span>
+              </div>
             </div>
           </div>
         </section>
@@ -1245,10 +1380,10 @@ export default function CreateProductPage() {
                         id={`attr-select-${attr.id}`}
                         type="checkbox"
                         aria-label={`Select ${attr.name} attribute`}
-                        checked={selectedAttributes.includes(attr.id)}
+                        checked={selectedAttributes.map(id => String(id)).includes(String(attr.id))}
                         onChange={(e) => {
                           if (e.target.checked) setSelectedAttributes([...selectedAttributes, attr.id]);
-                          else setSelectedAttributes(selectedAttributes.filter((id) => id !== attr.id));
+                          else setSelectedAttributes(selectedAttributes.filter((id) => String(id) !== String(attr.id)));
                         }}
                         className="w-5 h-5 rounded accent-violet-500"
                       />
@@ -1275,10 +1410,7 @@ export default function CreateProductPage() {
         <div className="flex gap-3 pt-2">
           <button
             type="button"
-            onClick={() => {
-              clearFormDraft(); clearSelAttrDraft(); clearStepDraft(); clearCombosDraft(); clearComboSelDraft();
-              router.push('/products');
-            }}
+            onClick={handleBack}
             className="flex-1 flex items-center justify-center px-4 py-3 rounded-lg font-bold border border-slate-200 dark:border-gray-600 text-slate-700 dark:text-gray-300 hover:bg-slate-100 dark:hover:bg-gray-700 transition-colors"
           >
             Cancel

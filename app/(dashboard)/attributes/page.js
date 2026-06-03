@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { attributeAPI, categoryAPI } from '@/lib/api';
+import { attributeAPI, categoryAPI, isCancelledError } from '@/lib/api';
 import { toast } from 'sonner';
 import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
 import { Plus, Search, Trash2, Tag, MoreHorizontal, Pencil } from 'lucide-react';
 import Pagination from '@/components/dashboard/Pagination';
+import DataError from '@/components/dashboard/DataError';
 import { useSharedDataStore } from '@/store/sharedDataStore';
 import {
   DropdownMenu,
@@ -22,17 +23,23 @@ export default function AttributesPage() {
   const { fetchCategories, categories } = useSharedDataStore();
   const [attributes, setAttributes] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [deleteModal, setDeleteModal] = useState({ open: false, attr: null });
+  const fetchingRef = useRef(false);
 
   const fetchAttributes = useCallback(async () => {
+    setLoading(true);
+    setError(false);
     try {
       const attrRes = await attributeAPI.list();
       const attrData = attrRes.data;
       setAttributes(Array.isArray(attrData) ? attrData : (attrData?.results || []));
-    } catch {
-      toast.error('Failed to load attributes');
+    } catch (err) {
+      if (!isCancelledError(err)) {
+        setError(true);
+      }
       setAttributes([]);
     } finally {
       setLoading(false);
@@ -40,24 +47,31 @@ export default function AttributesPage() {
   }, []);
 
   const fetchData = useCallback(async () => {
+    if (fetchingRef.current) return;
+    fetchingRef.current = true;
+    setLoading(true);
+    setError(false);
     try {
       const [attrRes] = await Promise.all([
         attributeAPI.list(),
-        fetchCategories(), // reads from cache if fresh
+        fetchCategories(),
       ]);
       const attrData = attrRes.data;
       setAttributes(Array.isArray(attrData) ? attrData : (attrData?.results || []));
-    } catch {
-      toast.error('Failed to load data');
+    } catch (err) {
+      if (!isCancelledError(err)) {
+        setError(true);
+      }
       setAttributes([]);
     } finally {
       setLoading(false);
+      fetchingRef.current = false;
     }
   }, [fetchCategories]);
 
   useEffect(() => {
     fetchData();
-  }, [fetchData]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleDelete = async () => {
     if (!deleteModal.attr) return;
@@ -92,6 +106,12 @@ export default function AttributesPage() {
     setCurrentPage(1);
   }, [searchQuery]);
 
+  const handleCreate = () => {
+    sessionStorage.removeItem('form-draft:attribute-create');
+    sessionStorage.removeItem('form-draft:attribute-create-values');
+    router.push('/attributes/create');
+  };
+
   return (
     <div className="admin-page">
       <div className="admin-container">
@@ -102,7 +122,7 @@ export default function AttributesPage() {
             <p className="admin-subtitle">Manage product attributes and their values.</p>
           </div>
           <button
-            onClick={() => router.push('/attributes/create')}
+            onClick={handleCreate}
             className="admin-btn-primary"
           >
             <Plus size={20} />
@@ -131,6 +151,8 @@ export default function AttributesPage() {
             <div className="admin-loading">
               <div className="admin-spinner"></div>
             </div>
+          ) : error ? (
+            <DataError message="Failed to load attributes" onRetry={fetchData} retrying={loading} />
           ) : (
             <>
               <div className="overflow-x-auto">

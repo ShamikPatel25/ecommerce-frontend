@@ -2,12 +2,13 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { orderAPI } from '@/lib/api';
+import { orderAPI, isCancelledError } from '@/lib/api';
 import { toast } from 'sonner';
 import {
   Download, Search, ShoppingBag, SlidersHorizontal,
 } from 'lucide-react';
 import Pagination from '@/components/dashboard/Pagination';
+import DataError from '@/components/dashboard/DataError';
 import { formatDate, formatCurrency } from '@/lib/utils';
 import { useStoreStore } from '@/store/storeStore';
 
@@ -41,11 +42,14 @@ export default function OrdersPage() {
 
   const [orders,       setOrders]       = useState([]);
   const [loading,      setLoading]      = useState(true);
+  const [error,        setError]        = useState(false);
   const [activeStatus, setActiveStatus] = useState('');
   const [searchQuery,  setSearchQuery]  = useState('');
   const [page,         setPage]         = useState(1);
   const [filterOpen,   setFilterOpen]   = useState(false);
   const filterRef = useRef(null);
+  const fetchingRef = useRef(false);
+  const lastStatusRef = useRef('');
 
   useEffect(() => {
     if (!filterOpen) return;
@@ -59,22 +63,29 @@ export default function OrdersPage() {
   }, [filterOpen]);
 
   /* ── fetch ── */
-  const fetchOrders = useCallback(async () => {
+  const fetchOrders = useCallback(async (status) => {
+    if (fetchingRef.current && lastStatusRef.current === status) return;
+    fetchingRef.current = true;
+    lastStatusRef.current = status;
     setLoading(true);
+    setError(false);
     try {
-      const res  = await orderAPI.list(activeStatus);
+      const res  = await orderAPI.list(status);
       const data = res.data;
       setOrders(Array.isArray(data) ? data : (data?.results || []));
-    } catch {
-      toast.error('Failed to load orders');
+    } catch (err) {
+      if (!isCancelledError(err)) {
+        setError(true);
+      }
     } finally {
       setLoading(false);
+      fetchingRef.current = false;
     }
-  }, [activeStatus]);
+  }, []);
 
   useEffect(() => {
-    fetchOrders();
-  }, [activeStatus, fetchOrders]);
+    fetchOrders(activeStatus);
+  }, [activeStatus]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* ── search filter ── */
   const lowerQuery = searchQuery.toLowerCase().trim();
@@ -207,6 +218,8 @@ export default function OrdersPage() {
             <div className="admin-loading">
               <div className="admin-spinner"></div>
             </div>
+          ) : error ? (
+            <DataError message="Failed to load orders" onRetry={fetchOrders} retrying={loading} />
           ) : (
             <>
               {paginated.length === 0 ? (

@@ -21,7 +21,17 @@ const INPUT_CLS =
   'focus:ring-2 focus:ring-violet-500/20 transition-all ' +
   'dark:bg-gray-700 dark:border-gray-600 dark:placeholder:text-gray-500';
 
+const INPUT_ERROR_CLS =
+  'w-full rounded-lg border border-red-500 bg-red-50 px-4 py-3 text-slate-900 dark:text-white ' +
+  'placeholder:text-slate-400 focus:outline-none focus:border-red-500 ' +
+  'focus:ring-2 focus:ring-red-500/20 transition-all ' +
+  'dark:bg-red-900/20 dark:border-red-500 dark:placeholder:text-gray-500';
+
 const SELECT_CLS = INPUT_CLS + ' appearance-none pr-10';
+
+const MAX_NAME_LENGTH = 100;
+const MAX_SKU_LENGTH = 30;
+const MAX_DESCRIPTION_LENGTH = 500;
 
 const appendToCombo = (combo, arr) =>
   arr.map((c) => [...combo, c]);
@@ -48,6 +58,7 @@ export default function EditProductPage() {
     stock: '', description: '', category: '', product_type: 'single',
     is_active: true, is_featured: false,
   });
+  const [originalData, setOriginalData] = useState(null);
 
   const [singleCatalogMode, setSingleCatalogMode] = useState(true);
   const [selections, setSelections] = useState({});
@@ -56,6 +67,7 @@ export default function EditProductPage() {
 
   const [pendingVariantDeletes, setPendingVariantDeletes] = useState(new Set());
   const [confirmVariantDialog, setConfirmVariantDialog] = useState(null);
+  const [errors, setErrors] = useState({});
 
   const fetchProduct = useCallback(async () => {
     try {
@@ -91,13 +103,15 @@ export default function EditProductPage() {
       const p = productRes.data;
       setProduct(p);
 
-      setFormData({
+      const initialFormData = {
         name: p.name || '', sku: p.sku || '', price: p.price || '',
         compare_at_price: p.compare_at_price || '', stock: p.stock ?? '',
         description: p.description || '',
         category: p.category || '', product_type: p.product_type || 'single',
         is_active: p.is_active ?? true, is_featured: p.is_featured ?? false,
-      });
+      };
+      setFormData(initialFormData);
+      setOriginalData(initialFormData);
 
       const attrs = p.selected_attributes || [];
       setAttributes(attrs);
@@ -121,6 +135,29 @@ export default function EditProductPage() {
 
   const handleSave = async (e) => {
     e.preventDefault();
+    setErrors({});
+
+    if (!formData.name.trim()) {
+      setErrors({ name: 'Product name is required' });
+      toast.error('Product name is required');
+      return;
+    }
+    if (!formData.sku.trim()) {
+      setErrors({ sku: 'SKU is required' });
+      toast.error('SKU is required');
+      return;
+    }
+    if (!formData.price || Number.parseFloat(formData.price) <= 0) {
+      setErrors({ price: 'Price is required' });
+      toast.error('Price is required');
+      return;
+    }
+    if (formData.compare_at_price && Number.parseFloat(formData.compare_at_price) <= Number.parseFloat(formData.price)) {
+      setErrors({ compare_at_price: 'Compare price must be higher than selling price' });
+      toast.error('Compare price must be higher than selling price');
+      return;
+    }
+
     setSaving(true);
     try {
       const data = {
@@ -304,6 +341,21 @@ export default function EditProductPage() {
     ? `Save & Delete ${pendingVariantDeletes.size} Variant${variantPlural}`
     : 'Save Changes';
 
+  const hasFormChanges = originalData && (
+    formData.name !== originalData.name ||
+    formData.sku !== originalData.sku ||
+    formData.price !== originalData.price ||
+    formData.compare_at_price !== originalData.compare_at_price ||
+    formData.stock !== originalData.stock ||
+    formData.description !== originalData.description ||
+    formData.is_active !== originalData.is_active ||
+    formData.is_featured !== originalData.is_featured
+  );
+  const hasVariantChanges = pendingVariantDeletes.size > 0 ||
+    catalogs.some(c => c.is_new) ||
+    catalogs.some(c => c.isDirty);
+  const hasChanges = hasFormChanges || hasVariantChanges;
+
   return (
     <div className="admin-page">
       <div className="admin-container">
@@ -331,7 +383,7 @@ export default function EditProductPage() {
       </div>
 
       {/* ── PRODUCT DETAILS FORM ── */}
-      <form id="edit-product-form" onSubmit={handleSave} className="space-y-8 mb-8">
+      <form id="edit-product-form" onSubmit={handleSave} noValidate className="space-y-8 mb-8">
         <section className="bg-white dark:bg-gray-800 rounded-xl border border-violet-500/10 p-6 md:p-8 shadow-sm">
           <div className="flex items-center gap-2 mb-6 pb-4 border-b border-violet-500/5">
             <Info className="w-5 h-5 text-violet-500" />
@@ -342,41 +394,65 @@ export default function EditProductPage() {
             {/* Name */}
             <div className="space-y-1.5">
               <label htmlFor="product-name" className="text-sm font-semibold text-slate-700 dark:text-gray-300">
-                Product Name <span className="text-violet-500">*</span>
+                Product Name <span className="text-red-500">*</span>
               </label>
-              <input id="product-name" type="text" required className={INPUT_CLS}
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              />
+              <div className="relative">
+                <input id="product-name" type="text" className={(errors.name ? INPUT_ERROR_CLS : INPUT_CLS) + ' pr-16'}
+                  value={formData.name}
+                  maxLength={MAX_NAME_LENGTH}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/[^a-zA-Z0-9- ]/g, '');
+                    if (value.length <= MAX_NAME_LENGTH) {
+                      setFormData({ ...formData, name: value });
+                      if (errors.name) setErrors({ ...errors, name: null });
+                    }
+                  }}
+                />
+                <span className="absolute right-3 bottom-1 text-xs text-slate-400 dark:text-gray-500 pointer-events-none">{formData.name.length}/{MAX_NAME_LENGTH}</span>
+              </div>
+              {errors.name && <p className="text-xs text-red-500">{errors.name}</p>}
             </div>
 
             {/* SKU */}
             <div className="space-y-1.5">
               <label htmlFor="product-sku" className="text-sm font-semibold text-slate-700 dark:text-gray-300">
-                SKU <span className="text-violet-500">*</span>
+                SKU <span className="text-red-500">*</span>
               </label>
-              <input id="product-sku" type="text" required className={INPUT_CLS}
-                value={formData.sku}
-                onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
-              />
+              <div className="relative">
+                <input id="product-sku" type="text" className={(errors.sku ? INPUT_ERROR_CLS : INPUT_CLS) + ' pr-14'}
+                  value={formData.sku}
+                  maxLength={MAX_SKU_LENGTH}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/[^a-zA-Z0-9-]/g, '');
+                    if (value.length <= MAX_SKU_LENGTH) {
+                      setFormData({ ...formData, sku: value });
+                      if (errors.sku) setErrors({ ...errors, sku: null });
+                    }
+                  }}
+                />
+                <span className="absolute right-3 bottom-1 text-xs text-slate-400 dark:text-gray-500 pointer-events-none">{formData.sku.length}/{MAX_SKU_LENGTH}</span>
+              </div>
+              {errors.sku && <p className="text-xs text-red-500">{errors.sku}</p>}
             </div>
 
             {/* Price */}
             <div className="space-y-1.5">
               <label htmlFor="product-price" className="text-sm font-semibold text-slate-700 dark:text-gray-300">
-                Price <span className="text-violet-500">*</span>
+                Price <span className="text-red-500">*</span>
               </label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-gray-500 font-medium">$</span>
-                <input id="product-price" type="text" inputMode="decimal" pattern="[0-9]*\.?[0-9]*" required
-                  className={INPUT_CLS + ' pl-8'}
+                <input id="product-price" type="text" inputMode="numeric" pattern="[0-9]*"
+                  className={(errors.price ? INPUT_ERROR_CLS : INPUT_CLS) + ' pl-8'}
                   value={formData.price}
                   onChange={(e) => {
-                    const val = e.target.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');
+                    const val = e.target.value.replace(/[^0-9]/g, '');
                     setFormData({ ...formData, price: val });
+                    if (errors.price) setErrors({ ...errors, price: null });
                   }}
                 />
               </div>
+              {errors.price && <p className="text-xs text-red-500">{errors.price}</p>}
             </div>
 
             {/* Compare at Price */}
@@ -384,16 +460,18 @@ export default function EditProductPage() {
               <label htmlFor="compare-at-price" className="text-sm font-semibold text-slate-700 dark:text-gray-300">Compare at Price</label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-gray-500 font-medium">$</span>
-                <input id="compare-at-price" type="text" inputMode="decimal" pattern="[0-9]*\.?[0-9]*"
+                <input id="compare-at-price" type="text" inputMode="numeric" pattern="[0-9]*"
                   placeholder="Original price (optional)"
-                  className={INPUT_CLS + ' pl-8'}
+                  className={(errors.compare_at_price ? INPUT_ERROR_CLS : INPUT_CLS) + ' pl-8'}
                   value={formData.compare_at_price}
                   onChange={(e) => {
-                    const val = e.target.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');
+                    const val = e.target.value.replace(/[^0-9]/g, '');
                     setFormData({ ...formData, compare_at_price: val });
+                    if (errors.compare_at_price) setErrors({ ...errors, compare_at_price: null });
                   }}
                 />
               </div>
+              {errors.compare_at_price && <p className="text-xs text-red-500">{errors.compare_at_price}</p>}
             </div>
 
             {/* Category */}
@@ -432,14 +510,23 @@ export default function EditProductPage() {
             {/* Description */}
             <div className="md:col-span-2 space-y-1.5">
               <label htmlFor="product-description" className="text-sm font-semibold text-slate-700 dark:text-gray-300">Description</label>
-              <textarea
-                id="product-description"
-                rows={4}
-                placeholder="Describe your product in detail..."
-                className={INPUT_CLS + ' resize-none'}
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              />
+              <div className="relative">
+                <textarea
+                  id="product-description"
+                  rows={4}
+                  placeholder="Describe your product in detail..."
+                  className={INPUT_CLS + ' resize-none pr-16'}
+                  value={formData.description}
+                  maxLength={MAX_DESCRIPTION_LENGTH}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (value.length <= MAX_DESCRIPTION_LENGTH) {
+                      setFormData({ ...formData, description: value });
+                    }
+                  }}
+                />
+                <span className="absolute right-3 bottom-1 text-xs text-slate-400 dark:text-gray-500 pointer-events-none">{formData.description.length}/{MAX_DESCRIPTION_LENGTH}</span>
+              </div>
             </div>
           </div>
 
@@ -747,8 +834,8 @@ export default function EditProductPage() {
         <button
           type="submit"
           form="edit-product-form"
-          disabled={saving}
-          className="flex-1 sm:flex-none px-4 sm:px-12 py-3 rounded-lg font-bold bg-violet-500 text-white shadow-lg shadow-violet-500/30 hover:bg-violet-500/90 active:scale-95 transition-all disabled:opacity-50"
+          disabled={saving || !hasChanges}
+          className="flex-1 sm:flex-none px-4 sm:px-12 py-3 rounded-lg font-bold bg-violet-500 text-white shadow-lg shadow-violet-500/30 hover:bg-violet-500/90 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {saving ? (
             <span className="flex items-center justify-center gap-2">

@@ -41,7 +41,7 @@ export default function TopBar() {
 
   // Close on route change
   useEffect(() => {
-    setSettingsOpen(false);
+    queueMicrotask(() => setSettingsOpen(false));
   }, [pathname]);
 
   // Close on outside click

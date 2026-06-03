@@ -31,7 +31,7 @@ export default function CartSidebar({ open, onClose }) {
     if (lastValidatedRef.current === fingerprint) return;
     lastValidatedRef.current = fingerprint;
 
-    setValidating(true);
+    queueMicrotask(() => setValidating(true));
     validateCartStock(items, updateItemStock).finally(() => setValidating(false));
   }, [open, items.length]); // eslint-disable-line react-hooks/exhaustive-deps
 

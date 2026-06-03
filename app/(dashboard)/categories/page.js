@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { categoryAPI } from '@/lib/api';
+import { categoryAPI, isCancelledError } from '@/lib/api';
 import { toast } from 'sonner';
 import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
 import {
@@ -13,6 +13,7 @@ import {
   Pencil,
 } from 'lucide-react';
 import Pagination from '@/components/dashboard/Pagination';
+import DataError from '@/components/dashboard/DataError';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -32,18 +33,21 @@ const TABS = [
 ];
 
 /* Flatten a category list into tree order:
-   parent → its children → grandchildren → next parent … */
+   parent → its children → grandchildren → next parent …
+   Within each level, sort by created_at descending (newest first) */
 function buildTreeOrder(items) {
   const result = [];
+  const sortByNewest = (arr) => [...arr].sort((a, b) =>
+    new Date(b.created_at) - new Date(a.created_at)
+  );
   const insertChildren = (parentId) => {
-    items
-      .filter((c) => c.parent === parentId)
+    sortByNewest(items.filter((c) => c.parent === parentId))
       .forEach((child) => {
         result.push(child);
         insertChildren(child.id);
       });
   };
-  items.filter((c) => !c.parent).forEach((root) => {
+  sortByNewest(items.filter((c) => !c.parent)).forEach((root) => {
     result.push(root);
     insertChildren(root.id);
   });
@@ -57,6 +61,7 @@ export default function CategoriesPage() {
 
   const [categories,   setCategories]   = useState([]);
   const [loading,      setLoading]      = useState(true);
+  const [error,        setError]        = useState(false);
   const [searchQuery,  setSearchQuery]  = useState('');
   const [activeTab,    setActiveTab]    = useState('All');
   const [page,         setPage]         = useState(1);
@@ -64,6 +69,7 @@ export default function CategoriesPage() {
   const [deleting,     setDeleting]     = useState(false);
   const [filterOpen,   setFilterOpen]   = useState(false);
   const filterRef = useRef(null);
+  const fetchingRef = useRef(false);
 
   useEffect(() => {
     if (!filterOpen) return;
@@ -77,24 +83,31 @@ export default function CategoriesPage() {
   }, [filterOpen]);
 
   /* ── fetch ── */
-  const fetchCategories = useCallback(async () => {
+  const fetchCategories = useCallback(async (force = false) => {
+    if (fetchingRef.current && !force) return;
+    fetchingRef.current = true;
+    setLoading(true);
+    setError(false);
     try {
       const res  = await categoryAPI.list();
       const data = res.data;
       if (Array.isArray(data))    setCategories(data);
       else if (data?.results)     setCategories(data.results);
       else                        setCategories([]);
-    } catch {
-      toast.error('Failed to load categories');
+    } catch (err) {
+      if (!isCancelledError(err)) {
+        setError(true);
+      }
       setCategories([]);
     } finally {
       setLoading(false);
+      fetchingRef.current = false;
     }
   }, []);
 
   useEffect(() => {
     fetchCategories();
-  }, [fetchCategories]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* ── delete ── */
   const handleDelete = async () => {
@@ -105,7 +118,7 @@ export default function CategoriesPage() {
       toast.success('Category and all its products deleted!');
       setDeleteModal(null);
       invalidateDashboard(activeStore?.id);
-      fetchCategories();
+      fetchCategories(true);
     } catch (err) {
       const detail = err.response?.data?.detail;
       toast.error(detail || 'Failed to delete category');
@@ -120,7 +133,7 @@ export default function CategoriesPage() {
       await categoryAPI.toggleActive(cat.id);
       toast.success(cat.is_active ? 'Category, subcategories and products deactivated' : 'Category, subcategories and products activated');
       invalidateDashboard(activeStore?.id);
-      fetchCategories();
+      fetchCategories(true);
     } catch (err) {
       const detail = err.response?.data;
       const msg = typeof detail === 'string' ? detail : detail?.detail || 'Failed to update category status';
@@ -153,10 +166,15 @@ export default function CategoriesPage() {
   const filtered =
     activeTab === 'All' && !lowerQuery
       ? buildTreeOrder(baseFiltered)
-      : baseFiltered;
+      : [...baseFiltered].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
   const paginated  = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
+
+  const handleCreate = () => {
+    sessionStorage.removeItem('form-draft:category-create');
+    router.push('/categories/create');
+  };
 
   return (
     <div className="admin-page">
@@ -169,7 +187,7 @@ export default function CategoriesPage() {
           <p className="admin-subtitle">Organize your store hierarchy for better customer navigation.</p>
         </div>
         <button
-          onClick={() => router.push('/categories/create')}
+          onClick={handleCreate}
           className="admin-btn-primary"
         >
           <Plus size={20} />
@@ -233,6 +251,9 @@ export default function CategoriesPage() {
             <div className="admin-spinner"></div>
           </div>
 
+        ) : error ? (
+          <DataError message="Failed to load categories" onRetry={fetchCategories} retrying={loading} />
+
         ) : paginated.length === 0 ? (
           <div className="admin-empty admin-empty-text flex flex-col items-center justify-center">
             <Tag className="w-10 h-10 mb-3 opacity-40" />
@@ -245,7 +266,7 @@ export default function CategoriesPage() {
               <thead>
                 <tr className="admin-thead-row">
                   <th className="admin-th text-left">Category Name</th>
-                  <th className="admin-th text-left">Slug</th>
+                  <th className="admin-th text-left">URL Handle</th>
                   <th className="admin-th text-left">Parent</th>
                   <th className="admin-th">Products</th>
                   <th className="admin-th">Status</th>
@@ -271,7 +292,7 @@ export default function CategoriesPage() {
                         </div>
                       </td>
 
-                      {/* Slug */}
+                      {/* URL Handle */}
                       <td className="admin-td whitespace-nowrap text-left">
                         <code className="text-xs font-mono bg-slate-100 dark:bg-gray-700 px-2 py-1 rounded text-slate-500 dark:text-gray-400">
                           /{cat.slug}

@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { storeAPI } from '@/lib/api';
+import { storeAPI, isCancelledError } from '@/lib/api';
 import { toast } from 'sonner';
 import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
 import { Plus, Search, MoreHorizontal, Trash2, Eye, EyeOff, Pencil } from 'lucide-react';
 import Pagination from '@/components/dashboard/Pagination';
+import DataError from '@/components/dashboard/DataError';
 import { useStoreStore } from '@/store/storeStore';
 import StoreDeactivatedModal from '@/components/StoreDeactivatedModal';
 import {
@@ -20,14 +21,20 @@ export default function StoresPage() {
   const router = useRouter();
   const [stores, setStores] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [deleteModal, setDeleteModal] = useState({ open: false, store: null });
   const [showDeactivatedModal, setShowDeactivatedModal] = useState(false);
   const { activeStore, setActiveStore, setStores: setGlobalStores } = useStoreStore();
   const itemsPerPage = 10;
+  const fetchingRef = useRef(false);
 
-  const fetchStores = useCallback(async () => {
+  const fetchStores = useCallback(async (force = false) => {
+    if (fetchingRef.current && !force) return;
+    fetchingRef.current = true;
+    setLoading(true);
+    setError(false);
     try {
       const response = await storeAPI.list();
       const data = response.data;
@@ -35,17 +42,20 @@ export default function StoresPage() {
       else if (data?.results) setStores(data.results);
       else if (typeof data === 'object') setStores([data]);
       else setStores([]);
-    } catch {
-      toast.error('Failed to fetch stores');
+    } catch (err) {
+      if (!isCancelledError(err)) {
+        setError(true);
+      }
       setStores([]);
     } finally {
       setLoading(false);
+      fetchingRef.current = false;
     }
   }, []);
 
   useEffect(() => {
     fetchStores();
-  }, [fetchStores]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleDelete = async () => {
     if (!deleteModal.store) return;
@@ -126,6 +136,11 @@ export default function StoresPage() {
     setCurrentPage(1);
   }, [searchQuery]);
 
+  const handleCreate = () => {
+    sessionStorage.removeItem('form-draft:store-create');
+    router.push('/stores/create');
+  };
+
   return (
     <div className="admin-page">
       <div className="admin-container">
@@ -135,7 +150,7 @@ export default function StoresPage() {
             <h2 className="admin-title">Stores</h2>
           </div>
           <button
-            onClick={() => router.push('/stores/create')}
+            onClick={handleCreate}
             className="admin-btn-primary"
           >
             <Plus size={20} />
@@ -164,6 +179,8 @@ export default function StoresPage() {
             <div className="admin-loading">
               <div className="admin-spinner"></div>
             </div>
+          ) : error ? (
+            <DataError message="Failed to load stores" onRetry={fetchStores} retrying={loading} />
           ) : (
             <>
               <div className="overflow-x-auto">

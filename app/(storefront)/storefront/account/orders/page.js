@@ -553,7 +553,7 @@ export default function StorefrontOrdersPage() {
 
   useEffect(() => {
     if (accessToken) {
-      fetchOrders();
+      queueMicrotask(() => fetchOrders());
     }
   }, [accessToken]);
 

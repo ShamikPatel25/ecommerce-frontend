@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
 import { useStoreStore } from '@/store/storeStore';
@@ -21,6 +21,7 @@ export default function DashboardLayout({ children }) {
   const { activeStore, setActiveStore, setStores } = useStoreStore();
   const [ready, setReady] = useState(false);
   const [storeResolved, setStoreResolved] = useState(false);
+  const abortControllerRef = useRef(null);
 
   // Connect to notification WebSocket (only after store is resolved)
   useNotificationSocket(storeResolved);
@@ -41,7 +42,7 @@ export default function DashboardLayout({ children }) {
     if (!user || !accessToken) {
       router.push('/login');
     } else {
-      setReady(true);
+      queueMicrotask(() => setReady(true));
     }
   }, [hasHydrated, user, token, router]);
 
@@ -49,13 +50,28 @@ export default function DashboardLayout({ children }) {
   useEffect(() => {
     if (!ready) return;
 
+    // If we already have a valid active store, skip the API call
+    if (activeStore?.id) {
+      queueMicrotask(() => setStoreResolved(true));
+      return;
+    }
+
+    // Cancel any pending request from previous render
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    abortControllerRef.current = new AbortController();
+    const { signal } = abortControllerRef.current;
+    let cancelled = false;
+
     const resolveStore = async () => {
       try {
-        const res = await storeAPI.myStores();
+        const res = await storeAPI.myStores({ signal });
+        if (cancelled) return;
+
         const storeList = res.data?.stores || res.data || [];
         setStores(storeList);
 
-        // If on a subdomain (e.g., nike.localhost:3000), auto-select that store
         const subdomain = getSubdomain(window.location.host);
         if (subdomain && storeList.length > 0) {
           const subdomainStore = storeList.find(s => s.subdomain === subdomain);
@@ -65,7 +81,6 @@ export default function DashboardLayout({ children }) {
             setActiveStore(storeList[0]);
           }
         } else if (storeList.length > 0) {
-          // No subdomain: keep current activeStore if valid, else pick first
           const currentValid = activeStore && storeList.find(s => s.id === activeStore.id);
           if (!currentValid) {
             setActiveStore(storeList[0]);
@@ -73,24 +88,28 @@ export default function DashboardLayout({ children }) {
         } else if (activeStore) {
           setActiveStore(null);
         }
-      } catch {
-        /* no stores — that's fine */
-      } finally {
+        setStoreResolved(true);
+      } catch (err) {
+        if (cancelled || err.name === 'CanceledError') return;
         setStoreResolved(true);
       }
     };
     resolveStore();
+
+    return () => {
+      cancelled = true;
+      abortControllerRef.current?.abort();
+    };
   }, [ready]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!ready || !storeResolved) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-violet-500"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-violet-500" />
       </div>
     );
   }
 
-  // Pages that work without a store
   const storeFreePaths = ['/dashboard', '/stores', '/settings'];
   const needsStore = !storeFreePaths.some(p => pathname === p || pathname.startsWith(p + '/'));
 
@@ -100,19 +119,19 @@ export default function DashboardLayout({ children }) {
         <Sidebar />
         <div className="flex-1 pt-14 md:pt-0 md:ml-64 min-w-0 flex flex-col">
           <main className="flex-1 min-w-0 flex items-center justify-center">
-          <div className="text-center max-w-md px-6">
-            <div className="w-20 h-20 bg-violet-500/10 rounded-2xl flex items-center justify-center mx-auto mb-6">
-              <span className="text-4xl">🏪</span>
+            <div className="text-center max-w-md px-6">
+              <div className="w-20 h-20 bg-violet-500/10 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                <span className="text-4xl">🏪</span>
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Create Your Store First</h2>
+              <p className="text-gray-500 dark:text-gray-400 mb-8">You need to create a store before you can manage products, orders, and more.</p>
+              <button
+                onClick={() => router.push('/stores/create')}
+                className="px-8 py-3 bg-violet-500 text-white rounded-xl font-bold shadow-lg shadow-violet-500/20 hover:bg-violet-600 transition-all"
+              >
+                Create Store
+              </button>
             </div>
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Create Your Store First</h2>
-            <p className="text-gray-500 dark:text-gray-400 mb-8">You need to create a store before you can manage products, orders, and more.</p>
-            <button
-              onClick={() => router.push('/stores/create')}
-              className="px-8 py-3 bg-violet-500 text-white rounded-xl font-bold shadow-lg shadow-violet-500/20 hover:bg-violet-600 transition-all"
-            >
-              Create Store
-            </button>
-          </div>
           </main>
         </div>
       </div>

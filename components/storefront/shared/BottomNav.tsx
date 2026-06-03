@@ -25,7 +25,7 @@ export function BottomNav({ onOpenAuth, onOpenCart }: BottomNavProps) {
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
-    setIsMounted(true);
+    queueMicrotask(() => setIsMounted(true));
   }, []);
 
   const itemCount = cartItems.reduce((total, item) => total + item.quantity, 0);

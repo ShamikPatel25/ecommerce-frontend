@@ -16,7 +16,15 @@ const INPUT_CLS =
   'placeholder:text-slate-400 dark:placeholder:text-gray-500 focus:outline-none focus:border-violet-500 ' +
   'focus:ring-2 focus:ring-violet-500/20 transition-all dark:bg-gray-700 dark:border-gray-600';
 
+const INPUT_ERROR_CLS =
+  'w-full rounded-lg border border-red-500 bg-red-50 px-4 py-3 text-slate-900 dark:text-white ' +
+  'placeholder:text-slate-400 dark:placeholder:text-gray-500 focus:outline-none focus:border-red-500 ' +
+  'focus:ring-2 focus:ring-red-500/20 transition-all dark:bg-red-900/20 dark:border-red-500';
+
 const SELECT_CLS = INPUT_CLS + ' appearance-none pr-10';
+
+const MAX_NAME_LENGTH = 50;
+const MAX_SLUG_LENGTH = 50;
 
 export default function EditCategoryPage() {
   const router = useRouter();
@@ -29,6 +37,8 @@ export default function EditCategoryPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [formData, setFormData, clearDraft] = useFormDraft(`category-edit-${categoryId}`, { name: '', slug: '', parent: '' });
+  const [originalData, setOriginalData] = useState(null);
+  const [errors, setErrors] = useState({});
 
   const fetchData = useCallback(async () => {
     try {
@@ -44,6 +54,11 @@ export default function EditCategoryPage() {
       }
 
       setFormData({
+        name: c.name || '',
+        slug: c.slug || '',
+        parent: c.parent ? String(c.parent) : '',
+      });
+      setOriginalData({
         name: c.name || '',
         slug: c.slug || '',
         parent: c.parent ? String(c.parent) : '',
@@ -66,6 +81,24 @@ export default function EditCategoryPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setErrors({});
+
+    if (!formData.name.trim()) {
+      setErrors({ name: 'Category name is required' });
+      toast.error('Category name is required');
+      return;
+    }
+    if (/[_\-=+.,!@#$%^&*()[\]{}|\\;:'\"<>?/`~]/.test(formData.name)) {
+      setErrors({ name: 'Special characters are not allowed' });
+      toast.error('Special characters are not allowed in category name');
+      return;
+    }
+    if (!formData.slug.trim()) {
+      setErrors({ slug: 'Slug is required' });
+      toast.error('Slug is required');
+      return;
+    }
+
     setSaving(true);
     try {
       await categoryAPI.update(categoryId, { ...formData, parent: formData.parent || null });
@@ -75,8 +108,16 @@ export default function EditCategoryPage() {
       router.push('/categories');
     } catch (error) {
       const d = error.response?.data;
-      const msg = d?.name?.[0] || d?.slug?.[0] || d?.parent?.[0] || d?.non_field_errors?.[0] || 'Something went wrong';
-      toast.error(msg);
+      if (d?.name?.[0]) {
+        setErrors({ name: d.name[0] });
+        toast.error(d.name[0]);
+      } else if (d?.slug?.[0]) {
+        setErrors({ slug: d.slug[0] });
+        toast.error(d.slug[0]);
+      } else {
+        const msg = d?.parent?.[0] || d?.non_field_errors?.[0] || 'Something went wrong';
+        toast.error(msg);
+      }
     } finally {
       setSaving(false);
     }
@@ -89,6 +130,11 @@ export default function EditCategoryPage() {
   );
 
   const parentOptions = categories.filter(c => String(c.id) !== categoryId && c.level < 2);
+  const hasChanges = originalData && (
+    formData.name !== originalData.name ||
+    formData.slug !== originalData.slug ||
+    formData.parent !== originalData.parent
+  );
 
   return (
     <div className="admin-page">
@@ -116,7 +162,7 @@ export default function EditCategoryPage() {
         </div>
       </div>
 
-      <form id="edit-category-form" onSubmit={handleSubmit} className="space-y-8">
+      <form id="edit-category-form" onSubmit={handleSubmit} noValidate className="space-y-8">
         <section className="bg-white dark:bg-gray-800 rounded-xl border border-violet-500/10 dark:border-gray-700 p-6 md:p-8 shadow-sm">
           <div className="flex items-center gap-2 mb-6 pb-4 border-b border-violet-500/5 dark:border-gray-700">
             <Info className="w-5 h-5 text-violet-500" />
@@ -127,30 +173,49 @@ export default function EditCategoryPage() {
             {/* Name */}
             <div className="space-y-1.5">
               <label className="text-sm font-semibold text-slate-700 dark:text-gray-300">
-                Name <span className="text-violet-500">*</span>
+                Name <span className="text-red-500">*</span>
               </label>
-              <input
-                type="text"
-                className={INPUT_CLS}
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value, slug: generateSlug(e.target.value) })}
-                required
-              />
+              <div className="relative">
+                <input
+                  type="text"
+                  className={(errors.name ? INPUT_ERROR_CLS : INPUT_CLS) + ' pr-14'}
+                  value={formData.name}
+                  maxLength={MAX_NAME_LENGTH}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/[^a-zA-Z0-9 ]/g, '');
+                    if (value.length <= MAX_NAME_LENGTH) {
+                      setFormData({ ...formData, name: value, slug: generateSlug(value) });
+                      if (errors.name) setErrors({ ...errors, name: null });
+                    }
+                  }}
+                />
+                <span className="absolute right-3 bottom-1 text-xs text-slate-400 dark:text-gray-500 pointer-events-none">{formData.name.length}/{MAX_NAME_LENGTH}</span>
+              </div>
+              {errors.name && <p className="text-xs text-red-500">{errors.name}</p>}
             </div>
 
-            {/* Slug */}
+            {/* URL Handle */}
             <div className="space-y-1.5">
               <label className="text-sm font-semibold text-slate-700 dark:text-gray-300">
-                Slug <span className="text-violet-500">*</span>
+                URL Handle <span className="text-red-500">*</span>
               </label>
-              <input
-                type="text"
-                className={INPUT_CLS}
-                value={formData.slug}
-                onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
-                required
-              />
-              <p className="text-xs text-slate-400 dark:text-gray-500">Auto-generated from name</p>
+              <div className="relative">
+                <input
+                  type="text"
+                  className={(errors.slug ? INPUT_ERROR_CLS : INPUT_CLS) + ' pr-14'}
+                  value={formData.slug}
+                  maxLength={MAX_SLUG_LENGTH}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (value.length <= MAX_SLUG_LENGTH) {
+                      setFormData({ ...formData, slug: value });
+                      if (errors.slug) setErrors({ ...errors, slug: null });
+                    }
+                  }}
+                />
+                <span className="absolute right-3 bottom-1 text-xs text-slate-400 dark:text-gray-500 pointer-events-none">{formData.slug.length}/{MAX_SLUG_LENGTH}</span>
+              </div>
+              {errors.slug && <p className="text-xs text-red-500">{errors.slug}</p>}
             </div>
           </div>
 
@@ -197,8 +262,8 @@ export default function EditCategoryPage() {
           </button>
           <button
             type="submit"
-            disabled={saving}
-            className="flex-1 sm:flex-none px-4 sm:px-12 py-3 rounded-lg font-bold bg-violet-500 text-white shadow-lg shadow-violet-500/30 hover:bg-violet-500/90 active:scale-95 transition-all disabled:opacity-50"
+            disabled={saving || !hasChanges}
+            className="flex-1 sm:flex-none px-4 sm:px-12 py-3 rounded-lg font-bold bg-violet-500 text-white shadow-lg shadow-violet-500/30 hover:bg-violet-500/90 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {saving ? (
               <span className="flex items-center justify-center gap-2">

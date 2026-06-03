@@ -182,7 +182,7 @@ export default function NotificationBell({ variant = 'sidebar' }) {
                   <Bell className="w-6 h-6 text-gray-400 dark:text-gray-600" />
                 </div>
                 <p className="text-sm font-medium text-gray-900 dark:text-white mb-1">No notifications</p>
-                <p className="text-xs text-gray-500 dark:text-gray-500">You're all caught up!</p>
+                <p className="text-xs text-gray-500 dark:text-gray-500">You&apos;re all caught up!</p>
               </div>
             ) : (
               <div className="p-2">

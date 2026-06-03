@@ -196,7 +196,7 @@ export default function EditStorePage() {
         </div>
       </div>
 
-      <form id="edit-store-form" onSubmit={handleSubmit} className="space-y-8">
+      <form id="edit-store-form" onSubmit={handleSubmit} noValidate className="space-y-8">
         <section className="bg-white dark:bg-gray-800 rounded-xl border border-violet-500/10 dark:border-gray-700 p-6 md:p-8 shadow-sm">
           <div className="flex items-center gap-2 mb-6 pb-4 border-b border-violet-500/5 dark:border-gray-700">
             <Store className="w-5 h-5 text-violet-500" />
@@ -209,22 +209,18 @@ export default function EditStorePage() {
               <label className="text-sm font-semibold text-slate-700 dark:text-gray-300">
                 Store Name <span className="text-red-500">*</span>
               </label>
-              <input
-                type="text"
-                className={errors.name ? INPUT_ERROR_CLS : INPUT_CLS}
-                placeholder="My Awesome Store"
-                value={formData.name}
-                onChange={handleNameChange}
-                maxLength={MAX_NAME_LENGTH}
-              />
-              <div className="flex items-center justify-between">
-                {errors.name ? (
-                  <p className="text-xs text-red-500">{errors.name}</p>
-                ) : (
-                  <p className="text-xs text-slate-400 dark:text-gray-500">Min {MIN_LENGTH} characters, no special characters</p>
-                )}
-                <span className="text-xs text-slate-400 dark:text-gray-500">{formData.name.length}/{MAX_NAME_LENGTH}</span>
+              <div className="relative">
+                <input
+                  type="text"
+                  className={(errors.name ? INPUT_ERROR_CLS : INPUT_CLS) + ' pr-14'}
+                  placeholder="My Awesome Store"
+                  value={formData.name}
+                  onChange={handleNameChange}
+                  maxLength={MAX_NAME_LENGTH}
+                />
+                <span className="absolute right-3 bottom-1 text-xs text-slate-400 dark:text-gray-500 pointer-events-none">{formData.name.length}/{MAX_NAME_LENGTH}</span>
               </div>
+              {errors.name && <p className="text-xs text-red-500">{errors.name}</p>}
             </div>
 
             {/* Currency */}
@@ -265,20 +261,20 @@ export default function EditStorePage() {
           {/* Description */}
           <div className="mt-6 space-y-1.5">
             <label className="text-sm font-semibold text-slate-700 dark:text-gray-300">Description</label>
-            <textarea
-              className={INPUT_CLS + ' resize-none'}
-              rows={4}
-              placeholder="Describe your store..."
-              value={formData.description}
-              onChange={(e) => {
-                if (e.target.value.length <= MAX_DESCRIPTION_LENGTH) {
-                  setFormData({ ...formData, description: e.target.value });
-                }
-              }}
-              maxLength={MAX_DESCRIPTION_LENGTH}
-            />
-            <div className="flex justify-end">
-              <span className="text-xs text-slate-400 dark:text-gray-500">{formData.description.length}/{MAX_DESCRIPTION_LENGTH}</span>
+            <div className="relative">
+              <textarea
+                className={INPUT_CLS + ' resize-none pr-16'}
+                rows={4}
+                placeholder="Describe your store..."
+                value={formData.description}
+                onChange={(e) => {
+                  if (e.target.value.length <= MAX_DESCRIPTION_LENGTH) {
+                    setFormData({ ...formData, description: e.target.value });
+                  }
+                }}
+                maxLength={MAX_DESCRIPTION_LENGTH}
+              />
+              <span className="absolute right-3 bottom-1 text-xs text-slate-400 dark:text-gray-500 pointer-events-none">{formData.description.length}/{MAX_DESCRIPTION_LENGTH}</span>
             </div>
           </div>
         </section>

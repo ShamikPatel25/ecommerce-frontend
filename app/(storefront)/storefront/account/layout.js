@@ -23,7 +23,7 @@ export default function AccountLayout({ children }) {
   const { href } = useStorefrontPath();
 
   useEffect(() => {
-    setIsMounted(true);
+    queueMicrotask(() => setIsMounted(true));
   }, []);
 
   useEffect(() => {

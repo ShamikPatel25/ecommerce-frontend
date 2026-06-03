@@ -2,11 +2,12 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { productAPI, categoryAPI } from '@/lib/api';
+import { productAPI, categoryAPI, isCancelledError } from '@/lib/api';
 import { toast } from 'sonner';
 import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
 import { Plus, Search, MoreHorizontal, Trash2, Eye, EyeOff, Star, SlidersHorizontal, Pencil } from 'lucide-react';
 import Pagination from '@/components/dashboard/Pagination';
+import DataError from '@/components/dashboard/DataError';
 import { formatCurrency } from '@/lib/utils';
 import { useStoreStore } from '@/store/storeStore';
 import { useDashboardStore } from '@/store/dashboardStore';
@@ -25,12 +26,14 @@ export default function ProductsPage() {
   const { fetchCategories, categories, invalidateProducts: invalidateSharedProducts, fetchProducts: fetchSharedProducts } = useSharedDataStore();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [activeFilter, setActiveFilter] = useState('all');
   const [deleteModal, setDeleteModal] = useState({ open: false, product: null });
   const [filterOpen, setFilterOpen] = useState(false);
   const filterRef = useRef(null);
+  const fetchingRef = useRef(false);
 
   useEffect(() => {
     if (!filterOpen) return;
@@ -45,33 +48,45 @@ export default function ProductsPage() {
   const itemsPerPage = 10;
 
   const fetchProducts = useCallback(async () => {
+    setLoading(true);
+    setError(false);
     try {
       const prodRes = await productAPI.list().catch(() => ({ data: [] }));
       setProducts(Array.isArray(prodRes.data) ? prodRes.data : prodRes.data?.results || []);
-    } catch {
-      toast.error('Failed to load products');
+    } catch (err) {
+      if (!isCancelledError(err)) {
+        setError(true);
+      }
     } finally {
       setLoading(false);
+      fetchingRef.current = false;
     }
   }, []);
 
   const fetchData = useCallback(async () => {
+    if (fetchingRef.current) return;
+    fetchingRef.current = true;
+    setLoading(true);
+    setError(false);
     try {
       const [prodRes] = await Promise.all([
         productAPI.list().catch(() => ({ data: [] })),
-        fetchCategories(), // reads from cache if fresh
+        fetchCategories(),
       ]);
       setProducts(Array.isArray(prodRes.data) ? prodRes.data : prodRes.data?.results || []);
-    } catch {
-      toast.error('Failed to load products');
+    } catch (err) {
+      if (!isCancelledError(err)) {
+        setError(true);
+      }
     } finally {
       setLoading(false);
+      fetchingRef.current = false;
     }
   }, [fetchCategories]);
 
   useEffect(() => {
     fetchData();
-  }, [fetchData]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleDelete = async () => {
     if (!deleteModal.product) return;
@@ -191,6 +206,15 @@ export default function ProductsPage() {
     { key: 'low_stock', label: 'Low Stock' },
   ];
 
+  const handleCreate = () => {
+    sessionStorage.removeItem('form-draft:product-create');
+    sessionStorage.removeItem('form-draft:product-create-selattr');
+    sessionStorage.removeItem('form-draft:product-create-step');
+    sessionStorage.removeItem('form-draft:product-create-combos');
+    sessionStorage.removeItem('form-draft:product-create-combosel');
+    router.push('/products/create');
+  };
+
   return (
     <div className="admin-page">
       <div className="admin-container">
@@ -201,7 +225,7 @@ export default function ProductsPage() {
             <p className="admin-subtitle">Manage your catalog, stock levels, and pricing.</p>
           </div>
           <button
-            onClick={() => router.push('/products/create')}
+            onClick={handleCreate}
             className="admin-btn-primary"
           >
             <Plus size={20} />
@@ -263,6 +287,8 @@ export default function ProductsPage() {
             <div className="admin-loading">
               <div className="admin-spinner"></div>
             </div>
+          ) : error ? (
+            <DataError message="Failed to load products" onRetry={fetchData} retrying={loading} />
           ) : (
             <>
               <div className="overflow-x-auto">
