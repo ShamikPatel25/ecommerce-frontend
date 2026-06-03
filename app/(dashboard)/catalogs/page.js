@@ -207,7 +207,7 @@ export default function CatalogsPage() {
                                   e.stopPropagation();
                                   setDeleteModal({ open: true, variant });
                                 }}
-                                className="inline-flex items-center justify-center size-8 rounded-lg text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all opacity-100 lg:opacity-0 lg:group-hover:opacity-100"
+                                className="inline-flex items-center justify-center size-8 rounded-lg text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all"
                               >
                                 <Trash2 size={16} />
                               </button>
