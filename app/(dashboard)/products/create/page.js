@@ -183,6 +183,13 @@ const renderStep1ActionButton = (productType, submitting, attributes, selectedAt
   );
 };
 
+const CURRENCY_SYMBOLS = {
+  INR: '₹',
+  USD: '$',
+  EUR: '€',
+  GBP: '£',
+};
+
 /* ── Component ───────────────────────────────────────────── */
 
 export default function CreateProductPage() {
@@ -1140,10 +1147,10 @@ export default function CreateProductPage() {
 
             <div className="space-y-1.5">
               <label htmlFor="product-price" className="text-sm font-semibold text-slate-700 dark:text-gray-300">
-                Price (USD) <span className="text-red-500">*</span>
+                Price ({activeStore?.currency || 'USD'}) <span className="text-red-500">*</span>
               </label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-gray-500 font-medium">$</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-gray-500 font-medium">{CURRENCY_SYMBOLS[activeStore?.currency] || '$'}</span>
                 <input
                   id="product-price"
                   type="text"
@@ -1165,7 +1172,7 @@ export default function CreateProductPage() {
             <div className="space-y-1.5">
               <label htmlFor="product-compare-price" className="text-sm font-semibold text-slate-700 dark:text-gray-300">Compare at Price</label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-gray-500 font-medium">$</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-gray-500 font-medium">{CURRENCY_SYMBOLS[activeStore?.currency] || '$'}</span>
                 <input
                   id="product-compare-price"
                   type="text"

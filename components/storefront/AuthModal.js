@@ -1,10 +1,31 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { storefrontAPI } from '@/lib/storefrontApi';
 import { useStorefrontAuthStore } from '@/store/storefrontAuthStore';
 import { X, Loader2, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
+
+const validateEmail = (email) => {
+  if (!email) return { valid: false, error: 'Email is required' };
+
+  const parts = email.split('@');
+  if (parts.length !== 2) return { valid: false, error: 'Please enter a valid email address' };
+
+  const [localPart, domain] = parts;
+
+  // Local part validation: at least 2 chars
+  if (localPart.length < 2) return { valid: false, error: 'Minimum 2 characters required before @' };
+  if (!/^[a-z0-9][a-z0-9._-]*[a-z0-9]$/.test(localPart) && !/^[a-z0-9]{2}$/.test(localPart)) {
+    return { valid: false, error: 'Invalid characters in email' };
+  }
+
+  // Domain must be gmail.com only
+  if (domain !== 'gmail.com') return { valid: false, error: 'Only Gmail emails are allowed' };
+
+  return { valid: true, error: null };
+};
 
 export default function AuthModal({ open, onClose, initialTab = 'signin' }) {
   const [tab, setTab] = useState(initialTab);
@@ -14,6 +35,19 @@ export default function AuthModal({ open, onClose, initialTab = 'signin' }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const setAuth = useStorefrontAuthStore((s) => s.setAuth);
+
+  // Field error states
+  const [siErrors, setSiErrors] = useState({});
+  const [suErrors, setSuErrors] = useState({});
+
+  // Refs for focusing
+  const siEmailRef = useRef(null);
+  const siPassRef = useRef(null);
+  const suFirstRef = useRef(null);
+  const suLastRef = useRef(null);
+  const suEmailRef = useRef(null);
+  const suPassRef = useRef(null);
+  const suPass2Ref = useRef(null);
 
   useEffect(() => {
     if (open) setTab(initialTab);
@@ -30,11 +64,34 @@ export default function AuthModal({ open, onClose, initialTab = 'signin' }) {
   const [suPass, setSuPass] = useState('');
   const [suPass2, setSuPass2] = useState('');
 
-  const switchTab = (t) => { setTab(t); setError(''); };
+  const switchTab = (t) => {
+    setTab(t);
+    setError('');
+    setSiErrors({});
+    setSuErrors({});
+  };
 
   const handleSignIn = async (e) => {
     e.preventDefault();
-    if (!siEmail || !siPass) { setError('Please fill in all fields'); return; }
+    const errors = {};
+
+    if (!siEmail.trim()) errors.email = 'Email is required';
+    else {
+      const emailValidation = validateEmail(siEmail);
+      if (!emailValidation.valid) errors.email = emailValidation.error;
+    }
+    if (!siPass) errors.password = 'Password is required';
+
+    if (Object.keys(errors).length > 0) {
+      setSiErrors(errors);
+      const firstError = Object.keys(errors)[0];
+      const refMap = { email: siEmailRef, password: siPassRef };
+      refMap[firstError]?.current?.focus();
+      toast.error(errors[firstError]);
+      return;
+    }
+
+    setSiErrors({});
     setLoading(true);
     setError('');
     try {
@@ -45,7 +102,9 @@ export default function AuthModal({ open, onClose, initialTab = 'signin' }) {
       setSiEmail(''); setSiPass('');
     } catch (err) {
       const data = err.response?.data;
-      setError(data?.detail || data?.non_field_errors?.[0] || 'Invalid credentials');
+      const msg = data?.detail || data?.non_field_errors?.[0] || 'Invalid credentials';
+      setError(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
@@ -53,12 +112,45 @@ export default function AuthModal({ open, onClose, initialTab = 'signin' }) {
 
   const handleSignUp = async (e) => {
     e.preventDefault();
-    if (!suFirst || !suEmail || !suPass || !suPass2) { setError('Please fill in all required fields'); return; }
-    if (suPass !== suPass2) { setError('Passwords do not match'); return; }
+    const errors = {};
+
+    if (!suFirst.trim()) errors.first_name = 'First name is required';
+    if (!suLast.trim()) errors.last_name = 'Last name is required';
+    if (!suEmail.trim()) errors.email = 'Email is required';
+    else {
+      const emailValidation = validateEmail(suEmail);
+      if (!emailValidation.valid) errors.email = emailValidation.error;
+    }
+    if (!suPass) errors.password = 'Password is required';
+    if (!suPass2) errors.password2 = 'Confirm password is required';
+
+    if (Object.keys(errors).length > 0) {
+      setSuErrors(errors);
+      const firstError = Object.keys(errors)[0];
+      const refMap = {
+        first_name: suFirstRef,
+        last_name: suLastRef,
+        email: suEmailRef,
+        password: suPassRef,
+        password2: suPass2Ref
+      };
+      refMap[firstError]?.current?.focus();
+      toast.error(errors[firstError]);
+      return;
+    }
+
+    if (suPass !== suPass2) {
+      setSuErrors({ password2: 'Passwords do not match' });
+      suPass2Ref.current?.focus();
+      toast.error('Passwords do not match');
+      return;
+    }
+
+    setSuErrors({});
     setLoading(true);
     setError('');
     try {
-      const username = suEmail.split('@')[0] + '_' + Date.now().toString().slice(-4);
+      const username = suEmail.split('@')[0].replace(/[^a-zA-Z0-9]/g, '') + Date.now().toString().slice(-4);
       await storefrontAPI.register({
         email: suEmail, password: suPass, password2: suPass2,
         username, first_name: suFirst, last_name: suLast,
@@ -69,28 +161,44 @@ export default function AuthModal({ open, onClose, initialTab = 'signin' }) {
       setAuth(user, tokens.access, tokens.refresh);
       onClose();
       setSuFirst(''); setSuLast(''); setSuEmail(''); setSuPass(''); setSuPass2('');
+      toast.success('Account created successfully!');
     } catch (err) {
       const data = err.response?.data;
       const msg = data?.email?.[0] || data?.password?.[0] || data?.password2?.[0]
         || data?.username?.[0] || data?.non_field_errors?.[0] || data?.detail
         || (typeof data === 'object' ? JSON.stringify(data) : 'Something went wrong');
       setError(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
   };
 
+  const getInputClass = (hasError) =>
+    `w-full h-12 px-4 rounded-xl bg-background border outline-none transition-all ${
+      hasError
+        ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500'
+        : 'border-border focus:border-primary focus:ring-1 focus:ring-primary'
+    }`;
+
+  const getInputClassWithPadding = (hasError) =>
+    `w-full h-12 px-4 pr-12 rounded-xl bg-background border outline-none transition-all ${
+      hasError
+        ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500'
+        : 'border-border focus:border-primary focus:ring-1 focus:ring-primary'
+    }`;
+
   if (!open) return null;
 
   return (
     <>
-      <div 
+      <div
         className="fixed inset-0 z-[100] bg-background/80 backdrop-blur-sm transition-opacity pointer-events-auto"
-        onClick={onClose} 
+        onClick={onClose}
       />
       <div className="fixed inset-0 z-[101] flex items-center justify-center p-4 py-12 sm:p-6 pointer-events-none">
         <div className="w-full max-w-md bg-card border border-border shadow-2xl rounded-3xl overflow-hidden relative pointer-events-auto max-h-full flex flex-col">
-          <button 
+          <button
             className="absolute top-4 right-4 z-10 w-8 h-8 flex items-center justify-center rounded-full bg-background/50 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
             onClick={onClose}
           >
@@ -98,14 +206,14 @@ export default function AuthModal({ open, onClose, initialTab = 'signin' }) {
           </button>
 
           <div className="flex border-b border-border bg-muted/40 shrink-0">
-            <button 
+            <button
               className={`flex-1 py-4 text-sm font-bold tracking-wider uppercase transition-colors relative ${tab === 'signin' ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}
               onClick={() => switchTab('signin')}
             >
               Sign In
               {tab === 'signin' && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-primary rounded-t-full shadow-[0_0_8px_rgba(212,175,55,0.8)]" />}
             </button>
-            <button 
+            <button
               className={`flex-1 py-4 text-sm font-bold tracking-wider uppercase transition-colors relative ${tab === 'signup' ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}
               onClick={() => switchTab('signup')}
             >
@@ -127,29 +235,40 @@ export default function AuthModal({ open, onClose, initialTab = 'signin' }) {
                   <h2 className="text-2xl font-black text-foreground mb-2 tracking-tight">Welcome back</h2>
                   <p className="text-muted-foreground">Sign in to your account to continue</p>
                 </div>
-                
+
                 <div className="space-y-4">
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Email Address</label>
-                    <input 
-                      type="email" 
-                      className="w-full h-12 px-4 rounded-xl bg-background border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all" 
-                      placeholder="you@example.com" 
-                      value={siEmail} 
-                      onChange={(e) => setSiEmail(e.target.value)} 
+                    <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                      Email Address <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      ref={siEmailRef}
+                      type="email"
+                      className={getInputClass(siErrors.email)}
+                      placeholder="you@gmail.com"
+                      value={siEmail}
+                      onChange={(e) => {
+                        setSiEmail(e.target.value.replace(/\s/g, '').toLowerCase());
+                        if (siErrors.email) setSiErrors(prev => ({ ...prev, email: '' }));
+                      }}
                     />
+                    {siErrors.email && <p className="text-xs text-red-500 mt-1">{siErrors.email}</p>}
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex justify-between">
-                      <span>Password</span>
+                      <span>Password <span className="text-red-500">*</span></span>
                     </label>
                     <div className="relative">
-                      <input 
+                      <input
+                        ref={siPassRef}
                         type={showSiPass ? 'text' : 'password'}
-                        className="w-full h-12 px-4 pr-12 rounded-xl bg-background border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all" 
-                        placeholder="••••••••" 
-                        value={siPass} 
-                        onChange={(e) => setSiPass(e.target.value)} 
+                        className={getInputClassWithPadding(siErrors.password)}
+                        placeholder="••••••••"
+                        value={siPass}
+                        onChange={(e) => {
+                          setSiPass(e.target.value);
+                          if (siErrors.password) setSiErrors(prev => ({ ...prev, password: '' }));
+                        }}
                       />
                       <button
                         type="button"
@@ -159,6 +278,7 @@ export default function AuthModal({ open, onClose, initialTab = 'signin' }) {
                         {showSiPass ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                       </button>
                     </div>
+                    {siErrors.password && <p className="text-xs text-red-500 mt-1">{siErrors.password}</p>}
                   </div>
                 </div>
 
@@ -186,47 +306,74 @@ export default function AuthModal({ open, onClose, initialTab = 'signin' }) {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">First Name</label>
-                    <input 
-                      type="text" 
-                      className="w-full h-12 px-4 rounded-xl bg-background border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all" 
-                      placeholder="First" 
-                      value={suFirst} 
-                      onChange={(e) => setSuFirst(e.target.value)} 
+                    <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                      First Name <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      ref={suFirstRef}
+                      type="text"
+                      className={getInputClass(suErrors.first_name)}
+                      placeholder="First"
+                      value={suFirst}
+                      onChange={(e) => {
+                        setSuFirst(e.target.value);
+                        if (suErrors.first_name) setSuErrors(prev => ({ ...prev, first_name: '' }));
+                      }}
                     />
+                    {suErrors.first_name && <p className="text-xs text-red-500 mt-1">{suErrors.first_name}</p>}
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Last Name</label>
-                    <input 
-                      type="text" 
-                      className="w-full h-12 px-4 rounded-xl bg-background border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all" 
-                      placeholder="Last" 
-                      value={suLast} 
-                      onChange={(e) => setSuLast(e.target.value)} 
+                    <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                      Last Name <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      ref={suLastRef}
+                      type="text"
+                      className={getInputClass(suErrors.last_name)}
+                      placeholder="Last"
+                      value={suLast}
+                      onChange={(e) => {
+                        setSuLast(e.target.value);
+                        if (suErrors.last_name) setSuErrors(prev => ({ ...prev, last_name: '' }));
+                      }}
                     />
+                    {suErrors.last_name && <p className="text-xs text-red-500 mt-1">{suErrors.last_name}</p>}
                   </div>
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Email Address</label>
-                  <input 
-                    type="email" 
-                    className="w-full h-12 px-4 rounded-xl bg-background border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all" 
-                    placeholder="you@example.com" 
-                    value={suEmail} 
-                    onChange={(e) => setSuEmail(e.target.value)} 
+                  <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                    Email Address <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    ref={suEmailRef}
+                    type="email"
+                    className={getInputClass(suErrors.email)}
+                    placeholder="you@gmail.com"
+                    value={suEmail}
+                    onChange={(e) => {
+                      setSuEmail(e.target.value.replace(/\s/g, '').toLowerCase());
+                      if (suErrors.email) setSuErrors(prev => ({ ...prev, email: '' }));
+                    }}
                   />
+                  {suErrors.email && <p className="text-xs text-red-500 mt-1">{suErrors.email}</p>}
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Password</label>
+                  <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                    Password <span className="text-red-500">*</span>
+                  </label>
                   <div className="relative">
-                    <input 
+                    <input
+                      ref={suPassRef}
                       type={showSuPass ? 'text' : 'password'}
-                      className="w-full h-12 px-4 pr-12 rounded-xl bg-background border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all" 
-                      placeholder="Min. 8 characters" 
-                      value={suPass} 
-                      onChange={(e) => setSuPass(e.target.value)} 
+                      className={getInputClassWithPadding(suErrors.password)}
+                      placeholder="Min. 8 characters"
+                      value={suPass}
+                      onChange={(e) => {
+                        setSuPass(e.target.value);
+                        if (suErrors.password) setSuErrors(prev => ({ ...prev, password: '' }));
+                      }}
                     />
                     <button
                       type="button"
@@ -236,17 +383,24 @@ export default function AuthModal({ open, onClose, initialTab = 'signin' }) {
                       {showSuPass ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                     </button>
                   </div>
+                  {suErrors.password && <p className="text-xs text-red-500 mt-1">{suErrors.password}</p>}
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Confirm Password</label>
+                  <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                    Confirm Password <span className="text-red-500">*</span>
+                  </label>
                   <div className="relative">
-                    <input 
+                    <input
+                      ref={suPass2Ref}
                       type={showSuPass2 ? 'text' : 'password'}
-                      className="w-full h-12 px-4 pr-12 rounded-xl bg-background border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all" 
-                      placeholder="Confirm password" 
-                      value={suPass2} 
-                      onChange={(e) => setSuPass2(e.target.value)} 
+                      className={getInputClassWithPadding(suErrors.password2)}
+                      placeholder="Confirm password"
+                      value={suPass2}
+                      onChange={(e) => {
+                        setSuPass2(e.target.value);
+                        if (suErrors.password2) setSuErrors(prev => ({ ...prev, password2: '' }));
+                      }}
                     />
                     <button
                       type="button"
@@ -256,6 +410,7 @@ export default function AuthModal({ open, onClose, initialTab = 'signin' }) {
                       {showSuPass2 ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                     </button>
                   </div>
+                  {suErrors.password2 && <p className="text-xs text-red-500 mt-1">{suErrors.password2}</p>}
                 </div>
 
                 <div className="pt-2">

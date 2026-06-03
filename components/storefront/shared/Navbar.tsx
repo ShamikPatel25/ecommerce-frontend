@@ -175,8 +175,8 @@ export function Navbar({ storeName, onOpenAuth, onOpenCart }) {
                       <div className="p-2">
                         <DropdownMenuItem className="rounded-lg px-3 py-2.5 focus:bg-primary/10">
                           <Link href={href('/account')} className="flex items-center gap-3 w-full">
-                            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-500/10 text-blue-600">
-                              <User className="w-4 h-4" />
+                            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-50 border border-blue-200 text-blue-600">
+                              <User className="w-5 h-5" />
                             </div>
                             <div>
                               <p className="font-medium text-sm">Profile</p>
@@ -186,8 +186,8 @@ export function Navbar({ storeName, onOpenAuth, onOpenCart }) {
                         </DropdownMenuItem>
                         <DropdownMenuItem className="rounded-lg px-3 py-2.5 focus:bg-primary/10">
                           <Link href={href('/account/change-password')} className="flex items-center gap-3 w-full">
-                            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-amber-500/10 text-amber-600">
-                              <KeyRound className="w-4 h-4" />
+                            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-50 border border-amber-200 text-amber-600">
+                              <KeyRound className="w-5 h-5" />
                             </div>
                             <div>
                               <p className="font-medium text-sm">Change Password</p>
@@ -206,8 +206,8 @@ export function Navbar({ storeName, onOpenAuth, onOpenCart }) {
                           className="rounded-lg px-3 py-2.5 text-red-600 focus:bg-red-50 focus:text-red-600 cursor-pointer"
                         >
                           <div className="flex items-center gap-3 w-full">
-                            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-red-500/10">
-                              <LogOut className="w-4 h-4" />
+                            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-50 border border-red-200">
+                              <LogOut className="w-5 h-5" />
                             </div>
                             <p className="font-medium text-sm">Sign Out</p>
                           </div>
@@ -223,14 +223,14 @@ export function Navbar({ storeName, onOpenAuth, onOpenCart }) {
                     variant="ghost"
                     size="sm"
                     onClick={() => onOpenAuth('signin')}
-                    className="h-8 md:h-9 px-3 md:px-4 text-xs md:text-sm font-medium text-foreground/70 hover:text-foreground"
+                    className="h-8 md:h-9 px-3 md:px-4 text-xs md:text-sm font-medium text-foreground/70 hover:text-foreground !rounded-full"
                   >
                     Login
                   </Button>
                   <Button
                     size="sm"
                     onClick={() => onOpenAuth('signup')}
-                    className="h-8 md:h-9 px-3 md:px-4 text-xs md:text-sm font-medium rounded-full"
+                    className="h-8 md:h-9 px-3 md:px-4 text-xs md:text-sm font-medium !rounded-full"
                   >
                     Sign Up
                   </Button>

@@ -31,26 +31,37 @@ export default function Sidebar() {
   const [loadingStores, setLoadingStores] = useState(false);
   const storeDropdownRef = useRef(null);
   const settingsAccountRef = useRef(null);
+  const fetchingStoresRef = useRef(false);
 
   // Fetch stores when dropdown opens
   const fetchStores = async () => {
-    if (loadingStores) return;
+    if (fetchingStoresRef.current) return;
+    fetchingStoresRef.current = true;
     setLoadingStores(true);
     try {
       const res = await storeAPI.myStores();
       const storeList = res.data?.stores || res.data || [];
-      setStores(storeList);
+      if (Array.isArray(storeList) && storeList.length > 0) {
+        setStores(storeList);
+      }
     } catch (error) {
-      console.error('Failed to fetch stores:', error);
+      if (error?.name !== 'CanceledError') {
+        console.error('Failed to fetch stores:', error);
+      }
     } finally {
       setLoadingStores(false);
+      fetchingStoresRef.current = false;
     }
   };
+
+  // Display stores - use fetched stores, or fallback to activeStore if available
+  const displayStores = stores.length > 0 ? stores : (activeStore ? [activeStore] : []);
 
   const handleDropdownToggle = () => {
     const newState = !storeDropdownOpen;
     setStoreDropdownOpen(newState);
-    if (newState) {
+    // Fetch if stores not loaded yet
+    if (newState && stores.length === 0 && !fetchingStoresRef.current) {
       fetchStores();
     }
   };
@@ -87,8 +98,10 @@ export default function Sidebar() {
     }
     setActiveStore(store);
     setStoreDropdownOpen(false);
-    // Use router replace with timestamp to force page refresh without full reload
-    router.replace(`${pathname}?_t=${Date.now()}`);
+    // Small delay to ensure zustand persists to localStorage before reload
+    setTimeout(() => {
+      window.location.href = '/dashboard';
+    }, 100);
   };
 
   // Pending orders count for badge
@@ -143,7 +156,7 @@ export default function Sidebar() {
           <div className="w-9 h-9 bg-slate-200 dark:bg-slate-700 rounded-lg flex items-center justify-center text-sm font-bold text-slate-900 dark:text-white flex-shrink-0">
             {storeInitial}
           </div>
-          <span className="text-base font-semibold text-slate-900 dark:text-slate-100">E-Com Admin</span>
+          <span className="text-base font-semibold text-slate-900 dark:text-slate-100">Store Admin</span>
         </div>
       </div>
 
@@ -188,12 +201,12 @@ export default function Sidebar() {
               <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Switch Store</p>
             </div>
             <div className="max-h-48 overflow-y-auto">
-              {loadingStores ? (
+              {loadingStores && displayStores.length === 0 ? (
                 <div className="px-3 py-3 text-xs text-gray-500 text-center">Loading stores...</div>
-              ) : stores.length === 0 ? (
+              ) : displayStores.length === 0 ? (
                 <p className="px-3 py-3 text-xs text-gray-500 text-center">No stores found</p>
               ) : (
-                stores.map((store) => {
+                displayStores.map((store) => {
                   const isActive = activeStore?.id === store.id;
                   return (
                     <button
@@ -255,7 +268,7 @@ export default function Sidebar() {
                     title="Create a store first"
                   >
                     <Icon className="w-[18px] h-[18px] opacity-40" />
-                    <span className="text-sm font-medium opacity-40">{item.name}</span>
+                    <span className="text-[15px] font-medium opacity-40">{item.name}</span>
                     <Lock className="w-3.5 h-3.5 ml-auto opacity-30" />
                   </div>
                 );
@@ -266,7 +279,7 @@ export default function Sidebar() {
                   key={item.href}
                   href={item.href}
                   prefetch={false}
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all text-sm mb-0.5 ${
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all text-[15px] font-medium mb-0.5 ${
                     isActive
                       ? 'bg-gray-200 dark:bg-slate-200 text-slate-900 font-medium'
                       : 'text-gray-600 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-slate-900 dark:hover:text-slate-200'
@@ -304,7 +317,7 @@ export default function Sidebar() {
                 }, 100);
               }
             }}
-            className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm mb-0.5 transition-colors ${
+            className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-[15px] font-medium mb-0.5 transition-colors ${
               pathname.startsWith('/settings')
                 ? 'bg-gray-200 dark:bg-slate-200 text-slate-900 font-medium'
                 : 'text-gray-600 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-gray-800'
@@ -319,7 +332,7 @@ export default function Sidebar() {
               <Link
                 href="/settings"
                 prefetch={false}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-[15px] font-medium transition-colors ${
                   pathname === '/settings'
                     ? 'bg-gray-200 dark:bg-slate-200 text-slate-900 font-medium'
                     : 'text-gray-600 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-gray-800'
@@ -331,7 +344,7 @@ export default function Sidebar() {
               <Link
                 href="/settings/change-password"
                 prefetch={false}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-[15px] font-medium transition-colors ${
                   pathname === '/settings/change-password'
                     ? 'bg-gray-200 dark:bg-slate-200 text-slate-900 font-medium'
                     : 'text-gray-600 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-gray-800'
@@ -344,7 +357,7 @@ export default function Sidebar() {
           )}
           <button
             onClick={logout}
-            className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm mb-0.5 text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+            className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-[15px] font-medium mb-0.5 text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
           >
             <LogOut className="w-[18px] h-[18px] flex-shrink-0" />
             <span>Log out</span>
@@ -375,7 +388,7 @@ export default function Sidebar() {
           <div className="w-8 h-8 bg-slate-200 dark:bg-slate-700 rounded-lg flex items-center justify-center text-sm font-bold text-slate-900 dark:text-white">
             {storeInitial}
           </div>
-          <span className="font-bold text-base">E-Com Admin</span>
+          <span className="font-bold text-base">Store Admin</span>
         </div>
         <div className="flex items-center gap-2">
           <button

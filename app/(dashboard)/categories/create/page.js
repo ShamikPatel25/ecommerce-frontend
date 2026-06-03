@@ -24,9 +24,6 @@ const INPUT_ERROR_CLS =
 const SELECT_CLS = INPUT_CLS + ' appearance-none pr-10';
 const SELECT_ERROR_CLS = INPUT_ERROR_CLS + ' appearance-none pr-10';
 
-const MAX_NAME_LENGTH = 50;
-const MAX_SLUG_LENGTH = 50;
-
 export default function CreateCategoryPage() {
   const router = useRouter();
   const { activeStore } = useStoreStore();
@@ -102,7 +99,7 @@ export default function CreateCategoryPage() {
     }
   };
 
-  const mainCategories = categories.filter(c => c.level < 2);
+  const mainCategories = categories.filter(c => c.level === 0);
 
   return (
     <div className="admin-page">
@@ -143,24 +140,21 @@ export default function CreateCategoryPage() {
               <label className="text-sm font-semibold text-slate-700 dark:text-gray-300">
                 Name <span className="text-red-500">*</span>
               </label>
-              <div className="relative">
-                <input
-                  type="text"
-                  className={(errors.name ? INPUT_ERROR_CLS : INPUT_CLS) + ' pr-14'}
-                  placeholder="e.g. Clothes, Electronics"
-                  value={formData.name}
-                  maxLength={MAX_NAME_LENGTH}
-                  onChange={(e) => {
-                    const value = e.target.value.replace(/[^a-zA-Z0-9 ]/g, '');
-                    if (value.length <= MAX_NAME_LENGTH) {
-                      setFormData({ ...formData, name: value, slug: generateSlug(value) });
-                      if (errors.name) setErrors({ ...errors, name: null });
-                    }
-                  }}
-                />
-                <span className="absolute right-3 bottom-1 text-xs text-slate-400 dark:text-gray-500 pointer-events-none">{formData.name.length}/{MAX_NAME_LENGTH}</span>
-              </div>
-              {errors.name && <p className="text-xs text-red-500">{errors.name}</p>}
+              <input
+                type="text"
+                className={errors.name ? INPUT_ERROR_CLS : INPUT_CLS}
+                placeholder="e.g. Clothes, Electronics"
+                value={formData.name}
+                onChange={(e) => {
+                  setFormData({ ...formData, name: e.target.value, slug: generateSlug(e.target.value) });
+                  if (errors.name) setErrors({ ...errors, name: null });
+                }}
+              />
+              {errors.name ? (
+                <p className="text-xs text-red-500">{errors.name}</p>
+              ) : (
+                <p className="text-xs text-slate-400 dark:text-gray-500">Letters, numbers and spaces only</p>
+              )}
             </div>
 
             {/* URL Handle */}
@@ -168,24 +162,21 @@ export default function CreateCategoryPage() {
               <label className="text-sm font-semibold text-slate-700 dark:text-gray-300">
                 URL Handle <span className="text-red-500">*</span>
               </label>
-              <div className="relative">
-                <input
-                  type="text"
-                  className={(errors.slug ? INPUT_ERROR_CLS : INPUT_CLS) + ' pr-14'}
-                  placeholder="auto-generated"
-                  value={formData.slug}
-                  maxLength={MAX_SLUG_LENGTH}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    if (value.length <= MAX_SLUG_LENGTH) {
-                      setFormData({ ...formData, slug: value });
-                      if (errors.slug) setErrors({ ...errors, slug: null });
-                    }
-                  }}
-                />
-                <span className="absolute right-3 bottom-1 text-xs text-slate-400 dark:text-gray-500 pointer-events-none">{formData.slug.length}/{MAX_SLUG_LENGTH}</span>
-              </div>
-              {errors.slug && <p className="text-xs text-red-500">{errors.slug}</p>}
+              <input
+                type="text"
+                className={errors.slug ? INPUT_ERROR_CLS : INPUT_CLS}
+                placeholder="auto-generated"
+                value={formData.slug}
+                onChange={(e) => {
+                  setFormData({ ...formData, slug: e.target.value });
+                  if (errors.slug) setErrors({ ...errors, slug: null });
+                }}
+              />
+              {errors.slug ? (
+                <p className="text-xs text-red-500">{errors.slug}</p>
+              ) : (
+                <p className="text-xs text-slate-400 dark:text-gray-500">Used in URL: yourstore.com/categories/<span className="text-violet-500">{formData.slug || 'electronics'}</span></p>
+              )}
             </div>
           </div>
 

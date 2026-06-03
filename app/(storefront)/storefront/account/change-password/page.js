@@ -1,10 +1,11 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { storefrontAPI } from '@/lib/storefrontApi';
 import { useRouter } from 'next/navigation';
 import { useStorefrontPath } from '@/lib/useStorefrontPath';
-import { Loader2, Eye, EyeOff, Check } from 'lucide-react';
+import { Loader2, Eye, EyeOff, Check, ChevronLeft } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function ChangePasswordPage() {
@@ -92,17 +93,25 @@ export default function ChangePasswordPage() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
-      <div className="max-w-md">
-        {/* Header */}
+      <div className="w-full">
+        {/* Header with Back Arrow */}
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-foreground">Change Password</h1>
-          <p className="text-sm text-muted-foreground mt-1">Keep your account secure</p>
+          <div className="flex items-center gap-3 mb-1">
+            <Link
+              href={href('/account')}
+              className="p-1 -ml-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            >
+              <ChevronLeft className="w-6 h-6" strokeWidth={2.5} />
+            </Link>
+            <h1 className="text-2xl font-bold text-foreground">Change Password</h1>
+          </div>
+          <p className="text-sm text-muted-foreground ml-9">Keep your account secure</p>
         </div>
 
         {/* Card */}
         <div className="bg-background rounded-2xl shadow-sm border border-border overflow-hidden">
           <form onSubmit={handleSubmit} className="p-6 space-y-5">
-            {/* Current Password */}
+            {/* Current Password - Full Width */}
             <div>
               <label className="text-sm font-medium text-foreground mb-2 block">
                 Current Password
@@ -129,96 +138,99 @@ export default function ChangePasswordPage() {
 
             <hr className="border-border" />
 
-            {/* New Password */}
-            <div>
-              <label className="text-sm font-medium text-foreground mb-2 block">
-                New Password
-              </label>
-              <div className="relative">
-                <input
-                  type={showNew ? 'text' : 'password'}
-                  required
-                  placeholder="Create a new password"
-                  className="w-full px-4 py-3 pr-11 rounded-xl bg-muted/50 border border-transparent focus:border-primary focus:bg-background focus:ring-2 focus:ring-primary/10 text-sm text-foreground transition-all placeholder:text-muted-foreground/50 outline-none"
-                  value={form.new_password}
-                  onChange={(e) => setForm({ ...form, new_password: e.target.value.replace(/\s/g, '') })}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowNew(!showNew)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  {showNew ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-              {form.new_password && (
-                <div className="mt-2.5">
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden flex gap-0.5">
-                      {[1, 2, 3, 4, 5].map((i) => (
-                        <div
-                          key={i}
-                          className={`flex-1 rounded-full transition-colors ${
-                            i <= passwordStrength.score ? passwordStrength.color : 'bg-muted'
-                          }`}
-                        />
-                      ))}
-                    </div>
-                    <span className={`text-xs font-medium ${
-                      passwordStrength.score <= 1 ? 'text-red-500' :
-                      passwordStrength.score <= 2 ? 'text-orange-500' :
-                      passwordStrength.score <= 3 ? 'text-yellow-600' :
-                      'text-green-600'
-                    }`}>
-                      {passwordStrength.label}
-                    </span>
-                  </div>
+            {/* New Password & Confirm - Side by Side */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              {/* New Password */}
+              <div>
+                <label className="text-sm font-medium text-foreground mb-2 block">
+                  New Password
+                </label>
+                <div className="relative">
+                  <input
+                    type={showNew ? 'text' : 'password'}
+                    required
+                    placeholder="Create a new password"
+                    className="w-full px-4 py-3 pr-11 rounded-xl bg-muted/50 border border-transparent focus:border-primary focus:bg-background focus:ring-2 focus:ring-primary/10 text-sm text-foreground transition-all placeholder:text-muted-foreground/50 outline-none"
+                    value={form.new_password}
+                    onChange={(e) => setForm({ ...form, new_password: e.target.value.replace(/\s/g, '') })}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNew(!showNew)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    {showNew ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
                 </div>
-              )}
-              <FieldError field="new_password" />
-            </div>
-
-            {/* Confirm Password */}
-            <div>
-              <label className="text-sm font-medium text-foreground mb-2 block">
-                Confirm New Password
-              </label>
-              <div className="relative">
-                <input
-                  type={showConfirm ? 'text' : 'password'}
-                  required
-                  placeholder="Confirm your new password"
-                  className={`w-full px-4 py-3 pr-11 rounded-xl bg-muted/50 border transition-all text-sm text-foreground placeholder:text-muted-foreground/50 outline-none ${
-                    form.new_password2
-                      ? passwordsMatch
-                        ? 'border-green-500 focus:border-green-500 focus:ring-2 focus:ring-green-500/10'
-                        : 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-500/10'
-                      : 'border-transparent focus:border-primary focus:ring-2 focus:ring-primary/10'
-                  } focus:bg-background`}
-                  value={form.new_password2}
-                  onChange={(e) => setForm({ ...form, new_password2: e.target.value.replace(/\s/g, '') })}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirm(!showConfirm)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  {showConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
+                {form.new_password && (
+                  <div className="mt-2.5">
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden flex gap-0.5">
+                        {[1, 2, 3, 4, 5].map((i) => (
+                          <div
+                            key={i}
+                            className={`flex-1 rounded-full transition-colors ${
+                              i <= passwordStrength.score ? passwordStrength.color : 'bg-muted'
+                            }`}
+                          />
+                        ))}
+                      </div>
+                      <span className={`text-xs font-medium ${
+                        passwordStrength.score <= 1 ? 'text-red-500' :
+                        passwordStrength.score <= 2 ? 'text-orange-500' :
+                        passwordStrength.score <= 3 ? 'text-yellow-600' :
+                        'text-green-600'
+                      }`}>
+                        {passwordStrength.label}
+                      </span>
+                    </div>
+                  </div>
+                )}
+                <FieldError field="new_password" />
               </div>
-              {form.new_password2 && (
-                <p className={`text-xs mt-1.5 flex items-center gap-1 ${passwordsMatch ? 'text-green-600' : 'text-red-500'}`}>
-                  {passwordsMatch ? (
-                    <>
-                      <Check className="w-3.5 h-3.5" />
-                      Passwords match
-                    </>
-                  ) : (
-                    'Passwords do not match'
-                  )}
-                </p>
-              )}
-              <FieldError field="new_password2" />
+
+              {/* Confirm Password */}
+              <div>
+                <label className="text-sm font-medium text-foreground mb-2 block">
+                  Confirm New Password
+                </label>
+                <div className="relative">
+                  <input
+                    type={showConfirm ? 'text' : 'password'}
+                    required
+                    placeholder="Confirm your new password"
+                    className={`w-full px-4 py-3 pr-11 rounded-xl bg-muted/50 border transition-all text-sm text-foreground placeholder:text-muted-foreground/50 outline-none ${
+                      form.new_password2
+                        ? passwordsMatch
+                          ? 'border-green-500 focus:border-green-500 focus:ring-2 focus:ring-green-500/10'
+                          : 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-500/10'
+                        : 'border-transparent focus:border-primary focus:ring-2 focus:ring-primary/10'
+                    } focus:bg-background`}
+                    value={form.new_password2}
+                    onChange={(e) => setForm({ ...form, new_password2: e.target.value.replace(/\s/g, '') })}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirm(!showConfirm)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    {showConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+                {form.new_password2 && (
+                  <p className={`text-xs mt-1.5 flex items-center gap-1 ${passwordsMatch ? 'text-green-600' : 'text-red-500'}`}>
+                    {passwordsMatch ? (
+                      <>
+                        <Check className="w-3.5 h-3.5" />
+                        Passwords match
+                      </>
+                    ) : (
+                      'Passwords do not match'
+                    )}
+                  </p>
+                )}
+                <FieldError field="new_password2" />
+              </div>
             </div>
 
             {errors.detail && (
@@ -235,21 +247,23 @@ export default function ChangePasswordPage() {
               </div>
             )}
 
-            {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={saving || !passwordsMatch || !form.old_password}
-              className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-medium text-sm hover:bg-primary/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-2"
-            >
-              {saving ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Updating...
-                </>
-              ) : (
-                'Update Password'
-              )}
-            </button>
+            {/* Submit Button - Right Aligned */}
+            <div className="flex justify-end pt-2">
+              <button
+                type="submit"
+                disabled={saving || !passwordsMatch || !form.old_password}
+                className="px-8 py-3 bg-primary text-primary-foreground rounded-xl font-medium text-sm hover:bg-primary/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {saving ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Updating...
+                  </>
+                ) : (
+                  'Update Password'
+                )}
+              </button>
+            </div>
           </form>
         </div>
       </div>

@@ -3,7 +3,8 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { productAPI } from '@/lib/api';
-import { formatDate } from '@/lib/utils';
+import { formatDate, formatCurrency } from '@/lib/utils';
+import { useStoreStore } from '@/store/storeStore';
 import Link from 'next/link';
 import {
   ChevronLeft, ChevronRight, Edit, Package, Tag, Layers,
@@ -19,6 +20,7 @@ export default function ProductDetailPage() {
   const router = useRouter();
   const params = useParams();
   const productId = params.id;
+  const { activeStore } = useStoreStore();
 
   const [product, setProduct] = useState(null);
   const [storefront, setStorefront] = useState(null);
@@ -215,9 +217,9 @@ export default function ProductDetailPage() {
             <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
               <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">{product.name}</h2>
               <div className="flex items-baseline gap-3 mb-4">
-                <span className="text-2xl font-black text-violet-500">${parseFloat(product.price).toFixed(2)}</span>
+                <span className="text-2xl font-black text-violet-500">{formatCurrency(product.price, activeStore?.currency)}</span>
                 {product.compare_at_price && (
-                  <span className="text-lg text-slate-400 line-through">${parseFloat(product.compare_at_price).toFixed(2)}</span>
+                  <span className="text-lg text-slate-400 line-through">{formatCurrency(product.compare_at_price, activeStore?.currency)}</span>
                 )}
               </div>
               <div className="flex items-center gap-4 text-sm text-slate-500 dark:text-gray-400">
@@ -340,9 +342,9 @@ export default function ProductDetailPage() {
                     <div>
                       <p className="text-xs font-medium text-slate-400 dark:text-gray-500 uppercase tracking-wider">Price</p>
                       <div className="flex items-baseline gap-2 mt-1">
-                        <p className="text-lg font-bold text-slate-900 dark:text-white">${parseFloat(product.price).toFixed(2)}</p>
+                        <p className="text-lg font-bold text-slate-900 dark:text-white">{formatCurrency(product.price, activeStore?.currency)}</p>
                         {product.compare_at_price && (
-                          <p className="text-sm text-slate-400 dark:text-gray-500 line-through">${parseFloat(product.compare_at_price).toFixed(2)}</p>
+                          <p className="text-sm text-slate-400 dark:text-gray-500 line-through">{formatCurrency(product.compare_at_price, activeStore?.currency)}</p>
                         )}
                       </div>
                     </div>
@@ -465,7 +467,7 @@ export default function ProductDetailPage() {
                         </div>
                       </td>
                       <td className="px-6 py-4 text-sm font-bold text-slate-900 dark:text-white">
-                        ${parseFloat(v.final_price || v.price || product.price).toFixed(2)}
+                        {formatCurrency(v.final_price || v.price || product.price, activeStore?.currency)}
                       </td>
                       <td className="px-6 py-4">
                         <span className={`px-2 py-0.5 rounded text-xs font-bold ${vStockColor}`}>

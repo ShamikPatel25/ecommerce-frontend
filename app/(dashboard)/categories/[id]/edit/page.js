@@ -129,7 +129,7 @@ export default function EditCategoryPage() {
     </div>
   );
 
-  const parentOptions = categories.filter(c => String(c.id) !== categoryId && c.level < 2);
+  const parentOptions = categories.filter(c => String(c.id) !== categoryId && c.level === 0);
   const hasChanges = originalData && (
     formData.name !== originalData.name ||
     formData.slug !== originalData.slug ||

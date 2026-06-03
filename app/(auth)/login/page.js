@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
 import { useStoreStore } from '@/store/storeStore';
@@ -8,6 +8,19 @@ import { authAPI } from '@/lib/api';
 import { toast } from 'sonner';
 import Link from 'next/link';
 import { LayoutDashboard, Mail, Lock, Eye, EyeOff, LogIn, Loader2 } from 'lucide-react';
+
+const validateEmail = (email) => {
+  if (!email) return { valid: false, error: 'Email is required' };
+  const parts = email.split('@');
+  if (parts.length !== 2) return { valid: false, error: 'Please enter a valid email address' };
+  const [localPart, domain] = parts;
+  if (localPart.length < 2) return { valid: false, error: 'Minimum 2 characters required before @' };
+  if (!/^[a-z0-9][a-z0-9._-]*[a-z0-9]$/.test(localPart) && !/^[a-z0-9]{2}$/.test(localPart)) {
+    return { valid: false, error: 'Invalid characters in email' };
+  }
+  if (domain !== 'gmail.com') return { valid: false, error: 'Only Gmail emails are allowed' };
+  return { valid: true, error: null };
+};
 
 export default function LoginPage() {
   const router = useRouter();
@@ -17,23 +30,61 @@ export default function LoginPage() {
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState('');
+  const [errors, setErrors] = useState({});
+
+  const emailRef = useRef(null);
+  const passwordRef = useRef(null);
+
+  const getInputClass = (hasError) =>
+    `w-full pl-10 pr-4 py-3 rounded-lg border bg-white text-slate-900 outline-none transition-all ${
+      hasError
+        ? 'border-red-500 focus:ring-2 focus:ring-red-500/20 focus:border-red-500'
+        : 'border-slate-200 focus:ring-2 focus:ring-[#8b5cf6]/20 focus:border-[#8b5cf6]'
+    }`;
+
+  const getInputClassWithPadding = (hasError) =>
+    `w-full pl-10 pr-12 py-3 rounded-lg border bg-white text-slate-900 outline-none transition-all ${
+      hasError
+        ? 'border-red-500 focus:ring-2 focus:ring-red-500/20 focus:border-red-500'
+        : 'border-slate-200 focus:ring-2 focus:ring-[#8b5cf6]/20 focus:border-[#8b5cf6]'
+    }`;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const newErrors = {};
+
+    if (!formData.email.trim()) {
+      newErrors.email = 'Email is required';
+    } else {
+      const emailValidation = validateEmail(formData.email);
+      if (!emailValidation.valid) newErrors.email = emailValidation.error;
+    }
+
+    if (!formData.password) {
+      newErrors.password = 'Password is required';
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      const firstError = Object.keys(newErrors)[0];
+      const refMap = { email: emailRef, password: passwordRef };
+      refMap[firstError]?.current?.focus();
+      toast.error(newErrors[firstError]);
+      return;
+    }
+
+    setErrors({});
     setLoading(true);
-    setError('');
     try {
       const response = await authAPI.login(formData);
       const { user, tokens } = response.data;
-      // Clear previous user's store selection before setting new auth
       setActiveStore(null);
       setStores([]);
       setAuth(user, tokens);
       toast.success('Login successful!');
       router.push('/dashboard');
     } catch {
-      setError('Invalid email or password. Please try again.');
+      toast.error('Invalid email or password');
     } finally {
       setLoading(false);
     }
@@ -53,32 +104,36 @@ export default function LoginPage() {
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} noValidate className="space-y-6">
 
           {/* Email */}
           <div>
             <label htmlFor="email" className="block text-sm font-semibold text-slate-700 mb-2">
-              Email Address
+              Email Address <span className="text-red-500">*</span>
             </label>
             <div className="relative">
               <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5 pointer-events-none" />
               <input
+                ref={emailRef}
                 id="email"
                 type="email"
-                placeholder="admin@estore.com"
-                className="w-full pl-10 pr-4 py-3 rounded-lg border border-slate-200 bg-white text-slate-900 focus:ring-2 focus:ring-[#8b5cf6]/20 focus:border-[#8b5cf6] outline-none transition-all"
+                placeholder="you@gmail.com"
+                className={getInputClass(errors.email)}
                 value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value.replace(/\s/g, '').toLowerCase() })}
-                required
+                onChange={(e) => {
+                  setFormData({ ...formData, email: e.target.value.replace(/\s/g, '').toLowerCase() });
+                  if (errors.email) setErrors(prev => ({ ...prev, email: '' }));
+                }}
               />
             </div>
+            {errors.email && <p className="text-xs text-red-500 mt-1">{errors.email}</p>}
           </div>
 
           {/* Password */}
           <div>
             <div className="flex justify-between items-center mb-2">
               <label htmlFor="password" className="block text-sm font-semibold text-slate-700">
-                Password
+                Password <span className="text-red-500">*</span>
               </label>
               <Link href="/forgot-password" className="text-xs font-medium text-[#8b5cf6] hover:underline">
                 Forgot password?
@@ -87,13 +142,16 @@ export default function LoginPage() {
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5 pointer-events-none" />
               <input
+                ref={passwordRef}
                 id="password"
                 type={showPassword ? 'text' : 'password'}
                 placeholder="••••••••"
-                className="w-full pl-10 pr-12 py-3 rounded-lg border border-slate-200 bg-white text-slate-900 focus:ring-2 focus:ring-[#8b5cf6]/20 focus:border-[#8b5cf6] outline-none transition-all"
+                className={getInputClassWithPadding(errors.password)}
                 value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value.replace(/\s/g, '') })}
-                required
+                onChange={(e) => {
+                  setFormData({ ...formData, password: e.target.value.replace(/\s/g, '') });
+                  if (errors.password) setErrors(prev => ({ ...prev, password: '' }));
+                }}
               />
               <button
                 type="button"
@@ -103,6 +161,7 @@ export default function LoginPage() {
                 {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
               </button>
             </div>
+            {errors.password && <p className="text-xs text-red-500 mt-1">{errors.password}</p>}
           </div>
 
           {/* Remember */}
@@ -116,13 +175,6 @@ export default function LoginPage() {
               Remember this device
             </label>
           </div>
-
-          {/* Error Message */}
-          {error && (
-            <div className="bg-red-50 border border-red-200 text-red-600 text-sm font-medium px-4 py-3 rounded-lg">
-              {error}
-            </div>
-          )}
 
           {/* Submit */}
           <button

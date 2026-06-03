@@ -10,7 +10,7 @@ import {
   Trash2, MoreHorizontal,
   Tag, Eye, EyeOff,
   SlidersHorizontal,
-  Pencil,
+  Pencil, X,
 } from 'lucide-react';
 import Pagination from '@/components/dashboard/Pagination';
 import DataError from '@/components/dashboard/DataError';
@@ -154,9 +154,7 @@ export default function CategoriesPage() {
   /* ── filter + paginate ── */
   const lowerQuery = searchQuery.toLowerCase().trim();
   const baseFiltered = categories.filter((c) => {
-    const matchSearch =
-      c.name?.toLowerCase().includes(lowerQuery) ||
-      c.slug?.toLowerCase().includes(lowerQuery);
+    const matchSearch = c.name?.toLowerCase().includes(lowerQuery);
     if (!matchSearch) return false;
     if (activeTab === 'Main')     return c.level === 0;
     if (activeTab === 'Sub')      return c.level >= 1;
@@ -203,10 +201,19 @@ export default function CategoriesPage() {
           </div>
           <input
             className="admin-search-input"
-            placeholder="Search categories by name or slug..."
+            placeholder="Search categories by name..."
             value={searchQuery}
             onChange={(e) => { setSearchQuery(e.target.value); setPage(1); }}
           />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => { setSearchQuery(''); setPage(1); }}
+              className="absolute right-1 top-1/2 -translate-y-1/2 p-1 text-slate-600 dark:text-gray-400 hover:text-slate-800 dark:hover:text-gray-200 transition-colors"
+            >
+              <X size={20} strokeWidth={2.5} />
+            </button>
+          )}
           <button
             onClick={() => setFilterOpen(!filterOpen)}
             className={activeTab !== 'All' ? 'admin-filter-toggle-active' : 'admin-filter-toggle'}
@@ -295,7 +302,7 @@ export default function CategoriesPage() {
                       {/* URL Handle */}
                       <td className="admin-td whitespace-nowrap text-left">
                         <code className="text-xs font-mono bg-slate-100 dark:bg-gray-700 px-2 py-1 rounded text-slate-500 dark:text-gray-400">
-                          /{cat.slug}
+                          /{cat.full_slug || cat.slug}
                         </code>
                       </td>
 

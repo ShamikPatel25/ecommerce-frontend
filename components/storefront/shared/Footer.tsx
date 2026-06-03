@@ -65,7 +65,7 @@ export function Footer({ store, categories, href }) {
               {categories?.slice(0, 4).map((cat) => (
                 <li key={cat.id}>
                   <Link
-                    href={href(`/products?category=${cat.slug}`)}
+                    href={href(`/products?category=${cat.full_slug || cat.slug}`)}
                     className="text-sm text-muted-foreground hover:text-primary transition-colors"
                   >
                     {cat.name}

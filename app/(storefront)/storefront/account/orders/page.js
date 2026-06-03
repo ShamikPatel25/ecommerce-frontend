@@ -9,9 +9,10 @@ import { useStorefrontPath } from '@/lib/useStorefrontPath';
 import {
   PackageX, Package, Calendar, ChevronDown, ChevronUp,
   Box, ShoppingBag, Truck, CheckCircle2, Clock, XCircle,
-  RotateCcw, AlertCircle, RefreshCw, ArrowRight,
+  RotateCcw, AlertCircle, RefreshCw, ArrowRight, ChevronLeft,
 } from 'lucide-react';
 import ConfirmActionModal from '@/components/storefront/ConfirmActionModal';
+import { useStoreInfo } from '@/lib/StorefrontContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -169,7 +170,7 @@ function OrderProgressTracker({ status }) {
 /* ─────────────────────────────────────── */
 /*  Single order card                      */
 /* ─────────────────────────────────────── */
-function OrderCard({ order, isExpanded, onToggle, href, onRefresh }) {
+function OrderCard({ order, isExpanded, onToggle, href, onRefresh, currency }) {
   const [submitting, setSubmitting] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalConfig, setModalConfig] = useState({ type: null, itemId: null, itemName: null });
@@ -274,7 +275,7 @@ function OrderCard({ order, isExpanded, onToggle, href, onRefresh }) {
               </span>
             </div>
             <p className="font-black text-foreground text-lg sm:text-2xl mt-1">
-              {formatCurrency(activeTotal)}
+              {formatCurrency(activeTotal, currency)}
             </p>
           </div>
 
@@ -373,7 +374,7 @@ function OrderCard({ order, isExpanded, onToggle, href, onRefresh }) {
                       {/* Subtotal & Item Actions */}
                       <div className="flex flex-col items-end gap-2 shrink-0 min-w-[80px]">
                         <p className={`font-black ${['cancelled', 'returned'].includes(item.status) ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
-                          {formatCurrency(Number.parseFloat(item.subtotal))}
+                          {formatCurrency(Number.parseFloat(item.subtotal), currency)}
                         </p>
                         
                         {/* Item level buttons */}
@@ -422,12 +423,12 @@ function OrderCard({ order, isExpanded, onToggle, href, onRefresh }) {
                 {inactiveLabel && (
                   <div className="flex justify-between items-center">
                     <span className="text-sm font-medium text-red-400 capitalize">{inactiveLabel}</span>
-                    <span className="text-sm font-medium text-red-400 line-through">{formatCurrency(inactiveTotal)}</span>
+                    <span className="text-sm font-medium text-red-400 line-through">{formatCurrency(inactiveTotal, currency)}</span>
                   </div>
                 )}
                 <div className="flex justify-between items-center">
                   <span className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Order Total</span>
-                  <span className="text-2xl font-black text-foreground">{formatCurrency(activeTotal)}</span>
+                  <span className="text-2xl font-black text-foreground">{formatCurrency(activeTotal, currency)}</span>
                 </div>
               </div>
 
@@ -527,6 +528,8 @@ function OrderCard({ order, isExpanded, onToggle, href, onRefresh }) {
 /* ─────────────────────────────────────── */
 export default function StorefrontOrdersPage() {
   const { href } = useStorefrontPath();
+  const storeInfo = useStoreInfo();
+  const currency = storeInfo?.currency;
   const customer = useStorefrontAuthStore((s) => s.customer);
   const accessToken = useStorefrontAuthStore((s) => s.accessToken);
   const [orders, setOrders] = useState([]);
@@ -560,23 +563,25 @@ export default function StorefrontOrdersPage() {
   /* ── Skeleton: shown while fetching ── */
   if (loading) {
     return (
-      <div className="p-4 sm:p-6 lg:p-8">
-        <div className="mb-8 space-y-3">
-          <div className="h-8 w-40 bg-muted/50 rounded-xl animate-pulse" />
-          <div className="h-4 w-32 bg-muted/40 rounded-full animate-pulse" />
-        </div>
-        {[1, 2, 3].map((i) => (
-          <div key={i} className="bg-card border border-border rounded-2xl p-5 mb-4 animate-pulse">
-            <div className="flex gap-4">
-              <div className="w-12 h-12 rounded-xl bg-muted/50" />
-              <div className="flex-1 space-y-2">
-                <div className="h-4 w-32 bg-muted/50 rounded-full" />
-                <div className="h-5 w-40 bg-muted/50 rounded-lg" />
-              </div>
-              <div className="h-7 w-20 bg-muted/50 rounded-lg self-start" />
-            </div>
+      <div className="min-h-screen bg-muted/30">
+        <div className="container mx-auto px-4 md:px-6 py-6 md:py-8">
+          <div className="mb-8 space-y-3">
+            <div className="h-8 w-40 bg-muted/50 rounded-xl animate-pulse" />
+            <div className="h-4 w-32 bg-muted/40 rounded-full animate-pulse" />
           </div>
-        ))}
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="bg-card border border-border rounded-2xl p-5 mb-4 animate-pulse">
+              <div className="flex gap-4">
+                <div className="w-12 h-12 rounded-xl bg-muted/50" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-4 w-32 bg-muted/50 rounded-full" />
+                  <div className="h-5 w-40 bg-muted/50 rounded-lg" />
+                </div>
+                <div className="h-7 w-20 bg-muted/50 rounded-lg self-start" />
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
@@ -585,44 +590,55 @@ export default function StorefrontOrdersPage() {
   /* ── Error state ── */
   if (error) {
     return (
-      <div className="p-4 sm:p-6 lg:p-8">
-        <div className="flex flex-col items-center justify-center py-16 px-4 text-center bg-card border border-red-500/20 rounded-2xl">
-          <AlertCircle className="w-12 h-12 text-red-400 mb-4" />
-          <h3 className="text-xl font-bold text-foreground mb-2">Couldn&apos;t Load Orders</h3>
-          <p className="text-sm text-muted-foreground mb-6 max-w-sm">{error}</p>
-          <Button
-            onClick={() => { setLoading(true); setError(null); fetchOrders(); }}
-            className="rounded-xl gap-2 font-medium"
-          >
-            <RefreshCw className="w-4 h-4" /> Try Again
-          </Button>
+      <div className="min-h-screen bg-muted/30">
+        <div className="container mx-auto px-4 md:px-6 py-6 md:py-8">
+          <div className="flex flex-col items-center justify-center py-16 px-4 text-center bg-card border border-red-500/20 rounded-2xl">
+            <AlertCircle className="w-12 h-12 text-red-400 mb-4" />
+            <h3 className="text-xl font-bold text-foreground mb-2">Couldn&apos;t Load Orders</h3>
+            <p className="text-sm text-muted-foreground mb-6 max-w-sm">{error}</p>
+            <Button
+              onClick={() => { setLoading(true); setError(null); fetchOrders(); }}
+              className="rounded-xl gap-2 font-medium"
+            >
+              <RefreshCw className="w-4 h-4" /> Try Again
+            </Button>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8">
-      {/* ── Page Header ── */}
-      <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">My Orders</h1>
-          <p className="text-sm text-muted-foreground mt-1">Track and manage your orders</p>
-        </div>
+    <div className="min-h-screen bg-muted/30">
+      <div className="container mx-auto px-4 md:px-6 py-6 md:py-8">
+        {/* ── Page Header with Back Arrow ── */}
+        <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-3 mb-1">
+              <Link
+                href={href('/')}
+                className="p-1 -ml-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+              >
+                <ChevronLeft className="w-6 h-6" strokeWidth={2.5} />
+              </Link>
+              <h1 className="text-2xl font-bold text-foreground">My Orders</h1>
+            </div>
+            <p className="text-sm text-muted-foreground ml-9">Track and manage your orders</p>
+          </div>
 
-        {/* Refresh button */}
-        {orders.length > 0 && (
-          <button
-            type="button"
-            onClick={() => fetchOrders(true)}
-            disabled={refreshing}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-muted hover:bg-muted/80 text-sm font-medium text-foreground transition-colors disabled:opacity-50"
-          >
-            <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
-            Refresh
-          </button>
-        )}
-      </div>
+          {/* Refresh button */}
+          {orders.length > 0 && (
+            <button
+              type="button"
+              onClick={() => fetchOrders(true)}
+              disabled={refreshing}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-muted hover:bg-muted/80 text-sm font-medium text-foreground transition-colors disabled:opacity-50"
+            >
+              <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+              Refresh
+            </button>
+          )}
+        </div>
 
       {/* ── Empty State ── */}
       {orders.length === 0 ? (
@@ -665,6 +681,7 @@ export default function StorefrontOrdersPage() {
                 onToggle={() => setExpandedOrder(expandedOrder === order.id ? null : order.id)}
                 href={href}
                 onRefresh={fetchOrders}
+                currency={currency}
               />
             </motion.div>
           ))}
@@ -682,6 +699,7 @@ export default function StorefrontOrdersPage() {
           </Link>
         </div>
       )}
+      </div>
     </div>
   );
 }

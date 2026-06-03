@@ -185,7 +185,7 @@ export default function ProductsListClient() {
                       <DropdownMenuRadioGroup value={currentCategory} onValueChange={(val) => updateParams({ category: val || null })}>
                         <DropdownMenuRadioItem value="">All Categories</DropdownMenuRadioItem>
                         {categories.map((cat) => (
-                          <DropdownMenuRadioItem key={cat.id} value={cat.slug}>
+                          <DropdownMenuRadioItem key={cat.id} value={cat.full_slug || cat.slug}>
                             {cat.name}
                           </DropdownMenuRadioItem>
                         ))}

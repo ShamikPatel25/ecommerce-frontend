@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { User, Package, KeyRound, LogOut, ChevronLeft } from 'lucide-react';
+import { User, KeyRound, LogOut } from 'lucide-react';
 import { useStorefrontPath } from '@/lib/useStorefrontPath';
 import { useStorefrontAuthStore } from '@/store/storefrontAuthStore';
 
@@ -31,12 +31,6 @@ export function AccountSidebar() {
       description: 'Manage your info',
     },
     {
-      icon: Package,
-      label: 'Orders',
-      href: '/account/orders',
-      description: 'Track your orders',
-    },
-    {
       icon: KeyRound,
       label: 'Change Password',
       href: '/account/change-password',
@@ -48,14 +42,6 @@ export function AccountSidebar() {
     <div className="bg-background border-r border-border h-full flex flex-col">
       {/* Header */}
       <div className="p-4 border-b border-border">
-        <Link
-          href={href('/')}
-          className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4"
-        >
-          <ChevronLeft className="w-4 h-4" />
-          Back to Store
-        </Link>
-
         {customer && (
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-lg font-bold">
@@ -101,7 +87,7 @@ export function AccountSidebar() {
         })}
       </nav>
 
-      {/* Sign Out */}
+      {/* Logout */}
       <div className="p-3 border-t border-border">
         <button
           onClick={handleLogout}
@@ -110,10 +96,7 @@ export function AccountSidebar() {
           <div className="w-9 h-9 rounded-lg bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
             <LogOut className="w-4 h-4" />
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium">Sign Out</p>
-            <p className="text-xs text-red-400">Log out of your account</p>
-          </div>
+          <p className="text-sm font-medium">Logout</p>
         </button>
       </div>
     </div>

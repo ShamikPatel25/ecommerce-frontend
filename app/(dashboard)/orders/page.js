@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { orderAPI, isCancelledError } from '@/lib/api';
 import { toast } from 'sonner';
 import {
-  Download, Search, ShoppingBag, SlidersHorizontal,
+  Download, Search, ShoppingBag, SlidersHorizontal, X,
 } from 'lucide-react';
 import Pagination from '@/components/dashboard/Pagination';
 import DataError from '@/components/dashboard/DataError';
@@ -176,6 +176,15 @@ export default function OrdersPage() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => { setSearchQuery(''); setPage(1); }}
+                className="absolute right-1 top-1/2 -translate-y-1/2 p-1 text-slate-600 dark:text-gray-400 hover:text-slate-800 dark:hover:text-gray-200 transition-colors"
+              >
+                <X size={20} strokeWidth={2.5} />
+              </button>
+            )}
             <button
               onClick={() => setFilterOpen(!filterOpen)}
               className={activeStatus !== 'all' ? 'admin-filter-toggle-active' : 'admin-filter-toggle'}

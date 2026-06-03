@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { authAPI } from '@/lib/api';
-import { useFormDraft } from '@/hooks/useFormDraft';
 import { useAuthStore } from '@/store/authStore';
 import { toast } from 'sonner';
 import { User, Loader2, Save, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -13,13 +12,22 @@ const INPUT_CLS =
   'placeholder:text-slate-400 dark:placeholder:text-gray-500 focus:outline-none focus:border-violet-500 ' +
   'focus:ring-2 focus:ring-violet-500/20 transition-all';
 
+const INPUT_ERROR_CLS =
+  'w-full rounded-lg border border-red-500 bg-red-50 dark:bg-red-900/20 px-4 py-3 text-slate-900 dark:text-white ' +
+  'placeholder:text-slate-400 dark:placeholder:text-gray-500 focus:outline-none focus:border-red-500 ' +
+  'focus:ring-2 focus:ring-red-500/20 transition-all';
+
+const MAX_PHONE_LENGTH = 15;
+const MIN_PHONE_LENGTH = 10;
+
 export default function SettingsPage() {
   const { user, setAuth } = useAuthStore();
   const router = useRouter();
 
   const [loading, setLoading] = useState(true);
   const [savingProfile, setSavingProfile] = useState(false);
-  const [profileData, setProfileData, clearProfileDraft] = useFormDraft('settings-profile', {
+  const [originalData, setOriginalData] = useState(null);
+  const [profileData, setProfileData] = useState({
     first_name: '',
     last_name: '',
     username: '',
@@ -32,28 +40,48 @@ export default function SettingsPage() {
     try {
       const res = await authAPI.getProfile();
       const p = res.data;
-      setProfileData({
+      const data = {
         first_name: p.first_name || '',
         last_name: p.last_name || '',
         username: p.username || '',
         phone: p.phone || '',
         email: p.email || '',
-      });
+      };
+      setProfileData(data);
+      setOriginalData(data);
     } catch {
       toast.error('Failed to load profile');
     } finally {
       setLoading(false);
     }
-  }, [setProfileData]);
+  }, []);
 
   useEffect(() => {
     fetchProfile();
   }, [fetchProfile]);
 
+  const hasChanges = originalData && (
+    profileData.first_name !== originalData.first_name ||
+    profileData.last_name !== originalData.last_name ||
+    profileData.username !== originalData.username ||
+    profileData.phone !== originalData.phone
+  );
+
   const handleSaveProfile = async (e) => {
     e.preventDefault();
-    setSavingProfile(true);
     setProfileErrors({});
+
+    // Validate phone number
+    if (profileData.phone) {
+      const digitsOnly = profileData.phone.replace(/[^0-9]/g, '');
+      if (digitsOnly.length < MIN_PHONE_LENGTH || digitsOnly.length > MAX_PHONE_LENGTH) {
+        setProfileErrors({ phone: [`Phone number must be ${MIN_PHONE_LENGTH}-${MAX_PHONE_LENGTH} digits`] });
+        toast.error(`Phone number must be ${MIN_PHONE_LENGTH}-${MAX_PHONE_LENGTH} digits`);
+        return;
+      }
+    }
+
+    setSavingProfile(true);
 
     try {
       const res = await authAPI.updateProfile({
@@ -72,8 +100,8 @@ export default function SettingsPage() {
         }
       }
 
+      setOriginalData({ ...profileData });
       toast.success('Profile updated successfully');
-      clearProfileDraft();
     } catch (error) {
       const errData = error.response?.data;
       if (errData && typeof errData === 'object') {
@@ -184,10 +212,17 @@ export default function SettingsPage() {
                   <label className="text-sm font-semibold text-slate-700 dark:text-gray-300">Phone</label>
                   <input
                     type="text"
-                    placeholder="+1 (555) 000-0000"
-                    className={INPUT_CLS}
+                    placeholder="+1 555 000 0000"
+                    className={profileErrors.phone ? INPUT_ERROR_CLS : INPUT_CLS}
                     value={profileData.phone}
-                    onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
+                    maxLength={MAX_PHONE_LENGTH}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/[^0-9+\-\s]/g, '');
+                      if (value.length <= MAX_PHONE_LENGTH) {
+                        setProfileData({ ...profileData, phone: value });
+                        if (profileErrors.phone) setProfileErrors({ ...profileErrors, phone: null });
+                      }
+                    }}
                   />
                   <FieldError errors={profileErrors} field="phone" />
                 </div>
@@ -207,8 +242,8 @@ export default function SettingsPage() {
               <div className="flex justify-end mt-8 pt-6 border-t border-gray-100 dark:border-gray-700">
                 <button
                   type="submit"
-                  disabled={savingProfile}
-                  className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-violet-500 text-white font-bold rounded-lg px-4 sm:px-8 py-3 shadow-lg shadow-violet-500/30 hover:bg-violet-500/90 active:scale-95 transition-all disabled:opacity-50"
+                  disabled={savingProfile || !hasChanges}
+                  className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-violet-500 text-white font-bold rounded-lg px-4 sm:px-8 py-3 shadow-lg shadow-violet-500/30 hover:bg-violet-500/90 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {savingProfile ? (
                     <>

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { Menu } from 'lucide-react';
 import { useStorefrontAuthStore } from '@/store/storefrontAuthStore';
 import { useStorefrontPath } from '@/lib/useStorefrontPath';
@@ -20,7 +20,11 @@ export default function AccountLayout({ children }) {
   const accessToken = useStorefrontAuthStore((state) => state.accessToken);
   const isLoggedIn = !!(customer && accessToken);
   const router = useRouter();
+  const pathname = usePathname();
   const { href } = useStorefrontPath();
+
+  // Check if on orders page - show full width without sidebar
+  const isOrdersPage = pathname?.endsWith('/account/orders');
 
   useEffect(() => {
     queueMicrotask(() => setIsMounted(true));
@@ -44,6 +48,17 @@ export default function AccountLayout({ children }) {
     return null;
   }
 
+  // Full width layout for orders page
+  if (isOrdersPage) {
+    return (
+      <div className="min-h-screen bg-muted/30">
+        <main className="w-full">
+          {children}
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-muted/30">
       {/* Mobile Header with Menu Button */}
@@ -65,12 +80,12 @@ export default function AccountLayout({ children }) {
 
       <div className="flex">
         {/* Desktop Sidebar */}
-        <aside className="hidden md:block w-72 lg:w-80 flex-shrink-0 sticky top-16 h-[calc(100vh-4rem)]">
+        <aside className="hidden md:block w-56 lg:w-64 flex-shrink-0 sticky top-16 h-[calc(100vh-4rem)]">
           <AccountSidebar />
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1 min-w-0">
+        <main className="flex-1 min-w-0 w-full">
           {children}
         </main>
       </div>

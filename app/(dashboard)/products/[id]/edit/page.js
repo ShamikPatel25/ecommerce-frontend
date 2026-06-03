@@ -33,6 +33,13 @@ const MAX_NAME_LENGTH = 100;
 const MAX_SKU_LENGTH = 30;
 const MAX_DESCRIPTION_LENGTH = 500;
 
+const CURRENCY_SYMBOLS = {
+  INR: '₹',
+  USD: '$',
+  EUR: '€',
+  GBP: '£',
+};
+
 const appendToCombo = (combo, arr) =>
   arr.map((c) => [...combo, c]);
 
@@ -438,10 +445,10 @@ export default function EditProductPage() {
             {/* Price */}
             <div className="space-y-1.5">
               <label htmlFor="product-price" className="text-sm font-semibold text-slate-700 dark:text-gray-300">
-                Price <span className="text-red-500">*</span>
+                Price ({activeStore?.currency || 'USD'}) <span className="text-red-500">*</span>
               </label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-gray-500 font-medium">$</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-gray-500 font-medium">{CURRENCY_SYMBOLS[activeStore?.currency] || '$'}</span>
                 <input id="product-price" type="text" inputMode="numeric" pattern="[0-9]*"
                   className={(errors.price ? INPUT_ERROR_CLS : INPUT_CLS) + ' pl-8'}
                   value={formData.price}
@@ -459,7 +466,7 @@ export default function EditProductPage() {
             <div className="space-y-1.5">
               <label htmlFor="compare-at-price" className="text-sm font-semibold text-slate-700 dark:text-gray-300">Compare at Price</label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-gray-500 font-medium">$</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-gray-500 font-medium">{CURRENCY_SYMBOLS[activeStore?.currency] || '$'}</span>
                 <input id="compare-at-price" type="text" inputMode="numeric" pattern="[0-9]*"
                   placeholder="Original price (optional)"
                   className={(errors.compare_at_price ? INPUT_ERROR_CLS : INPUT_CLS) + ' pl-8'}

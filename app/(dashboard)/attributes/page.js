@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { attributeAPI, categoryAPI, isCancelledError } from '@/lib/api';
 import { toast } from 'sonner';
 import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
-import { Plus, Search, Trash2, Tag, MoreHorizontal, Pencil } from 'lucide-react';
+import { Plus, Search, Trash2, Tag, MoreHorizontal, Pencil, X } from 'lucide-react';
 import Pagination from '@/components/dashboard/Pagination';
 import DataError from '@/components/dashboard/DataError';
 import { useSharedDataStore } from '@/store/sharedDataStore';
@@ -142,6 +142,15 @@ export default function AttributesPage() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => { setSearchQuery(''); setCurrentPage(1); }}
+                className="absolute right-1 top-1/2 -translate-y-1/2 p-1 text-slate-600 dark:text-gray-400 hover:text-slate-800 dark:hover:text-gray-200 transition-colors"
+              >
+                <X size={20} strokeWidth={2.5} />
+              </button>
+            )}
           </div>
         </div>
 

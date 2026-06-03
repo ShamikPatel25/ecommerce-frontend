@@ -236,15 +236,15 @@ export default function CreateStorePage() {
             <label className="text-sm font-semibold text-slate-700 dark:text-gray-300">
               Subdomain <span className="text-red-500">*</span>
             </label>
-            <div className="relative">
-              <div className={`flex items-center rounded-lg border overflow-hidden focus-within:ring-2 transition-all ${
-                errors.subdomain
-                  ? 'border-red-500 focus-within:ring-red-500/20 focus-within:border-red-500'
-                  : 'border-violet-500/20 dark:border-gray-600 focus-within:ring-violet-500/20 focus-within:border-violet-500'
-              }`}>
+            <div className={`flex items-center rounded-lg border overflow-hidden focus-within:ring-2 transition-all ${
+              errors.subdomain
+                ? 'border-red-500 focus-within:ring-red-500/20 focus-within:border-red-500'
+                : 'border-violet-500/20 dark:border-gray-600 focus-within:ring-violet-500/20 focus-within:border-violet-500'
+            }`}>
+              <div className="relative flex-1">
                 <input
                   type="text"
-                  className={`flex-1 px-4 py-3 focus:outline-none text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-gray-500 min-w-0 pr-14 ${
+                  className={`w-full px-4 py-3 pr-14 focus:outline-none text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-gray-500 ${
                     errors.subdomain
                       ? 'bg-red-50 dark:bg-red-900/20'
                       : 'bg-violet-500/5 dark:bg-gray-700'
@@ -254,11 +254,11 @@ export default function CreateStorePage() {
                   onChange={handleSubdomainChange}
                   maxLength={MAX_SUBDOMAIN_LENGTH}
                 />
-                <span className="px-4 py-3 bg-slate-50 dark:bg-gray-700/50 text-slate-400 dark:text-gray-500 text-sm border-l border-violet-500/10 dark:border-gray-600 whitespace-nowrap">.localhost:3000</span>
+                <span className="absolute right-3 bottom-1 text-xs text-slate-400 dark:text-gray-500 pointer-events-none">{formData.subdomain.length}/{MAX_SUBDOMAIN_LENGTH}</span>
               </div>
-              <span className="absolute right-28 bottom-1 text-xs text-slate-400 dark:text-gray-500 pointer-events-none">{formData.subdomain.length}/{MAX_SUBDOMAIN_LENGTH}</span>
+              <span className="px-4 py-3 bg-slate-50 dark:bg-gray-700/50 text-slate-400 dark:text-gray-500 text-sm border-l border-violet-500/10 dark:border-gray-600 whitespace-nowrap">.localhost:3000</span>
             </div>
-            {errors.subdomain && <p className="text-xs text-red-500">{errors.subdomain}</p>}
+            {errors.subdomain && <p className="text-xs text-red-500 mt-1">{errors.subdomain}</p>}
           </div>
 
           {/* Description */}

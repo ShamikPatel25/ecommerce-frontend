@@ -1,10 +1,12 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 import { storefrontAPI } from '@/lib/storefrontApi';
 import { useStorefrontAuthStore } from '@/store/storefrontAuthStore';
+import { useStorefrontPath } from '@/lib/useStorefrontPath';
 import { ADDRESS_LABEL_ICONS, ADDRESS_LABEL_OPTIONS } from '@/lib/addressConfig';
-import { Mail, Phone, Loader2, MapPin, Plus, Pencil, Trash2, Check } from 'lucide-react';
+import { Mail, Phone, Loader2, MapPin, Plus, Pencil, Trash2, Check, ChevronLeft } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function AccountPage() {
@@ -23,6 +25,7 @@ export default function AccountPage() {
 
   const customer = useStorefrontAuthStore((s) => s.customer);
   const setCustomer = useStorefrontAuthStore((s) => s.setCustomer);
+  const { href } = useStorefrontPath();
 
   const fetchData = useCallback(async () => {
     try {
@@ -216,10 +219,18 @@ export default function AccountPage() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
-      {/* Page Title - Mobile hidden since layout has it */}
-      <div className="hidden md:block mb-6">
-        <h1 className="text-2xl font-bold text-foreground">Profile</h1>
-        <p className="text-sm text-muted-foreground mt-1">Manage your personal information</p>
+      {/* Page Header with Back Arrow */}
+      <div className="mb-6">
+        <div className="flex items-center gap-3 mb-1">
+          <Link
+            href={href('/')}
+            className="p-1 -ml-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+          >
+            <ChevronLeft className="w-6 h-6" strokeWidth={2.5} />
+          </Link>
+          <h1 className="text-2xl font-bold text-foreground">Profile</h1>
+        </div>
+        <p className="text-sm text-muted-foreground ml-9">Manage your personal information</p>
       </div>
 
       {/* Profile Card */}
