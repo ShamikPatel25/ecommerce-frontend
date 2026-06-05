@@ -1,9 +1,8 @@
 'use client';
 
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuthStore } from '@/store/authStore';
-import { categoryAPI, productAPI, orderAPI, isCancelledError } from '@/lib/api';
+import { orderAPI, isCancelledError } from '@/lib/api';
 import { useStoreStore } from '@/store/storeStore';
 import { useDashboardStore } from '@/store/dashboardStore';
 import { formatCurrency } from '@/lib/utils';
@@ -30,13 +29,14 @@ function useWindowWidth() {
   return width;
 }
 
-const STATUS_STYLES = {
-  pending: 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20',
-  confirmed: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20',
-  processing: 'bg-purple-500/10 text-purple-400 border border-purple-500/20',
-  shipped: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20',
-  delivered: 'bg-blue-500/10 text-blue-400 border border-blue-500/20',
-  cancelled: 'bg-red-500/10 text-red-400 border border-red-500/20',
+const STATUS_BADGE = {
+  pending:    { dot: 'bg-yellow-500', pill: 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20' },
+  confirmed:  { dot: 'bg-blue-500',   pill: 'bg-blue-500/10 text-blue-400 border border-blue-500/20' },
+  processing: { dot: 'bg-violet-500', pill: 'bg-violet-500/10 text-violet-400 border border-violet-500/20' },
+  shipped:    { dot: 'bg-cyan-500',   pill: 'bg-cyan-500/10 text-cyan-500 border border-cyan-500/20' },
+  delivered:  { dot: 'bg-green-500',  pill: 'bg-green-500/10 text-green-400 border border-green-500/20' },
+  cancelled:  { dot: 'bg-red-500',    pill: 'bg-red-500/10 text-red-400 border border-red-500/20' },
+  returned:   { dot: 'bg-orange-500', pill: 'bg-orange-500/10 text-orange-400 border border-orange-500/20' },
 };
 
 function getInitials(name) {
@@ -51,7 +51,6 @@ function getInitials(name) {
 
 export default function DashboardPage() {
   const router = useRouter();
-  const user = useAuthStore((s) => s.user);
   const { activeStore, stores } = useStoreStore();
   const { getCache, setCache } = useDashboardStore();
   const screenWidth = useWindowWidth();
@@ -197,7 +196,7 @@ export default function DashboardPage() {
         <table className="admin-table">
           <thead>
             <tr>
-              <th className="admin-th border-b border-gray-200 dark:border-gray-700">Order ID</th>
+              <th className="admin-th border-b border-gray-200 dark:border-gray-700">Order</th>
               <th className="admin-th border-b border-gray-200 dark:border-gray-700 text-left">Customer</th>
               <th className="admin-th border-b border-gray-200 dark:border-gray-700 text-center">Items</th>
               <th className="admin-th border-b border-gray-200 dark:border-gray-700">Total</th>
@@ -211,8 +210,8 @@ export default function DashboardPage() {
                 onClick={() => router.push(`/orders/${order.id}`)}
                 className="hover:bg-slate-50 dark:hover:bg-gray-700/30 transition-colors cursor-pointer border-b border-gray-100 dark:border-gray-700/50 last:border-b-0"
               >
-                <td className="admin-td text-sm font-medium text-slate-900 dark:text-slate-100">
-                  #ORD-{String(order.id).padStart(4, '0')}
+                <td className="admin-td text-sm font-mono font-bold text-slate-900 dark:text-slate-100">
+                  {order.order_number}
                 </td>
                 <td className="admin-td text-left">
                   <div className="flex items-center justify-start gap-2.5">
@@ -229,9 +228,16 @@ export default function DashboardPage() {
                   {formatCurrency(order.total_amount || 0, activeStore?.currency)}
                 </td>
                 <td className="admin-td">
-                  <span className={`px-3 py-1 rounded-md text-[11px] font-semibold uppercase tracking-wide ${STATUS_STYLES[order.status] || 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'}`}>
-                    {order.status}
-                  </span>
+                  {(() => {
+                    const badge = STATUS_BADGE[order.status] || { dot: 'bg-slate-400', pill: 'bg-slate-500/10 text-slate-400 border border-slate-500/20' };
+                    const statusText = order.status.charAt(0).toUpperCase() + order.status.slice(1);
+                    return (
+                      <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${badge.pill}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${badge.dot}`} />
+                        {statusText}
+                      </span>
+                    );
+                  })()}
                 </td>
               </tr>
             ))}

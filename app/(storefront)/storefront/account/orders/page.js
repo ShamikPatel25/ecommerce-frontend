@@ -28,7 +28,7 @@ const STATUS_META = {
   shipped: { label: 'Shipped', color: 'bg-cyan-500/15 text-cyan-400 border-cyan-500/30', dot: 'bg-cyan-400' },
   delivered: { label: 'Delivered', color: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30', dot: 'bg-emerald-400' },
   cancelled: { label: 'Cancelled', color: 'bg-red-500/15 text-red-400 border-red-500/30', dot: 'bg-red-400' },
-  returned: { label: 'Returned', color: 'bg-gray-500/15 text-gray-400 border-gray-500/30', dot: 'bg-gray-400' },
+  returned: { label: 'Returned', color: 'bg-orange-500/15 text-orange-400 border-orange-500/30', dot: 'bg-orange-400' },
 };
 
 /* ─────────────────────────────────────── */
@@ -181,14 +181,32 @@ function OrderCard({ order, isExpanded, onToggle, href, onRefresh, currency }) {
   const activeItems = order.items?.filter(i => !['cancelled', 'returned'].includes(i.status)) || [];
   const cancelledItems = order.items?.filter(i => i.status === 'cancelled') || [];
   const returnedItems = order.items?.filter(i => i.status === 'returned') || [];
-  const activeTotal = activeItems.reduce((sum, i) => sum + Number.parseFloat(i.subtotal || 0), 0);
-  const inactiveTotal = [...cancelledItems, ...returnedItems].reduce((sum, i) => sum + Number.parseFloat(i.subtotal || 0), 0);
+  const totalItems = order.items?.length || 0;
+  const allItemsInactive = activeItems.length === 0 && totalItems > 0;
+  const hasReturnedItems = returnedItems.length > 0;
 
-  // Build inactive items label like "(2 cancelled + 1 returned)"
-  const inactiveLabel = [
+  // Determine if order is final (fully cancelled/returned)
+  const isOrderFinal = ['cancelled', 'returned'].includes(statusKey) || allItemsInactive;
+
+  // Determine effective status for display
+  let effectiveStatus = statusKey;
+  if (allItemsInactive && !['cancelled', 'returned'].includes(statusKey)) {
+    effectiveStatus = hasReturnedItems ? 'returned' : 'cancelled';
+  }
+
+  // Calculate display values based on whether order is final
+  const activeTotal = activeItems.reduce((sum, i) => sum + Number.parseFloat(i.subtotal || 0), 0);
+  const displayTotal = isOrderFinal ? Number.parseFloat(order.total_amount || 0) : activeTotal;
+  const displayItemsCount = isOrderFinal ? totalItems : activeItems.length;
+
+  // Build inactive items label like "(2 cancelled + 1 returned)" - only for partial
+  const inactiveLabel = isOrderFinal ? '' : [
     cancelledItems.length > 0 ? `${cancelledItems.length} cancelled` : '',
     returnedItems.length > 0 ? `${returnedItems.length} returned` : '',
   ].filter(Boolean).join(' + ');
+
+  const inactiveTotal = [...cancelledItems, ...returnedItems].reduce((sum, i) => sum + Number.parseFloat(i.subtotal || 0), 0);
+
   const dateStr = new Date(order.created_at).toLocaleDateString('en-IN', {
     year: 'numeric', month: 'short', day: 'numeric',
   });
@@ -258,9 +276,9 @@ function OrderCard({ order, isExpanded, onToggle, href, onRefresh, currency }) {
           <div className="flex-1 min-w-0">
             <div className="flex flex-wrap items-center gap-2 mb-1 sm:mb-2">
               <h3 className="text-base sm:text-xl font-black text-card-foreground">
-                Order #{order.id}
+                {order.order_number}
               </h3>
-              <StatusBadge status={statusKey} />
+              <StatusBadge status={effectiveStatus} />
             </div>
             <div className="flex flex-col sm:flex-row sm:items-center sm:gap-x-4 gap-y-0.5 text-xs sm:text-sm text-muted-foreground mb-1">
               <span className="flex items-center gap-1.5 font-medium">
@@ -268,14 +286,14 @@ function OrderCard({ order, isExpanded, onToggle, href, onRefresh, currency }) {
                 <span className="truncate">{dateStr} · {timeStr}</span>
               </span>
               <span className="font-medium">
-                {activeItems.length} item{activeItems.length !== 1 ? 's' : ''}
+                {displayItemsCount} item{displayItemsCount !== 1 ? 's' : ''}
                 {inactiveLabel && (
                   <span className="text-red-400 ml-1">({inactiveLabel})</span>
                 )}
               </span>
             </div>
             <p className="font-black text-foreground text-lg sm:text-2xl mt-1">
-              {formatCurrency(activeTotal, currency)}
+              {formatCurrency(displayTotal, currency)}
             </p>
           </div>
 
@@ -290,9 +308,9 @@ function OrderCard({ order, isExpanded, onToggle, href, onRefresh, currency }) {
         </div>
 
         {/* Progress bar (always visible in header) */}
-        {!['cancelled', 'returned'].includes(statusKey) && (
+        {!['cancelled', 'returned'].includes(effectiveStatus) && (
           <div className="mt-5 sm:mt-4">
-            <OrderProgressTracker status={statusKey} />
+            <OrderProgressTracker status={effectiveStatus} />
           </div>
         )}
       </button>
@@ -310,9 +328,9 @@ function OrderCard({ order, isExpanded, onToggle, href, onRefresh, currency }) {
           >
             <div className="border-t border-border bg-background/40 p-5 sm:p-7">
               {/* Cancelled / Return status banner */}
-              {['cancelled', 'returned'].includes(statusKey) && (
+              {['cancelled', 'returned'].includes(effectiveStatus) && (
                 <div className="mb-6">
-                  <OrderProgressTracker status={statusKey} />
+                  <OrderProgressTracker status={effectiveStatus} />
                 </div>
               )}
 
@@ -406,7 +424,7 @@ function OrderCard({ order, isExpanded, onToggle, href, onRefresh, currency }) {
                             item.status === 'cancelled'
                               ? 'bg-red-500/10 text-red-500 border border-red-500/20'
                               : item.status === 'returned'
-                              ? 'bg-rose-500/10 text-rose-500 border border-rose-500/20'
+                              ? 'bg-orange-500/10 text-orange-500 border border-orange-500/20'
                               : 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
                           }`}>
                             {item.status}
@@ -420,7 +438,7 @@ function OrderCard({ order, isExpanded, onToggle, href, onRefresh, currency }) {
 
               {/* Order total row */}
               <div className="py-4 border-t border-border/50 mb-6 space-y-2">
-                {inactiveLabel && (
+                {inactiveLabel && !isOrderFinal && (
                   <div className="flex justify-between items-center">
                     <span className="text-sm font-medium text-red-400 capitalize">{inactiveLabel}</span>
                     <span className="text-sm font-medium text-red-400 line-through">{formatCurrency(inactiveTotal, currency)}</span>
@@ -428,7 +446,7 @@ function OrderCard({ order, isExpanded, onToggle, href, onRefresh, currency }) {
                 )}
                 <div className="flex justify-between items-center">
                   <span className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Order Total</span>
-                  <span className="text-2xl font-black text-foreground">{formatCurrency(activeTotal, currency)}</span>
+                  <span className="text-2xl font-black text-foreground">{formatCurrency(displayTotal, currency)}</span>
                 </div>
               </div>
 
@@ -453,7 +471,7 @@ function OrderCard({ order, isExpanded, onToggle, href, onRefresh, currency }) {
                 </div>
                 <div className="p-4 rounded-2xl bg-muted/10 border border-border/50">
                   <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">Order Info</p>
-                  <p className="font-semibold text-foreground">#{order.id}</p>
+                  <p className="font-semibold text-foreground">{order.order_number}</p>
                   <p className="text-muted-foreground text-xs mt-0.5">Placed: {dateStr}</p>
                   <p className="text-muted-foreground text-xs">Updated: {new Date(order.updated_at).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' })}</p>
                 </div>
@@ -472,9 +490,9 @@ function OrderCard({ order, isExpanded, onToggle, href, onRefresh, currency }) {
                 </div>
               )}
 
-              {/* Actions: Cancel / Return */}
+              {/* Actions: Cancel / Return - hide when order is final */}
               <div className="mt-8 flex flex-wrap gap-3">
-                {['pending', 'confirmed', 'processing'].includes(statusKey) && (
+                {!isOrderFinal && ['pending', 'confirmed', 'processing'].includes(statusKey) && (
                   <Button
                     variant="outline"
                     className="rounded-xl border-red-500/30 text-red-500 hover:bg-red-500/10 hover:text-red-600 transition-colors gap-2 font-bold"
@@ -485,7 +503,7 @@ function OrderCard({ order, isExpanded, onToggle, href, onRefresh, currency }) {
                     Cancel Order
                   </Button>
                 )}
-                {statusKey === 'delivered' && (
+                {!isOrderFinal && statusKey === 'delivered' && (
                   <Button
                     variant="outline"
                     className="rounded-xl border-primary/30 text-primary hover:bg-primary/10 transition-colors gap-2 font-bold"
@@ -512,7 +530,7 @@ function OrderCard({ order, isExpanded, onToggle, href, onRefresh, currency }) {
                 onConfirm={handleConfirmAction}
                 actionType={modalConfig.type}
                 itemName={modalConfig.itemName}
-                orderNumber={order.id}
+                orderNumber={order.order_number}
                 loading={submitting}
               />
             </div>

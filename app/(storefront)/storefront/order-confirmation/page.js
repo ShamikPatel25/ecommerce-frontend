@@ -75,7 +75,7 @@ function OrderConfirmationContent() {
             transition={{ delay: 0.6 }}
           >
             <Package className="w-5 h-5 text-primary" />
-            <span className="text-sm font-bold text-card-foreground">Order #{orderId}</span>
+            <span className="text-sm font-bold text-card-foreground">{orderId}</span>
           </motion.div>
         )}
 

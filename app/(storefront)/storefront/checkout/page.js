@@ -23,16 +23,16 @@ function validateCheckoutForm(form) {
   if (!form.customer_name.trim()) errs.customer_name = 'Full name is required';
   if (!form.customer_phone.trim()) {
     errs.customer_phone = 'Phone number is required';
-  } else if (!/^\d{10}$/.test(form.customer_phone)) {
-    errs.customer_phone = 'Enter a valid 10-digit phone number';
+  } else if (!/^\d{10,15}$/.test(form.customer_phone)) {
+    errs.customer_phone = 'Enter a valid phone number (10-15 digits)';
   }
   if (!form.address_line_1.trim()) errs.address_line_1 = 'Address line 1 is required';
   if (!form.city.trim()) errs.city = 'City is required';
   if (!form.state.trim()) errs.state = 'State is required';
   if (!form.postal_code.trim()) {
     errs.postal_code = 'Postal code is required';
-  } else if (!/^\d{5,10}$/.test(form.postal_code)) {
-    errs.postal_code = 'Enter a valid postal code';
+  } else if (!/^\d{6}$/.test(form.postal_code)) {
+    errs.postal_code = 'Enter a valid 6-digit postal code';
   }
   if (!form.country.trim()) errs.country = 'Country is required';
   return errs;
@@ -236,7 +236,7 @@ export default function CheckoutPage() {
       const res = await storefrontAPI.createOrder(orderData);
       clearCart();
       toast.success('Order placed successfully!');
-      router.push(href(`/order-confirmation?order=${res.data.id}`));
+      router.push(href(`/order-confirmation?order=${res.data.order_number}`));
     } catch (err) {
       const msg = parseOrderError(err.response?.data);
       toast.error(msg);
@@ -314,10 +314,10 @@ export default function CheckoutPage() {
                         type="tel"
                         required
                         inputMode="numeric"
-                        maxLength={10}
+                        maxLength={15}
                         value={form.customer_phone}
                         onChange={(e) => {
-                          const val = e.target.value.replaceAll(/\D/g, '').slice(0, 10);
+                          const val = e.target.value.replaceAll(/\D/g, '').slice(0, 15);
                           setForm({ ...form, customer_phone: val });
                           setErrors({ ...errors, customer_phone: '' });
                         }}
@@ -464,7 +464,7 @@ export default function CheckoutPage() {
                           inputMode="numeric"
                           value={form.postal_code}
                           onChange={(e) => {
-                            const val = e.target.value.replaceAll(/\D/g, '').slice(0, 10);
+                            const val = e.target.value.replaceAll(/\D/g, '').slice(0, 6);
                             setForm({ ...form, postal_code: val });
                             setErrors({ ...errors, postal_code: '' });
                           }}

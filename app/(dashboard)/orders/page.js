@@ -30,10 +30,10 @@ const STATUS_BADGE = {
   pending:          { dot: 'bg-yellow-500', pill: 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20' },
   confirmed:        { dot: 'bg-blue-500',   pill: 'bg-blue-500/10 text-blue-400 border border-blue-500/20' },
   processing:       { dot: 'bg-violet-500', pill: 'bg-violet-500/10 text-violet-400 border border-violet-500/20' },
-  shipped:          { dot: 'bg-emerald-500', pill: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' },
+  shipped:          { dot: 'bg-cyan-500',   pill: 'bg-cyan-500/10 text-cyan-500 border border-cyan-500/20' },
   delivered:        { dot: 'bg-green-500',  pill: 'bg-green-500/10 text-green-400 border border-green-500/20' },
   cancelled:        { dot: 'bg-red-500',    pill: 'bg-red-500/10 text-red-400 border border-red-500/20' },
-  returned:         { dot: 'bg-rose-500',   pill: 'bg-rose-500/10 text-rose-400 border border-rose-500/20' },
+  returned:         { dot: 'bg-orange-500', pill: 'bg-orange-500/10 text-orange-400 border border-orange-500/20' },
 };
 
 export default function OrdersPage() {
@@ -89,12 +89,17 @@ export default function OrdersPage() {
 
   /* ── search filter ── */
   const lowerQuery = searchQuery.toLowerCase().trim();
-  const idQuery = lowerQuery.replace(/^#/, '');
+  const idQuery = lowerQuery.replace(/^#/, '').replace(/^ord-/i, '');
 
-  const filtered = orders.filter((o) =>
-    o.customer_name?.toLowerCase().includes(lowerQuery) ||
-    String(o.id).includes(idQuery)
-  );
+  // Filter by search only (API handles status filtering)
+  const filtered = orders.filter((o) => {
+    if (!lowerQuery) return true;
+    return (
+      o.customer_name?.toLowerCase().includes(lowerQuery) ||
+      o.order_number?.toLowerCase().includes(lowerQuery) ||
+      o.order_number?.replace('ORD-', '').toLowerCase().includes(idQuery)
+    );
+  });
 
   /* ── pagination ── */
   const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
@@ -121,10 +126,13 @@ export default function OrdersPage() {
     const rows = filtered.map((o) => {
       const activeCount = o.active_items_count ?? o.items_count ?? 0;
       const totalCount = o.items_count ?? 0;
-      const isFullyCancelled = activeCount === 0 && totalCount > 0;
-      const displayTotal = isFullyCancelled ? o.total_amount : (o.active_total ?? o.total_amount ?? 0);
+      const isOrderFinal = ['cancelled', 'returned'].includes(o.status);
+      // If order is cancelled/returned, show original total; otherwise show active_total
+      const displayTotal = isOrderFinal
+        ? (o.total_amount ?? 0)
+        : (o.active_total ?? o.total_amount ?? 0);
       return [
-        o.id,
+        o.order_number,
         `"${(o.customer_name || '').replaceAll('"', '""')}"`,
         `"${(o.customer_email || '').replaceAll('"', '""')}"`,
         `"${(o.customer_phone || '').replaceAll('"', '""')}"`,
@@ -228,7 +236,7 @@ export default function OrdersPage() {
               <div className="admin-spinner"></div>
             </div>
           ) : error ? (
-            <DataError message="Failed to load orders" onRetry={fetchOrders} retrying={loading} />
+            <DataError message="Failed to load orders" onRetry={() => fetchOrders(activeStatus)} retrying={loading} />
           ) : (
             <>
               {paginated.length === 0 ? (
@@ -244,7 +252,7 @@ export default function OrdersPage() {
                   <table className="admin-table min-w-[800px]">
                     <thead>
                       <tr className="admin-thead-row">
-                        <th className="admin-th lg:w-[12%]">Order #</th>
+                        <th className="admin-th lg:w-[12%]">Order</th>
                         <th className="admin-th lg:w-[25%] text-left">Customer</th>
                         <th className="admin-th lg:w-[12%]">Items</th>
                         <th className="admin-th lg:w-[15%]">Total Price</th>
@@ -256,17 +264,37 @@ export default function OrdersPage() {
                       {paginated.map((order) => {
                         const badge = STATUS_BADGE[order.status] || { dot: 'bg-slate-400', pill: 'bg-slate-500/10 text-slate-400 border border-slate-500/20' };
 
-                        let statusText;
-                        if (order.status === 'returned') statusText = 'Returned';
-                        else statusText = order.status.charAt(0).toUpperCase() + order.status.slice(1);
-
-                        // Use backend-computed active_total and active_items_count
-                        // If all items cancelled, show original total_amount
                         const activeCount = order.active_items_count ?? order.items_count ?? 0;
                         const totalCount = order.items_count ?? 0;
+                        const allItemsInactive = activeCount === 0 && totalCount > 0;
+
+                        // If order status is final OR all items are inactive → treat as final
+                        const isOrderFinal = ['cancelled', 'returned'].includes(order.status) || allItemsInactive;
                         const hasInactiveItems = activeCount < totalCount;
-                        const isFullyCancelled = activeCount === 0 && totalCount > 0;
-                        const displayTotal = isFullyCancelled
+
+                        // Determine display status
+                        let displayStatus = order.status;
+                        let statusText = order.status.charAt(0).toUpperCase() + order.status.slice(1);
+
+                        // If all items inactive but order status not updated, determine correct status
+                        if (allItemsInactive && !['cancelled', 'returned'].includes(order.status)) {
+                          // Check if any items are returned - if so, order should show Returned
+                          const hasReturnedItems = order.items?.some(i => i.status === 'returned');
+                          if (hasReturnedItems) {
+                            displayStatus = 'returned';
+                            statusText = 'Returned';
+                          } else {
+                            displayStatus = 'cancelled';
+                            statusText = 'Cancelled';
+                          }
+                        }
+                        if (order.status === 'returned') statusText = 'Returned';
+
+                        const displayBadge = STATUS_BADGE[displayStatus] || badge;
+
+                        // If order is final (cancelled/returned/all items inactive), show original total_amount
+                        // Otherwise show active_total
+                        const displayTotal = isOrderFinal
                           ? (order.total_amount ?? 0)
                           : (order.active_total ?? order.total_amount ?? 0);
 
@@ -277,7 +305,7 @@ export default function OrdersPage() {
                             className="admin-tr group"
                           >
                             <td className="admin-td font-mono font-bold text-slate-900 dark:text-white text-sm whitespace-nowrap">
-                              #{order.id}
+                              {order.order_number}
                             </td>
                             <td className="admin-td max-w-0 text-left">
                               <div className="flex items-center justify-start gap-3">
@@ -293,17 +321,17 @@ export default function OrdersPage() {
                               </div>
                             </td>
                             <td className="admin-td text-sm whitespace-nowrap">
-                              {activeCount === 0 ? (
-                                // All items cancelled - show total in gray
-                                <span className="text-slate-400 dark:text-gray-500">{totalCount}</span>
+                              {isOrderFinal ? (
+                                // Order fully cancelled/returned - show total count only
+                                <span className="text-slate-900 dark:text-white">{totalCount}</span>
                               ) : hasInactiveItems ? (
-                                // Some items cancelled - show active/total
+                                // Some items cancelled/returned - show active/total
                                 <span>
                                   <span className="text-slate-900 dark:text-white font-medium">{activeCount}</span>
                                   <span className="text-slate-400 dark:text-gray-500">/{totalCount}</span>
                                 </span>
                               ) : (
-                                // All items active - show total in black
+                                // All items active - show total
                                 <span className="text-slate-900 dark:text-white">{totalCount}</span>
                               )}
                             </td>
@@ -313,8 +341,8 @@ export default function OrdersPage() {
                               </span>
                             </td>
                             <td className="admin-td whitespace-nowrap">
-                              <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${badge.pill}`}>
-                                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${badge.dot}`} />
+                              <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${displayBadge.pill}`}>
+                                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${displayBadge.dot}`} />
                                 {statusText}
                               </span>
                             </td>

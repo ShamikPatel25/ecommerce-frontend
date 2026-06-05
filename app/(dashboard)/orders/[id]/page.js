@@ -17,10 +17,10 @@ const STATUS_STYLES = {
   pending:          'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20',
   confirmed:        'bg-blue-500/10 text-blue-400 border border-blue-500/20',
   processing:       'bg-violet-500/10 text-violet-400 border border-violet-500/20',
-  shipped:          'bg-purple-500/10 text-purple-400 border border-purple-500/20',
+  shipped:          'bg-cyan-500/10 text-cyan-500 border border-cyan-500/20',
   delivered:        'bg-green-500/10 text-green-400 border border-green-500/20',
   cancelled:        'bg-red-500/10 text-red-400 border border-red-500/20',
-  returned:         'bg-rose-500/10 text-rose-400 border border-rose-500/20',
+  returned:         'bg-orange-500/10 text-orange-400 border border-orange-500/20',
 };
 
 const VALID_TRANSITIONS = {
@@ -104,10 +104,23 @@ export default function OrderDetailPage() {
 
   if (!order) return null;
 
-  const isCancelled   = order.status === 'cancelled';
-  const isReturned    = order.status === 'returned';
+  // Check if all items are inactive (cancelled/returned)
+  const activeItems = order.items?.filter(i => !['cancelled', 'returned'].includes(i.status)) || [];
+  const allItemsInactive = activeItems.length === 0 && (order.items?.length || 0) > 0;
+  const hasReturnedItems = order.items?.some(i => i.status === 'returned');
+
+  // Determine effective status (for display when backend hasn't updated)
+  let effectiveStatus = order.status;
+  if (allItemsInactive && !['cancelled', 'returned'].includes(order.status)) {
+    effectiveStatus = hasReturnedItems ? 'returned' : 'cancelled';
+  }
+
+  const isCancelled   = effectiveStatus === 'cancelled';
+  const isReturned    = effectiveStatus === 'returned';
+  const isOrderFinal  = isCancelled || isReturned || allItemsInactive;
   const customerInit  = order.customer_name?.charAt(0).toUpperCase() || '?';
-  const allowedNext   = VALID_TRANSITIONS[order.status] || [];
+  // If order is final (cancelled/returned/all items inactive), no status changes allowed
+  const allowedNext   = isOrderFinal ? [] : (VALID_TRANSITIONS[order.status] || []);
 
   const renderProgressTracker = () => {
     if (isCancelled) {
@@ -126,14 +139,14 @@ export default function OrderDetailPage() {
 
     if (isReturned) {
       const label = 'Returned';
-      const colorCls = 'bg-rose-500/10 text-rose-500 border-rose-500/20';
+      const colorCls = 'bg-orange-500/10 text-orange-500 border-orange-500/20';
       return (
         <div className="flex items-center gap-3 py-3">
           <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 border ${colorCls}`}>
             <RotateCcw className="w-5 h-5" />
           </div>
           <div>
-            <p className="text-sm font-bold text-rose-500">{label}</p>
+            <p className="text-sm font-bold text-orange-500">{label}</p>
             <p className="text-xs text-slate-400 dark:text-gray-500">{formatDateTime(order.updated_at)}</p>
           </div>
         </div>
@@ -213,7 +226,7 @@ export default function OrderDetailPage() {
       <!DOCTYPE html>
       <html>
       <head>
-        <title>Invoice #INV-${String(order.id).padStart(5, '0')}</title>
+        <title>Invoice - ${order.order_number}</title>
         <style>
           * { margin: 0; padding: 0; box-sizing: border-box; }
           body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 40px; color: #1f2937; }
@@ -256,7 +269,7 @@ export default function OrderDetailPage() {
           </div>
           <div>
             <div class="invoice-title">INVOICE</div>
-            <div class="invoice-meta">Invoice #: INV-${String(order.id).padStart(5, '0')}</div>
+            <div class="invoice-meta">Order #: ${order.order_number}</div>
             <div class="invoice-meta">Date: ${formatDateTime(order.created_at)}</div>
             <div class="invoice-meta">Status: ${STATUS_LABELS[order.status] || order.status}</div>
           </div>
@@ -330,7 +343,7 @@ export default function OrderDetailPage() {
             Orders
           </button>
           <ChevronRight className="w-3.5 h-3.5" />
-          <span className="font-semibold text-slate-900 dark:text-white">Order #{order.id}</span>
+          <span className="font-semibold text-slate-900 dark:text-white">{order.order_number}</span>
         </nav>
 
         {/* Page Header */}
@@ -343,10 +356,10 @@ export default function OrderDetailPage() {
               <ChevronLeft className="w-7 h-7 text-slate-900 dark:text-white" strokeWidth={2.5} />
             </button>
             <h1 className="admin-title">
-              Order #{order.id}
+              {order.order_number}
             </h1>
-            <span className={`px-3 py-1 rounded-full text-xs font-bold ${STATUS_STYLES[order.status] || ''}`}>
-              {STATUS_LABELS[order.status] || order.status}
+            <span className={`px-3 py-1 rounded-full text-xs font-bold ${STATUS_STYLES[effectiveStatus] || ''}`}>
+              {STATUS_LABELS[effectiveStatus] || effectiveStatus}
             </span>
           </div>
 
@@ -358,7 +371,7 @@ export default function OrderDetailPage() {
               <Printer className="w-4 h-4" />
               Print Invoice
             </button>
-            {(VALID_TRANSITIONS[order.status] || []).includes('shipped') && (
+            {!isOrderFinal && allowedNext.includes('shipped') && (
               <button
                 onClick={() => { setNewStatus('shipped'); }}
                 className="admin-btn-primary"
@@ -404,15 +417,17 @@ export default function OrderDetailPage() {
                     <tbody className="admin-tbody">
                       {order.items.map((item) => {
                         const isItemCancelled = item.status === 'cancelled';
+                        const isItemReturned = item.status === 'returned';
+                        const isItemInactive = isItemCancelled || isItemReturned;
                         return (
-                          <tr key={item.id} className={isItemCancelled ? 'opacity-60' : ''}>
+                          <tr key={item.id} className={isItemInactive ? 'opacity-60' : ''}>
                             <td className="admin-td text-left">
                               <div className="flex items-center gap-4 justify-start">
                                 <div className="w-10 h-10 rounded-lg bg-violet-500/10 flex items-center justify-center shrink-0">
                                   <Package className="w-4 h-4 text-violet-500/60" />
                                 </div>
                                 <div className="min-w-0">
-                                  <p className={`font-semibold text-sm ${isItemCancelled ? 'line-through text-slate-400 dark:text-gray-500' : 'text-slate-900 dark:text-white'}`}>{item.product_name}</p>
+                                  <p className={`font-semibold text-sm ${isItemInactive ? 'line-through text-slate-400 dark:text-gray-500' : 'text-slate-900 dark:text-white'}`}>{item.product_name}</p>
                                   {item.variant_attrs && (
                                     <p className="text-xs text-slate-500 dark:text-gray-400">{item.variant_attrs}</p>
                                   )}
@@ -435,6 +450,10 @@ export default function OrderDetailPage() {
                                 <span className="px-2 py-1 rounded-full text-xs font-bold bg-red-500/10 text-red-500 border border-red-500/20">
                                   Cancelled
                                 </span>
+                              ) : isItemReturned ? (
+                                <span className="px-2 py-1 rounded-full text-xs font-bold bg-orange-500/10 text-orange-500 border border-orange-500/20">
+                                  Returned
+                                </span>
                               ) : (
                                 <span className="px-2 py-1 rounded-full text-xs font-bold bg-green-500/10 text-green-500 border border-green-500/20">
                                   Active
@@ -448,20 +467,33 @@ export default function OrderDetailPage() {
 
                     <tfoot className="bg-slate-50/50 dark:bg-gray-700/20">
                       {(() => {
-                        const activeItems = order.items?.filter(i => i.status !== 'cancelled') || [];
+                        const activeItems = order.items?.filter(i => !['cancelled', 'returned'].includes(i.status)) || [];
                         const cancelledItems = order.items?.filter(i => i.status === 'cancelled') || [];
+                        const returnedItems = order.items?.filter(i => i.status === 'returned') || [];
+                        const allItemsInactive = activeItems.length === 0 && (order.items?.length || 0) > 0;
+
+                        // If order status is final OR all items are inactive → show original total
+                        const isOrderFinal = ['cancelled', 'returned'].includes(order.status) || allItemsInactive;
+
                         const activeSubtotal = activeItems.reduce((sum, i) => sum + (Number.parseFloat(i.unit_price) * i.quantity), 0);
                         const cancelledTotal = cancelledItems.reduce((sum, i) => sum + (Number.parseFloat(i.unit_price) * i.quantity), 0);
-                        const activeTotal = activeSubtotal + (order.shipping_cost || 0);
+                        const returnedTotal = returnedItems.reduce((sum, i) => sum + (Number.parseFloat(i.unit_price) * i.quantity), 0);
+
+                        // If order is final, show original total_amount; otherwise show active total
+                        const displayTotal = isOrderFinal
+                          ? Number.parseFloat(order.total_amount || 0)
+                          : activeSubtotal + (order.shipping_cost || 0);
 
                         return (
                           <>
-                            <tr>
-                              <td colSpan={4} className="admin-td text-sm text-slate-500 dark:text-gray-400 text-right">Subtotal ({activeItems.length} items)</td>
-                              <td className="admin-td text-sm font-medium text-slate-700 dark:text-gray-300 text-right">
-                                {formatCurrency(activeSubtotal, activeStore?.currency)}
-                              </td>
-                            </tr>
+                            {!isOrderFinal && (
+                              <tr>
+                                <td colSpan={4} className="admin-td text-sm text-slate-500 dark:text-gray-400 text-right">Subtotal ({activeItems.length} items)</td>
+                                <td className="admin-td text-sm font-medium text-slate-700 dark:text-gray-300 text-right">
+                                  {formatCurrency(activeSubtotal, activeStore?.currency)}
+                                </td>
+                              </tr>
+                            )}
                             {cancelledItems.length > 0 && (
                               <tr>
                                 <td colSpan={4} className="admin-td text-sm text-red-400 text-right">Cancelled ({cancelledItems.length} items)</td>
@@ -470,7 +502,15 @@ export default function OrderDetailPage() {
                                 </td>
                               </tr>
                             )}
-                            {order.shipping_cost != null && (
+                            {returnedItems.length > 0 && (
+                              <tr>
+                                <td colSpan={4} className="admin-td text-sm text-orange-400 text-right">Returned ({returnedItems.length} items)</td>
+                                <td className="admin-td text-sm font-medium text-orange-400 text-right line-through">
+                                  {formatCurrency(returnedTotal, activeStore?.currency)}
+                                </td>
+                              </tr>
+                            )}
+                            {order.shipping_cost != null && !isOrderFinal && (
                               <tr>
                                 <td colSpan={4} className="admin-td text-sm text-slate-500 dark:text-gray-400 text-right">Shipping</td>
                                 <td className="admin-td text-sm font-medium text-slate-700 dark:text-gray-300 text-right">
@@ -481,7 +521,7 @@ export default function OrderDetailPage() {
                             <tr>
                               <td colSpan={4} className="admin-td text-slate-900 dark:text-white font-bold text-right">Total</td>
                               <td className="admin-td text-xl font-black text-violet-500 text-right">
-                                {formatCurrency(activeTotal, activeStore?.currency)}
+                                {formatCurrency(displayTotal, activeStore?.currency)}
                               </td>
                             </tr>
                           </>
@@ -549,39 +589,61 @@ export default function OrderDetailPage() {
           <div>
             <div className="admin-table-card p-6">
               <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4">Update Status</h3>
-              <div className="space-y-4">
-                <div>
-                  <label htmlFor="status-select" className="text-xs text-slate-400 dark:text-gray-500 uppercase font-bold tracking-wider block mb-2">
-                    Current Status
-                  </label>
-                  <div className="relative">
-                    <select
-                      id="status-select"
-                      value={newStatus}
-                      onChange={(e) => setNewStatus(e.target.value)}
-                      disabled={allowedNext.length === 0}
-                      className="w-full h-11 rounded-lg border border-gray-200 dark:border-gray-700 bg-slate-50 dark:bg-gray-700/50 px-4 pr-10 appearance-none text-sm text-slate-800 dark:text-gray-200 focus:outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <option value={order.status}>{STATUS_LABELS[order.status] || order.status} (current)</option>
-                      {allowedNext.map((s) => (
-                        <option key={s} value={s}>{STATUS_LABELS[s] || s}</option>
-                      ))}
-                    </select>
-                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-gray-500 pointer-events-none" />
+              {isOrderFinal ? (
+                <div className="space-y-4">
+                  <div className={`p-4 rounded-xl ${isCancelled ? 'bg-red-500/10 border border-red-500/20' : 'bg-orange-500/10 border border-orange-500/20'}`}>
+                    <div className="flex items-center gap-3">
+                      {isCancelled ? (
+                        <XCircle className="w-6 h-6 text-red-500" />
+                      ) : (
+                        <RotateCcw className="w-6 h-6 text-orange-500" />
+                      )}
+                      <div>
+                        <p className={`font-bold ${isCancelled ? 'text-red-500' : 'text-orange-500'}`}>
+                          Order {isCancelled ? 'Cancelled' : 'Returned'}
+                        </p>
+                        <p className="text-xs text-slate-400 dark:text-gray-500 mt-0.5">
+                          Status cannot be changed
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 </div>
+              ) : (
+                <div className="space-y-4">
+                  <div>
+                    <label htmlFor="status-select" className="text-xs text-slate-400 dark:text-gray-500 uppercase font-bold tracking-wider block mb-2">
+                      Current Status
+                    </label>
+                    <div className="relative">
+                      <select
+                        id="status-select"
+                        value={newStatus}
+                        onChange={(e) => setNewStatus(e.target.value)}
+                        disabled={allowedNext.length === 0}
+                        className="w-full h-11 rounded-lg border border-gray-200 dark:border-gray-700 bg-slate-50 dark:bg-gray-700/50 px-4 pr-10 appearance-none text-sm text-slate-800 dark:text-gray-200 focus:outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <option value={order.status}>{STATUS_LABELS[order.status] || order.status} (current)</option>
+                        {allowedNext.map((s) => (
+                          <option key={s} value={s}>{STATUS_LABELS[s] || s}</option>
+                        ))}
+                      </select>
+                      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-gray-500 pointer-events-none" />
+                    </div>
+                  </div>
 
-                <button
-                  onClick={handleStatusSave}
-                  disabled={saving || newStatus === order.status}
-                  className="w-full py-2.5 bg-violet-500 text-white rounded-lg font-bold shadow-lg shadow-violet-500/20 hover:bg-violet-600 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
-                >
-                  {saving
-                    ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving…</>
-                    : <><Save className="w-4 h-4" /> Save Status</>
-                  }
-                </button>
-              </div>
+                  <button
+                    onClick={handleStatusSave}
+                    disabled={saving || newStatus === order.status}
+                    className="w-full py-2.5 bg-violet-500 text-white rounded-lg font-bold shadow-lg shadow-violet-500/20 hover:bg-violet-600 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    {saving
+                      ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving…</>
+                      : <><Save className="w-4 h-4" /> Save Status</>
+                    }
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 
