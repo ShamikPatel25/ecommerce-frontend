@@ -359,13 +359,7 @@ export default function ProductsListClient() {
                 <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-muted flex items-center justify-center">
                   <Search className="w-8 h-8 text-muted-foreground" />
                 </div>
-                <h3 className="text-xl font-semibold mb-2 text-foreground">No products found</h3>
-                <p className="text-muted-foreground max-w-sm mx-auto mb-6">
-                  We couldn&apos;t find any products matching your criteria. Try adjusting your filters.
-                </p>
-                <Button onClick={clearAllFilters} className="rounded-full">
-                  Clear All Filters
-                </Button>
+                <h3 className="text-xl font-semibold text-foreground">No products found</h3>
               </div>
             )}
 

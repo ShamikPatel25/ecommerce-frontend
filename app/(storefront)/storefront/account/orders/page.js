@@ -450,17 +450,6 @@ function OrderCard({ order, isExpanded, onToggle, href, onRefresh, currency }) {
                 </div>
               </div>
 
-              {/* Notes */}
-              {order.notes && (
-                <div className="mt-2 p-4 rounded-2xl bg-muted/20 border border-border">
-                  <p className="text-xs font-bold text-foreground mb-1.5 flex items-center gap-2">
-                    <AlertCircle className="w-3.5 h-3.5 text-primary" />
-                    Order Notes
-                  </p>
-                  <p className="text-sm text-muted-foreground leading-relaxed">{order.notes}</p>
-                </div>
-              )}
-
               {/* Customer info */}
               <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                 <div className="p-4 rounded-2xl bg-muted/10 border border-border/50">
@@ -477,18 +466,35 @@ function OrderCard({ order, isExpanded, onToggle, href, onRefresh, currency }) {
                 </div>
               </div>
 
-              {/* Address */}
-              {order.shipping_address && (
-                <div className="mt-3 p-4 rounded-2xl bg-muted/10 border border-border/50 text-sm">
+              {/* Address & Notes */}
+              <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                {/* Address */}
+                <div className="p-4 rounded-2xl bg-muted/10 border border-border/50">
                   <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">Address</p>
-                  <p className="font-semibold text-foreground whitespace-pre-line">{order.shipping_address}</p>
-                  {order.address_type && (
-                    <span className="inline-block mt-1.5 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-wider">
-                      {order.address_type}
-                    </span>
+                  {order.shipping_address && (
+                    <>
+                      <p className="font-semibold text-foreground whitespace-pre-line">{order.shipping_address}</p>
+                      {order.address_type && (
+                        <span className="inline-block mt-1.5 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-wider">
+                          {order.address_type}
+                        </span>
+                      )}
+                    </>
                   )}
                 </div>
-              )}
+
+                {/* Notes */}
+                <div className="p-4 rounded-2xl bg-muted/10 border border-border/50">
+                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">Order Notes</p>
+                  {order.notes ? (
+                    <div className="max-h-24 overflow-y-auto">
+                      <p className="text-sm text-foreground whitespace-pre-wrap break-words">{order.notes.replace(/\n{2,}/g, '\n')}</p>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground italic">No notes</p>
+                  )}
+                </div>
+              </div>
 
               {/* Actions: Cancel / Return - hide when order is final */}
               <div className="mt-8 flex flex-wrap gap-3">

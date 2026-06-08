@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 import {
   ChevronLeft, ChevronRight, Printer, Truck, Package,
   Mail, Phone, MapPin, Save, CheckCircle2, Clock,
-  ChevronDown, Loader2, XCircle, RotateCcw,
+  ChevronDown, Loader2, XCircle, RotateCcw, FileText,
 } from 'lucide-react';
 import { formatDateTime, formatCurrency } from '@/lib/utils';
 import { useStoreStore } from '@/store/storeStore';
@@ -226,10 +226,14 @@ export default function OrderDetailPage() {
       <!DOCTYPE html>
       <html>
       <head>
-        <title>Invoice - ${order.order_number}</title>
+        <title>${order.order_number}</title>
         <style>
           * { margin: 0; padding: 0; box-sizing: border-box; }
-          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 40px; color: #1f2937; }
+          html, body { background: #fff; }
+          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 40px; color: #1f2937; max-width: 800px; margin: 0 auto; }
+          .print-btn { display: flex; justify-content: flex-end; margin-bottom: 20px; }
+          .print-btn button { padding: 10px 24px; font-size: 14px; font-weight: 600; border: none; border-radius: 8px; cursor: pointer; background: #8b5cf6; color: #fff; }
+          .print-btn button:hover { background: #7c3aed; }
           .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #1f2937; padding-bottom: 20px; margin-bottom: 30px; }
           .store-name { font-size: 24px; font-weight: bold; color: #111827; }
           .store-info { font-size: 13px; color: #4b5563; margin-top: 4px; }
@@ -248,18 +252,17 @@ export default function OrderDetailPage() {
           td.right { text-align: right; }
           .item-name { font-weight: 500; }
           .item-variant { font-size: 11px; color: #6b7280; }
-          .item-sku { font-size: 11px; color: #9ca3af; }
           .totals { display: flex; justify-content: flex-end; }
           .totals-box { width: 250px; }
           .total-row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 14px; }
           .total-row.final { border-top: 2px solid #1f2937; margin-top: 10px; padding-top: 12px; font-size: 18px; font-weight: bold; }
-          .footer { border-top: 1px solid #d1d5db; padding-top: 20px; text-align: center; margin-top: 40px; }
-          .footer-text { font-size: 14px; color: #4b5563; }
-          .footer-note { font-size: 11px; color: #9ca3af; margin-top: 8px; }
-          @media print { body { padding: 20px; } }
+          @media print { @page { margin: 0; } .print-btn { display: none !important; } body { padding: 15mm; margin: 0; max-width: none; } }
         </style>
       </head>
       <body>
+        <div class="print-btn">
+          <button onclick="window.print()">Print / Save PDF</button>
+        </div>
         <div class="header">
           <div>
             <div class="store-name">${activeStore?.name || 'Store'}</div>
@@ -298,7 +301,6 @@ export default function OrderDetailPage() {
                 <td>
                   <div class="item-name">${item.product_name}</div>
                   ${item.variant_attrs ? `<div class="item-variant">${item.variant_attrs}</div>` : ''}
-                  ${item.product_sku ? `<div class="item-sku">SKU: ${item.product_sku}</div>` : ''}
                 </td>
                 <td class="center">${item.quantity}</td>
                 <td class="right">${formatCurrency(item.unit_price, activeStore?.currency)}</td>
@@ -316,21 +318,12 @@ export default function OrderDetailPage() {
           </div>
         </div>
 
-        <div class="footer">
-          <div class="footer-text">Thank you for your business!</div>
-          <div class="footer-note">This is a computer-generated invoice. No signature required.</div>
-        </div>
       </body>
       </html>
     `;
 
     printWindow.document.write(invoiceHTML);
     printWindow.document.close();
-    printWindow.focus();
-    setTimeout(() => {
-      printWindow.print();
-      printWindow.close();
-    }, 250);
   };
 
   return (
@@ -574,6 +567,17 @@ export default function OrderDetailPage() {
                     <div>
                       <p className="text-xs text-slate-400 dark:text-gray-500 uppercase font-bold tracking-wider mb-0.5">Shipping Address</p>
                       <p className="text-sm text-slate-700 dark:text-gray-300 whitespace-pre-line">{order.shipping_address}</p>
+                    </div>
+                  </div>
+                )}
+                {order.notes && (
+                  <div className="flex items-start gap-3">
+                    <FileText className="w-5 h-5 text-slate-400 dark:text-gray-500 mt-0.5 shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs text-slate-400 dark:text-gray-500 uppercase font-bold tracking-wider mb-1.5">Order Notes</p>
+                      <div className="bg-slate-50 dark:bg-gray-700/50 rounded-lg p-3 max-h-32 overflow-y-auto">
+                        <p className="text-sm text-slate-700 dark:text-gray-300 whitespace-pre-wrap break-words">{order.notes.replace(/\n{2,}/g, '\n')}</p>
+                      </div>
                     </div>
                   </div>
                 )}

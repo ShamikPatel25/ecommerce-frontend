@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { storefrontAPI } from '@/lib/storefrontApi';
 import { useStorefrontAuthStore } from '@/store/storefrontAuthStore';
@@ -15,8 +15,11 @@ export default function AccountPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({ first_name: '', last_name: '', email: '', phone: '' });
+  const [originalForm, setOriginalForm] = useState({ first_name: '', last_name: '', email: '', phone: '' });
   const [phoneError, setPhoneError] = useState('');
   const [emailError, setEmailError] = useState('');
+  const [firstNameError, setFirstNameError] = useState('');
+  const [lastNameError, setLastNameError] = useState('');
   const [editingAddress, setEditingAddress] = useState(null);
   const [addressForm, setAddressForm] = useState({ label: 'home', address_line_1: '', address_line_2: '', city: '', state: '', postal_code: '', country: 'India' });
   const [addressSaving, setAddressSaving] = useState(false);
@@ -36,12 +39,14 @@ export default function AccountPage() {
       ]);
       setProfile(profileRes.data);
       setAddresses(addressRes.data || []);
-      setForm({
+      const formData = {
         first_name: profileRes.data.first_name || '',
         last_name: profileRes.data.last_name || '',
-        email: profileRes.data.email || '',
+        email: (profileRes.data.email || '').toLowerCase(),
         phone: profileRes.data.phone || '',
-      });
+      };
+      setForm(formData);
+      setOriginalForm(formData);
     } catch {
       toast.error('Failed to load profile');
     } finally {
@@ -52,6 +57,36 @@ export default function AccountPage() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // Check if form has changes from original
+  const hasChanges = useMemo(() => {
+    return (
+      form.first_name !== originalForm.first_name ||
+      form.last_name !== originalForm.last_name ||
+      form.email !== originalForm.email ||
+      form.phone !== originalForm.phone
+    );
+  }, [form, originalForm]);
+
+  const handleFirstNameChange = (e) => {
+    const value = e.target.value.slice(0, 20);
+    setForm({ ...form, first_name: value });
+    if (value.length >= 20) {
+      setFirstNameError('Maximum 20 characters allowed');
+    } else {
+      setFirstNameError('');
+    }
+  };
+
+  const handleLastNameChange = (e) => {
+    const value = e.target.value.slice(0, 20);
+    setForm({ ...form, last_name: value });
+    if (value.length >= 20) {
+      setLastNameError('Maximum 20 characters allowed');
+    } else {
+      setLastNameError('');
+    }
+  };
 
   const handlePhoneChange = (e) => {
     const value = e.target.value.replace(/\D/g, '').slice(0, 15);
@@ -66,10 +101,12 @@ export default function AccountPage() {
   };
 
   const handleEmailChange = (e) => {
-    const value = e.target.value;
+    const value = e.target.value.toLowerCase();
     setForm({ ...form, email: value });
-    if (value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
-      setEmailError('Enter a valid email address');
+    if (!value) {
+      setEmailError('');
+    } else if (!/^[^\s@]+@gmail\.com$/.test(value)) {
+      setEmailError('Only @gmail.com email addresses are allowed');
     } else {
       setEmailError('');
     }
@@ -80,8 +117,8 @@ export default function AccountPage() {
       setEmailError('Email is required');
       return;
     }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
-      setEmailError('Enter a valid email address');
+    if (!/^[^\s@]+@gmail\.com$/.test(form.email.toLowerCase())) {
+      setEmailError('Only @gmail.com email addresses are allowed');
       return;
     }
     if (form.phone && form.phone.length < 10) {
@@ -97,6 +134,8 @@ export default function AccountPage() {
       const res = await storefrontAPI.updateProfile(form);
       setProfile(res.data);
       if (setCustomer) setCustomer(res.data);
+      // Update originalForm to match current form so hasChanges becomes false
+      setOriginalForm({ ...form });
       toast.success('Profile updated');
     } catch (err) {
       const msg = err?.response?.data?.email?.[0] || err?.response?.data?.detail || 'Failed to update profile';
@@ -245,20 +284,28 @@ export default function AccountPage() {
                 <input
                   type="text"
                   value={form.first_name}
-                  onChange={(e) => setForm({ ...form, first_name: e.target.value })}
-                  className="w-full px-3.5 py-2.5 rounded-lg bg-muted/50 border-0 focus:ring-2 focus:ring-primary/20 focus:bg-background text-sm text-foreground transition-all placeholder:text-muted-foreground/60"
+                  onChange={handleFirstNameChange}
+                  maxLength={20}
+                  className={`w-full px-3.5 py-2.5 rounded-lg bg-muted/50 border-0 focus:ring-2 focus:ring-primary/20 focus:bg-background text-sm text-foreground transition-all placeholder:text-muted-foreground/60 ${firstNameError ? 'ring-2 ring-red-500/50' : ''}`}
                   placeholder="Enter first name"
                 />
+                {firstNameError && (
+                  <p className="text-xs text-red-500 mt-1.5">{firstNameError}</p>
+                )}
               </div>
               <div>
                 <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1.5 block">Last Name</label>
                 <input
                   type="text"
                   value={form.last_name}
-                  onChange={(e) => setForm({ ...form, last_name: e.target.value })}
-                  className="w-full px-3.5 py-2.5 rounded-lg bg-muted/50 border-0 focus:ring-2 focus:ring-primary/20 focus:bg-background text-sm text-foreground transition-all placeholder:text-muted-foreground/60"
+                  onChange={handleLastNameChange}
+                  maxLength={20}
+                  className={`w-full px-3.5 py-2.5 rounded-lg bg-muted/50 border-0 focus:ring-2 focus:ring-primary/20 focus:bg-background text-sm text-foreground transition-all placeholder:text-muted-foreground/60 ${lastNameError ? 'ring-2 ring-red-500/50' : ''}`}
                   placeholder="Enter last name"
                 />
+                {lastNameError && (
+                  <p className="text-xs text-red-500 mt-1.5">{lastNameError}</p>
+                )}
               </div>
               <div>
                 <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1.5 block">Email</label>
@@ -297,8 +344,8 @@ export default function AccountPage() {
             <div className="flex justify-end mt-6">
               <button
                 onClick={handleProfileSave}
-                disabled={saving || !!phoneError || !!emailError}
-                className="px-5 py-2 bg-primary text-primary-foreground rounded-lg font-medium text-sm hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center gap-2"
+                disabled={saving || !hasChanges || !!phoneError || !!emailError || !!firstNameError || !!lastNameError}
+                className="px-5 py-2 bg-primary text-primary-foreground rounded-lg font-medium text-sm hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
                 {saving && <Loader2 className="w-4 h-4 animate-spin" />}
                 Update Profile

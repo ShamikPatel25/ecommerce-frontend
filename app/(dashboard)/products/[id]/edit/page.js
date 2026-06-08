@@ -257,19 +257,56 @@ export default function EditProductPage() {
     setCatalogs(prev => prev.map(c => c.id === catalogId ? { ...c, [field]: value } : c));
   };
 
+  const getComboKey = (attrValues) => {
+    if (!attrValues) return '';
+    return attrValues
+      .map(val => typeof val === 'object' ? val.value_id : val)
+      .map(String)
+      .sort()
+      .join('-');
+  };
+
   const handleAddCatalog = () => {
     const combinations = generateCombinations();
     if (combinations.length === 0) return;
-    const newCatalogs = combinations.map((combo, idx) => ({
-      id: `temp-${Date.now()}-${idx}`,
-      attribute_values: combo.attribute_values,
-      price: product.price, stock: 0, is_new: true,
-    }));
-    setCatalogs([...catalogs, ...newCatalogs]);
+
+    let added = 0;
+    let skipped = 0;
+    const currentKeys = new Set(catalogs.map(c => getComboKey(c.attribute_values)));
+    const newCatalogs = [];
+
+    combinations.forEach((combo, idx) => {
+      const key = getComboKey(combo.attribute_values);
+      if (currentKeys.has(key)) {
+        skipped++;
+      } else {
+        newCatalogs.push({
+          id: `temp-${Date.now()}-${idx}`,
+          attribute_values: combo.attribute_values,
+          price: product.price, stock: 0, is_new: true,
+        });
+        currentKeys.add(key);
+        added++;
+      }
+    });
+
+    if (newCatalogs.length > 0) {
+      setCatalogs([...catalogs, ...newCatalogs]);
+    }
+
+    if (skipped > 0) {
+      if (added === 0 && singleCatalogMode) {
+        toast.error('This combination already exists');
+      } else {
+        toast.info(`${added} added, ${skipped} duplicates skipped`);
+      }
+    } else if (added > 0) {
+      toast.success(`${added} catalog(s) added`);
+    }
+
     const resetSelections = {};
     attributes.forEach(attr => { resetSelections[attr.attribute] = []; });
     setSelections(resetSelections);
-    toast.success(`${combinations.length} catalog(s) added`);
   };
 
   const handleGenerateCatalog = async () => {
@@ -816,6 +853,7 @@ export default function EditProductPage() {
                   id: v.id,
                   value: v.value,
                   attribute_name: attr.attribute_name,
+                  attribute_id: attr.attribute,
                 }))
               )
             : []

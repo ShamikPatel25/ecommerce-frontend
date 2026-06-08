@@ -8,6 +8,7 @@ import { ProductCard } from '@/components/storefront/shared/ProductCard';
 import { TestimonialsCarousel } from '@/components/storefront/shared/TestimonialsCarousel';
 import { storefrontAPI } from '@/lib/storefrontApi';
 import { useStorefrontPath } from '@/lib/useStorefrontPath';
+import { useStoreInfo } from '@/lib/StorefrontContext';
 import { formatCurrency } from '@/lib/utils';
 
 const fallbackTestimonials = [
@@ -35,25 +36,22 @@ const fallbackTestimonials = [
 ];
 
 export default function StorefrontHomeClient() {
-  const [store, setStore] = useState(null);
+  const store = useStoreInfo();
   const [featured, setFeatured] = useState([]);
   const [newArrivals, setNewArrivals] = useState([]);
   const [loading, setLoading] = useState(true);
   const { href } = useStorefrontPath();
 
   useEffect(() => {
-    Promise.all([
-      storefrontAPI.getStoreInfo().catch(() => ({ data: null })),
-      storefrontAPI.getProducts({ page_size: 30, sort: 'newest' }).catch(() => ({ data: { results: [] } })),
-    ]).then(([storeRes, productsRes]) => {
-      setStore(storeRes.data);
-
-      const allProducts = productsRes.data?.results || productsRes.data || [];
-      const shuffled = [...allProducts].sort(() => 0.5 - Math.random());
-      setFeatured(shuffled.slice(0, 8));
-      setNewArrivals(allProducts.slice(0, 4));
-      setLoading(false);
-    });
+    storefrontAPI.getProducts({ page_size: 30, sort: 'newest' })
+      .then((res) => {
+        const allProducts = res.data?.results || res.data || [];
+        const shuffled = [...allProducts].sort(() => 0.5 - Math.random());
+        setFeatured(shuffled.slice(0, 8));
+        setNewArrivals(allProducts.slice(0, 4));
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, []);
 
   if (loading) {

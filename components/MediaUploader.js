@@ -32,6 +32,29 @@ export default function MediaUploader({ productId, initialMedia = [], onMediaCha
     return { general, byValue };
   }, [media]);
 
+  // Determine which attribute is already used for media (lock to one attribute type)
+  const usedAttributeName = useMemo(() => {
+    const mediaWithAttr = media.find(m => m.attribute_value_id);
+    if (!mediaWithAttr) return null;
+    return mediaWithAttr.attribute_name || null;
+  }, [media]);
+
+  // Filter attribute values dropdown to only show values from the used attribute (or all if none used)
+  const filteredAttributeValues = useMemo(() => {
+    if (!usedAttributeName) return attributeValues;
+    return attributeValues.filter(av => av.attribute_name === usedAttributeName);
+  }, [attributeValues, usedAttributeName]);
+
+  // Reset selected value if it's no longer in filtered options
+  useEffect(() => {
+    if (selectedAttrValue && filteredAttributeValues.length > 0) {
+      const stillValid = filteredAttributeValues.some(av => String(av.id) === String(selectedAttrValue));
+      if (!stillValid) {
+        setSelectedAttrValue('');
+      }
+    }
+  }, [filteredAttributeValues, selectedAttrValue]);
+
   const uploadFile = async (file) => {
     const formData = new FormData();
     formData.append('file', file);
@@ -226,7 +249,7 @@ export default function MediaUploader({ productId, initialMedia = [], onMediaCha
                 className="w-full appearance-none rounded-lg border border-[#8b5cf6]/20 bg-[#8b5cf6]/5 px-4 h-11 pr-10 text-sm text-slate-900 dark:text-white dark:bg-gray-700 dark:border-gray-600 focus:outline-none focus:border-[#8b5cf6] focus:ring-2 focus:ring-[#8b5cf6]/20 transition-all font-medium"
               >
                 <option value="">General (Product Main)</option>
-                {attributeValues.map(av => (
+                {filteredAttributeValues.map(av => (
                   <option key={av.id} value={av.id}>
                     {av.attribute_name}: {av.value}
                   </option>

@@ -329,14 +329,18 @@ export default function CheckoutPage() {
                   </div>
                   <div className="space-y-2">
                     <label htmlFor="order-notes" className="block text-xs font-bold text-muted-foreground uppercase tracking-wider">Order Notes</label>
-                    <textarea
-                      id="order-notes"
-                      value={form.notes}
-                      onChange={(e) => setForm({ ...form, notes: e.target.value })}
-                      placeholder="Any special instructions..."
-                      rows={4}
-                      className="w-full px-5 py-4 rounded-xl bg-background border border-border focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none text-sm font-medium resize-none transition-all placeholder:text-muted-foreground/50 text-foreground leading-relaxed"
-                    />
+                    <div className="relative">
+                      <textarea
+                        id="order-notes"
+                        value={form.notes}
+                        onChange={(e) => setForm({ ...form, notes: e.target.value.replace(/\n{2,}/g, '\n').slice(0, 100) })}
+                        maxLength={100}
+                        placeholder="Any special instructions..."
+                        rows={3}
+                        className="w-full px-5 py-4 pb-8 rounded-xl bg-background border border-border focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none text-sm font-medium resize-none transition-all placeholder:text-muted-foreground/50 text-foreground leading-relaxed"
+                      />
+                      <span className="absolute bottom-3 right-4 text-xs text-muted-foreground">{form.notes.length}/100</span>
+                    </div>
                   </div>
                 </div>
 

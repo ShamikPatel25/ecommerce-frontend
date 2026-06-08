@@ -93,6 +93,7 @@ export default function ProductDetailClient({ slug, initialVariantSku = null }) 
   const [mounted, setMounted] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const addItem = useCartStore((s) => s.addItem);
+  const cartItems = useCartStore((s) => s.items);
   const [selectedValues, setSelectedValues] = useState({});
 
   // eslint-disable-next-line react-hooks/set-state-in-effect -- SSR hydration guard
@@ -203,14 +204,28 @@ export default function ProductDetailClient({ slug, initialVariantSku = null }) 
   }, [product, selectedValues, isCatalog]);
 
   const maxStock = variantInfo.stock || 0;
-  const catalogInStock = variantInfo.variant ? maxStock > 0 : false;
-  const inStock = isCatalog ? catalogInStock : (product?.stock || 0) > 0;
+
+  // Calculate how many of this variant are already in cart
+  const cartQuantity = useMemo(() => {
+    if (!product) return 0;
+    const variantId = variantInfo.variant?.variant_id || null;
+    const cartItem = cartItems.find(
+      (i) => (i.product || i.id) === product.id && i.variant === variantId
+    );
+    return cartItem?.quantity || 0;
+  }, [product, variantInfo.variant, cartItems]);
+
+  // Remaining stock = total stock - items already in cart
+  const remainingStock = Math.max(0, maxStock - cartQuantity);
+
+  const catalogInStock = variantInfo.variant ? remainingStock > 0 : false;
+  const inStock = isCatalog ? catalogInStock : (Math.max(0, (product?.stock || 0) - cartQuantity) > 0);
 
   /* eslint-disable react-hooks/set-state-in-effect -- clamp quantity to stock */
   useEffect(() => {
-    if (maxStock > 0 && quantity > maxStock) setQuantity(maxStock);
-    else if (maxStock === 0) setQuantity(1);
-  }, [maxStock, quantity]);
+    if (remainingStock > 0 && quantity > remainingStock) setQuantity(remainingStock);
+    else if (remainingStock === 0) setQuantity(1);
+  }, [remainingStock, quantity]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   const displayPrice = Number.parseFloat(variantInfo.price || 0);
@@ -480,8 +495,8 @@ export default function ProductDetailClient({ slug, initialVariantSku = null }) 
                   </button>
                   <span className="flex-1 font-bold text-center text-lg">{quantity}</span>
                   <button
-                    onClick={() => setQuantity(Math.min(maxStock || 1, quantity + 1))}
-                    disabled={!inStock || quantity >= maxStock}
+                    onClick={() => setQuantity(Math.min(remainingStock || 1, quantity + 1))}
+                    disabled={!inStock || quantity >= remainingStock}
                     className="flex-1 h-full flex items-center justify-center text-xl text-foreground disabled:opacity-30 hover:bg-black/5"
                   >
                     +
@@ -493,10 +508,12 @@ export default function ProductDetailClient({ slug, initialVariantSku = null }) 
                 onClick={handleAddToCart}
                 disabled={!inStock}
                 size="lg"
-                className={`flex-1 h-14 text-lg font-bold rounded-2xl ${addedToCart ? 'bg-green-600 hover:bg-green-600/90 text-white shadow-green-600/20 shadow-lg' : 'shadow-primary/20 shadow-lg'}`}
+                className={`flex-1 h-14 text-lg font-bold rounded-2xl ${!inStock ? 'bg-muted text-muted-foreground cursor-not-allowed' : addedToCart ? 'bg-green-600 hover:bg-green-600/90 text-white shadow-green-600/20 shadow-lg' : 'shadow-primary/20 shadow-lg'}`}
               >
                 {addedToCart ? (
                   <span className="flex items-center"><Check className="w-6 h-6 mr-2" /> Added to Cart</span>
+                ) : !inStock ? (
+                  'Out of Stock'
                 ) : (
                   'Add to Cart'
                 )}
@@ -509,8 +526,8 @@ export default function ProductDetailClient({ slug, initialVariantSku = null }) 
                 <div className="flex items-center gap-2 text-sm font-medium">
                   <div className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse"></div>
                   <span className="text-green-500">In Stock and Ready to Ship</span>
-                  {maxStock <= 5 && maxStock > 0 && (
-                    <span className="text-orange-400 ml-1">&mdash; Only {maxStock} left!</span>
+                  {remainingStock <= 5 && remainingStock > 0 && (
+                    <span className="text-orange-400 ml-1">&mdash; Only {remainingStock} left!</span>
                   )}
                 </div>
               ) : (

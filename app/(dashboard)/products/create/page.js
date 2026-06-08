@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { productAPI, categoryAPI, attributeAPI } from '@/lib/api';
 import { useFormDraft } from '@/hooks/useFormDraft';
@@ -272,6 +272,36 @@ export default function CreateProductPage() {
   useEffect(() => { imagesRef.current = images; }, [images]);
 
   const [selectedUploadAttr, setSelectedUploadAttr] = useState('');
+
+  // Determine which attribute is already used for images (lock to one attribute type)
+  const usedAttributeId = useMemo(() => {
+    const imageWithAttr = images.find(img => img.attribute_value_id);
+    if (!imageWithAttr) return null;
+    // Find which attribute this value belongs to
+    for (const attr of attributes) {
+      if ((attr.values || []).some(v => v.id === imageWithAttr.attribute_value_id)) {
+        return attr.id;
+      }
+    }
+    return null;
+  }, [images, attributes]);
+
+  // Filter attribute values dropdown to only show values from the used attribute (or all if none used)
+  const filteredAttrOptions = useMemo(() => {
+    const selected = attributes.filter(a => selectedAttributes.includes(a.id));
+    if (!usedAttributeId) return selected;
+    return selected.filter(a => a.id === usedAttributeId);
+  }, [attributes, selectedAttributes, usedAttributeId]);
+
+  // Reset selected upload attr if it's no longer in filtered options
+  useEffect(() => {
+    if (selectedUploadAttr && filteredAttrOptions.length > 0) {
+      const allValues = filteredAttrOptions.flatMap(a => (a.values || []).map(v => v.id));
+      if (!allValues.includes(selectedUploadAttr)) {
+        setSelectedUploadAttr('');
+      }
+    }
+  }, [filteredAttrOptions, selectedUploadAttr]);
 
   // Re-classify existing images when attributes are selected/changed
   useEffect(() => {
@@ -812,22 +842,21 @@ export default function CreateProductPage() {
         </nav>
 
         {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-          <div>
+        <div className="flex items-start justify-between gap-4 mb-2">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setStep(1)}
+              className="text-slate-500 dark:text-gray-400 hover:text-violet-500 transition-colors"
+            >
+              <ChevronLeft className="w-7 h-7 text-slate-900 dark:text-white" strokeWidth={2.5} />
+            </button>
             <h1 className="text-3xl font-black tracking-tight text-slate-900 dark:text-white">Select Attribute Values</h1>
-            <p className="text-sm text-slate-500 dark:text-gray-400 mt-1">
-              Build variant combinations for <span className="font-semibold text-slate-700 dark:text-gray-300">{formData.name}</span>
-            </p>
           </div>
-          <button
-            type="button"
-            onClick={() => setStep(1)}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg border border-violet-500/20 bg-white dark:bg-gray-800 dark:border-gray-600 hover:bg-violet-500/5 transition-colors text-sm font-bold self-start md:self-auto"
-          >
-            <ChevronLeft className="w-7 h-7 text-slate-900 dark:text-white" strokeWidth={2.5} />
-            Back
-          </button>
         </div>
+        <p className="text-sm text-slate-500 dark:text-gray-400 mb-8">
+          Build variant combinations for <span className="font-semibold text-slate-700 dark:text-gray-300">{formData.name}</span>
+        </p>
 
         {/* Select Values Card */}
         <section className="bg-white dark:bg-gray-800 rounded-xl border border-violet-500/10 dark:border-gray-700 p-6 md:p-8 shadow-sm mb-8">
@@ -1303,15 +1332,13 @@ export default function CreateProductPage() {
                       className="w-full appearance-none rounded-lg border border-violet-500/20 bg-violet-500/5 px-4 py-2.5 pr-10 text-sm text-slate-900 dark:text-white dark:bg-gray-700 dark:border-gray-600 focus:outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 transition-all font-medium truncate"
                     >
                       <option value="">General (Product Main)</option>
-                      {attributes
-                        .filter((a) => selectedAttributes.includes(a.id))
-                        .flatMap((a) =>
-                          (a.values || []).map((v) => (
-                            <option key={v.id} value={v.id}>
-                              {a.name}: {v.value}
-                            </option>
-                          ))
-                        )}
+                      {filteredAttrOptions.flatMap((a) =>
+                        (a.values || []).map((v) => (
+                          <option key={v.id} value={v.id}>
+                            {a.name}: {v.value}
+                          </option>
+                        ))
+                      )}
                     </select>
                     <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
                   </div>
