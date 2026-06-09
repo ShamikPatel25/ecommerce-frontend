@@ -140,16 +140,25 @@ export default function CreateCategoryPage() {
               <label className="text-sm font-semibold text-slate-700 dark:text-gray-300">
                 Name <span className="text-red-500">*</span>
               </label>
-              <input
-                type="text"
-                className={errors.name ? INPUT_ERROR_CLS : INPUT_CLS}
-                placeholder="e.g. Clothes, Electronics"
-                value={formData.name}
-                onChange={(e) => {
-                  setFormData({ ...formData, name: e.target.value, slug: generateSlug(e.target.value) });
-                  if (errors.name) setErrors({ ...errors, name: null });
-                }}
-              />
+              <div className="relative">
+                <input
+                  type="text"
+                  maxLength={100}
+                  className={(errors.name ? INPUT_ERROR_CLS : INPUT_CLS) + ' pr-14'}
+                  placeholder="e.g. Clothes, Electronics"
+                  value={formData.name}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (value.length <= 100) {
+                      setFormData({ ...formData, name: value, slug: generateSlug(value) });
+                      if (errors.name) setErrors({ ...errors, name: null });
+                    }
+                  }}
+                />
+                <span className="absolute right-3 bottom-1 text-[10px] font-medium text-slate-400 dark:text-gray-500 pointer-events-none">
+                  {formData.name.length}/100
+                </span>
+              </div>
               {errors.name ? (
                 <p className="text-xs text-red-500">{errors.name}</p>
               ) : (
@@ -162,16 +171,25 @@ export default function CreateCategoryPage() {
               <label className="text-sm font-semibold text-slate-700 dark:text-gray-300">
                 URL Handle <span className="text-red-500">*</span>
               </label>
-              <input
-                type="text"
-                className={errors.slug ? INPUT_ERROR_CLS : INPUT_CLS}
-                placeholder="auto-generated"
-                value={formData.slug}
-                onChange={(e) => {
-                  setFormData({ ...formData, slug: e.target.value });
-                  if (errors.slug) setErrors({ ...errors, slug: null });
-                }}
-              />
+              <div className="relative">
+                <input
+                  type="text"
+                  maxLength={100}
+                  className={(errors.slug ? INPUT_ERROR_CLS : INPUT_CLS) + ' pr-14'}
+                  placeholder="auto-generated"
+                  value={formData.slug}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (value.length <= 100) {
+                      setFormData({ ...formData, slug: value });
+                      if (errors.slug) setErrors({ ...errors, slug: null });
+                    }
+                  }}
+                />
+                <span className="absolute right-3 bottom-1 text-[10px] font-medium text-slate-400 dark:text-gray-500 pointer-events-none">
+                  {formData.slug.length}/100
+                </span>
+              </div>
               {errors.slug ? (
                 <p className="text-xs text-red-500">{errors.slug}</p>
               ) : (

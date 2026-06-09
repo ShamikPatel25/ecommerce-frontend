@@ -47,7 +47,7 @@
 }
 
 .admin-search-input {
-  @apply flex-1 bg-transparent border-none focus:ring-0 focus:outline-none text-slate-900 dark:text-white text-base;
+  @apply flex-1 min-w-0 bg-transparent border-none focus:ring-0 focus:outline-none text-slate-900 dark:text-white text-base;
 }
 
 .admin-search-input::placeholder {

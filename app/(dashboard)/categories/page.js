@@ -209,7 +209,7 @@ export default function CategoriesPage() {
             <button
               type="button"
               onClick={() => { setSearchQuery(''); setPage(1); }}
-              className="absolute right-1 top-1/2 -translate-y-1/2 p-1 text-slate-600 dark:text-gray-400 hover:text-slate-800 dark:hover:text-gray-200 transition-colors"
+              className="flex items-center justify-center px-3 text-slate-400 hover:text-slate-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors"
             >
               <X size={20} strokeWidth={2.5} />
             </button>
@@ -269,16 +269,16 @@ export default function CategoriesPage() {
 
         ) : (
           <div className="overflow-x-auto">
-            <table className="admin-table min-w-[950px]">
+            <table className="admin-table table-fixed min-w-[850px] w-full">
               <thead>
                 <tr className="admin-thead-row">
-                  <th className="admin-th text-left">Category Name</th>
-                  <th className="admin-th text-left">URL Handle</th>
-                  <th className="admin-th text-left">Parent</th>
-                  <th className="admin-th">Products</th>
-                  <th className="admin-th">Status</th>
-                  <th className="admin-th">Updated</th>
-                  <th className="admin-th w-20">Actions</th>
+                  <th className="admin-th w-[25%] text-left">Category Name</th>
+                  <th className="admin-th w-[20%] text-left">URL Handle</th>
+                  <th className="admin-th w-[15%] text-left">Parent</th>
+                  <th className="admin-th w-[10%]">Products</th>
+                  <th className="admin-th w-[12%]">Status</th>
+                  <th className="admin-th w-[10%]">Updated</th>
+                  <th className="admin-th w-[8%]">Actions</th>
                 </tr>
               </thead>
               <tbody className="admin-tbody">
@@ -291,25 +291,34 @@ export default function CategoriesPage() {
                       onClick={() => router.push(`/categories/${cat.id}/edit`)}
                     >
                       {/* Name */}
-                      <td className="admin-td whitespace-nowrap text-left">
-                        <div className="flex items-center justify-start gap-3">
-                          <span className="font-medium text-sm text-slate-900 dark:text-white">
+                      <td className="admin-td text-left">
+                        <div className="flex items-center justify-start gap-3 w-full min-w-0">
+                          <span 
+                            className="font-medium text-sm text-slate-900 dark:text-white truncate max-w-[150px] md:max-w-[200px] lg:max-w-[250px] block"
+                            title={cat.name}
+                          >
                             {cat.name}
                           </span>
                         </div>
                       </td>
 
                       {/* URL Handle */}
-                      <td className="admin-td whitespace-nowrap text-left">
-                        <code className="text-xs font-mono bg-slate-100 dark:bg-gray-700 px-2 py-1 rounded text-slate-500 dark:text-gray-400">
+                      <td className="admin-td text-left">
+                        <code 
+                          className="text-xs font-mono bg-slate-100 dark:bg-gray-700 px-2 py-1 rounded text-slate-500 dark:text-gray-400 truncate max-w-[150px] md:max-w-[200px] lg:max-w-[250px] inline-block align-bottom"
+                          title={`/${cat.full_slug || cat.slug}`}
+                        >
                           /{cat.full_slug || cat.slug}
                         </code>
                       </td>
 
                       {/* Parent */}
-                      <td className="admin-td whitespace-nowrap text-sm text-slate-500 dark:text-gray-400 text-left">
+                      <td className="admin-td text-sm text-slate-500 dark:text-gray-400 text-left">
                         {cat.parent ? (
-                          <span className="inline-block px-2.5 py-1 rounded-md bg-slate-100 dark:bg-gray-700 text-xs font-medium text-slate-600 dark:text-gray-300">
+                          <span 
+                            className="inline-block px-2.5 py-1 rounded-md bg-slate-100 dark:bg-gray-700 text-xs font-medium text-slate-600 dark:text-gray-300 truncate max-w-[120px] md:max-w-[150px] lg:max-w-[200px] align-bottom"
+                            title={getParentName(cat.parent)}
+                          >
                             {getParentName(cat.parent)}
                           </span>
                         ) : (

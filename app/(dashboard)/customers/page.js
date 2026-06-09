@@ -153,7 +153,7 @@ export default function CustomersPage() {
               <button
                 type="button"
                 onClick={() => { setSearchQuery(''); setCurrentPage(1); }}
-                className="absolute right-1 top-1/2 -translate-y-1/2 p-1 text-slate-600 dark:text-gray-400 hover:text-slate-800 dark:hover:text-gray-200 transition-colors"
+                className="flex items-center justify-center px-3 text-slate-400 hover:text-slate-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors"
               >
                 <X size={20} strokeWidth={2.5} />
               </button>
@@ -274,7 +274,7 @@ export default function CustomersPage() {
                                             >
                                               <div className="flex items-center gap-4">
                                                 <span className="font-mono font-bold text-sm text-slate-900 dark:text-white">
-                                                  #{order.id}
+                                                  #{order.order_number || order.id}
                                                 </span>
                                                 <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold capitalize ${badge.pill}`}>
                                                   <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${badge.dot}`} />

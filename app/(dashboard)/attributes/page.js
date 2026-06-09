@@ -146,7 +146,7 @@ export default function AttributesPage() {
               <button
                 type="button"
                 onClick={() => { setSearchQuery(''); setCurrentPage(1); }}
-                className="absolute right-1 top-1/2 -translate-y-1/2 p-1 text-slate-600 dark:text-gray-400 hover:text-slate-800 dark:hover:text-gray-200 transition-colors"
+                className="flex items-center justify-center px-3 text-slate-400 hover:text-slate-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors"
               >
                 <X size={20} strokeWidth={2.5} />
               </button>
@@ -165,14 +165,14 @@ export default function AttributesPage() {
           ) : (
             <>
               <div className="overflow-x-auto">
-                <table className="admin-table min-w-[800px]">
+                <table className="admin-table table-fixed min-w-[800px] w-full">
                   <thead>
                     <tr className="admin-thead-row">
-                      <th className="admin-th text-left">Attribute</th>
-                      <th className="admin-th text-left">Category</th>
-                      <th className="admin-th text-left">Values</th>
-                      <th className="admin-th text-center">Count</th>
-                      <th className="admin-th text-center w-20">Actions</th>
+                      <th className="admin-th w-[25%] text-left">Attribute</th>
+                      <th className="admin-th w-[20%] text-left">Category</th>
+                      <th className="admin-th w-[35%] text-left">Values</th>
+                      <th className="admin-th w-[10%] text-center">Count</th>
+                      <th className="admin-th w-[10%] text-center">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="admin-tbody">
@@ -195,14 +195,22 @@ export default function AttributesPage() {
                         >
                           {/* Attribute Name */}
                           <td className="admin-td text-left">
-                            <div className="flex items-center justify-start gap-3">
-                              <span className="text-slate-900 dark:text-white text-sm font-medium">{attr.name}</span>
+                            <div className="flex items-center justify-start gap-3 w-full min-w-0">
+                              <span 
+                                className="text-slate-900 dark:text-white text-sm font-medium truncate max-w-[150px] lg:max-w-[250px] block"
+                                title={attr.name}
+                              >
+                                {attr.name}
+                              </span>
                             </div>
                           </td>
 
                           {/* Category */}
                           <td className="admin-td text-left">
-                            <span className="text-sm font-medium text-violet-500">
+                            <span 
+                              className="text-sm font-medium text-violet-500 truncate max-w-[150px] lg:max-w-[250px] block"
+                              title={getCategoryName(attr.category)}
+                            >
                               {getCategoryName(attr.category)}
                             </span>
                           </td>
@@ -215,7 +223,8 @@ export default function AttributesPage() {
                                   {attr.values.slice(0, 5).map((v) => (
                                     <span
                                       key={v.id}
-                                      className="px-2.5 py-1 bg-slate-100 dark:bg-gray-700 border border-slate-200 dark:border-gray-600 text-slate-600 dark:text-gray-300 rounded-md text-[11px] font-medium"
+                                      title={v.value}
+                                      className="px-2.5 py-1 bg-slate-100 dark:bg-gray-700 border border-slate-200 dark:border-gray-600 text-slate-600 dark:text-gray-300 rounded-md text-[11px] font-medium truncate max-w-[120px] inline-block align-bottom"
                                     >
                                       {v.value}
                                     </span>

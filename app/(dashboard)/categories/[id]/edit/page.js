@@ -23,8 +23,8 @@ const INPUT_ERROR_CLS =
 
 const SELECT_CLS = INPUT_CLS + ' appearance-none pr-10';
 
-const MAX_NAME_LENGTH = 50;
-const MAX_SLUG_LENGTH = 50;
+const MAX_NAME_LENGTH = 100;
+const MAX_SLUG_LENGTH = 100;
 
 export default function EditCategoryPage() {
   const router = useRouter();
@@ -189,7 +189,7 @@ export default function EditCategoryPage() {
                     }
                   }}
                 />
-                <span className="absolute right-3 bottom-1 text-xs text-slate-400 dark:text-gray-500 pointer-events-none">{formData.name.length}/{MAX_NAME_LENGTH}</span>
+                <span className="absolute right-3 bottom-1 text-[10px] font-medium text-slate-400 dark:text-gray-500 pointer-events-none">{formData.name.length}/{MAX_NAME_LENGTH}</span>
               </div>
               {errors.name && <p className="text-xs text-red-500">{errors.name}</p>}
             </div>
@@ -213,7 +213,7 @@ export default function EditCategoryPage() {
                     }
                   }}
                 />
-                <span className="absolute right-3 bottom-1 text-xs text-slate-400 dark:text-gray-500 pointer-events-none">{formData.slug.length}/{MAX_SLUG_LENGTH}</span>
+                <span className="absolute right-3 bottom-1 text-[10px] font-medium text-slate-400 dark:text-gray-500 pointer-events-none">{formData.slug.length}/{MAX_SLUG_LENGTH}</span>
               </div>
               {errors.slug && <p className="text-xs text-red-500">{errors.slug}</p>}
             </div>

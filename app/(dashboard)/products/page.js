@@ -249,7 +249,7 @@ export default function ProductsPage() {
               <button
                 type="button"
                 onClick={() => { setSearchQuery(''); setCurrentPage(1); }}
-                className="absolute right-1 top-1/2 -translate-y-1/2 p-1 text-slate-600 dark:text-gray-400 hover:text-slate-800 dark:hover:text-gray-200 transition-colors"
+                className="flex items-center justify-center px-3 text-slate-400 hover:text-slate-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors"
               >
                 <X size={20} strokeWidth={2.5} />
               </button>
@@ -301,15 +301,15 @@ export default function ProductsPage() {
           ) : (
             <>
               <div className="overflow-x-auto">
-                <table className="admin-table min-w-[900px]">
+                <table className="admin-table table-fixed min-w-[950px] w-full">
                   <thead>
                     <tr className="admin-thead-row">
-                      <th className="admin-th lg:w-[28%] text-left">Product</th>
-                      <th className="admin-th lg:w-[12%] text-left">SKU</th>
-                      <th className="admin-th lg:w-[14%]">Stock Level</th>
-                      <th className="admin-th lg:w-[10%]">Catalog</th>
-                      <th className="admin-th lg:w-[12%]">Price</th>
-                      <th className="admin-th lg:w-[14%]">Actions</th>
+                      <th className="admin-th w-[30%] text-left">Product</th>
+                      <th className="admin-th w-[15%] text-left">SKU</th>
+                      <th className="admin-th w-[15%]">Stock Level</th>
+                      <th className="admin-th w-[10%]">Catalog</th>
+                      <th className="admin-th w-[20%] text-left">Price</th>
+                      <th className="admin-th w-[10%] text-center">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="admin-tbody">
@@ -339,7 +339,7 @@ export default function ProductsPage() {
                           >
                             {/* Product */}
                             <td className="admin-td text-left">
-                              <div className="flex items-center justify-start gap-3">
+                              <div className="flex items-center justify-start gap-3 w-full min-w-0">
                                 <div className="size-10 rounded-lg bg-slate-100 dark:bg-gray-700 overflow-hidden border border-slate-200 dark:border-gray-600 flex items-center justify-center flex-shrink-0">
                                   {mediaUrl ? (
                                     // eslint-disable-next-line @next/next/no-img-element
@@ -354,21 +354,34 @@ export default function ProductsPage() {
                                     </span>
                                   )}
                                 </div>
-                                <div className="min-w-0">
-                                  <div className="flex items-center gap-2">
-                                    <p className={`text-sm font-medium truncate ${product.is_active ? 'text-slate-900 dark:text-white' : 'text-slate-400 dark:text-gray-500'}`}>{product.name}</p>
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex items-center justify-start gap-2 max-w-full">
+                                    <p 
+                                      className={`text-sm font-medium text-left truncate max-w-[200px] lg:max-w-[300px] block ${product.is_active ? 'text-slate-900 dark:text-white' : 'text-slate-400 dark:text-gray-500'}`}
+                                      title={product.name}
+                                    >
+                                      {product.name}
+                                    </p>
                                     {product.is_featured && (
                                       <Star className="w-3.5 h-3.5 text-violet-500 fill-violet-500 flex-shrink-0" />
                                     )}
                                   </div>
-                                  <p className="text-slate-500 dark:text-gray-400 text-xs truncate">{getCategoryName(product.category)}</p>
+                                  <p 
+                                    className="text-slate-500 dark:text-gray-400 text-left text-xs truncate max-w-[150px] lg:max-w-[250px] block mt-0.5"
+                                    title={getCategoryName(product.category)}
+                                  >
+                                    {getCategoryName(product.category)}
+                                  </p>
                                 </div>
                               </div>
                             </td>
 
                             {/* SKU */}
                             <td className="admin-td text-left">
-                              <span className="font-mono text-xs bg-slate-100 dark:bg-gray-700 px-2 py-1 rounded text-slate-600 dark:text-gray-300">
+                              <span 
+                                className="font-mono text-xs bg-slate-100 dark:bg-gray-700 px-2 py-1 rounded text-slate-600 dark:text-gray-300 truncate max-w-full inline-block align-bottom"
+                                title={product.sku}
+                              >
                                 {product.sku}
                               </span>
                             </td>
@@ -402,8 +415,8 @@ export default function ProductsPage() {
                             </td>
 
                             {/* Price */}
-                            <td className="admin-td">
-                              <span className="text-sm font-bold text-slate-900 dark:text-white">
+                            <td className="admin-td text-left">
+                              <span className="text-sm font-bold text-slate-900 dark:text-white whitespace-nowrap">
                                 {formatCurrency(product.price, activeStore?.currency)}
                               </span>
                             </td>

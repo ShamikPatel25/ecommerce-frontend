@@ -355,11 +355,15 @@ export default function EditAttributePage() {
             <input
               type="text"
               placeholder="Add value (e.g. XL, Red, 10oz)"
-              className="w-full h-12 rounded-lg border border-violet-500/20 bg-violet-500/5 pl-10 pr-4 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 transition-all dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder:text-gray-500"
+              maxLength={30}
+              className="w-full h-12 rounded-lg border border-violet-500/20 bg-violet-500/5 pl-10 pr-14 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 transition-all dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder:text-gray-500"
               value={newValue}
               onChange={(e) => setNewValue(e.target.value.replace(/[^a-zA-Z0-9- ]/g, ''))}
               onKeyDown={handleKeyDown}
             />
+            <span className="absolute right-3 bottom-1.5 text-[10px] font-medium text-slate-400 dark:text-gray-500 pointer-events-none">
+              {newValue.length}/30
+            </span>
           </div>
           <button
             type="button"
@@ -386,14 +390,14 @@ export default function EditAttributePage() {
                     /* Pending deletion chip */
                     <div
                       key={v.id}
-                      className="flex items-center gap-2 rounded-lg bg-red-500/10 border border-red-500/30 px-4 py-2 text-red-500 line-through italic"
+                      className="flex items-center gap-2 rounded-lg bg-red-500/10 border border-red-500/30 px-4 py-2 text-red-500 line-through italic max-w-full"
                     >
-                      <span className="font-medium text-sm">{v.value}</span>
+                      <span className="font-medium text-sm break-all">{v.value}</span>
                       <button
                         type="button"
                         onClick={() => undoPendingDelete(v.id)}
                         title="Undo deletion"
-                        className="flex h-5 w-5 items-center justify-center rounded-full hover:bg-red-500/20 transition-colors"
+                        className="flex-shrink-0 flex h-5 w-5 items-center justify-center rounded-full hover:bg-red-500/20 transition-colors"
                       >
                         <Undo2 className="w-3.5 h-3.5" />
                       </button>
@@ -402,14 +406,14 @@ export default function EditAttributePage() {
                     /* Active chip */
                     <div
                       key={v.id}
-                      className="group flex items-center gap-2 rounded-lg bg-violet-500 px-4 py-2 text-white shadow-sm hover:shadow-md transition-all"
+                      className="group flex items-center gap-2 rounded-lg bg-violet-500 px-4 py-2 text-white shadow-sm hover:shadow-md transition-all max-w-full"
                     >
-                      <span className="font-medium text-sm">{v.value}</span>
+                      <span className="font-medium text-sm break-all">{v.value}</span>
                       <button
                         type="button"
                         onClick={() => requestDeleteValue(v.id, v.value)}
                         title="Mark for deletion"
-                        className="flex h-5 w-5 items-center justify-center rounded-full hover:bg-white/20 transition-colors"
+                        className="flex-shrink-0 flex h-5 w-5 items-center justify-center rounded-full hover:bg-white/20 transition-colors"
                       >
                         <X className="w-3.5 h-3.5" />
                       </button>
@@ -420,14 +424,14 @@ export default function EditAttributePage() {
                 {pendingAdds.map((a) => (
                   <div
                     key={a.tempId}
-                    className="group flex items-center gap-2 rounded-lg bg-green-500 px-4 py-2 text-white shadow-sm hover:shadow-md transition-all"
+                    className="group flex items-center gap-2 rounded-lg bg-green-500 px-4 py-2 text-white shadow-sm hover:shadow-md transition-all max-w-full"
                   >
-                    <span className="font-medium text-sm">{a.value}</span>
+                    <span className="font-medium text-sm break-all">{a.value}</span>
                     <button
                       type="button"
                       onClick={() => requestDeleteValue(a.tempId, a.value, true)}
                       title="Remove"
-                      className="flex h-5 w-5 items-center justify-center rounded-full hover:bg-white/20 transition-colors"
+                      className="flex-shrink-0 flex h-5 w-5 items-center justify-center rounded-full hover:bg-white/20 transition-colors"
                     >
                       <X className="w-3.5 h-3.5" />
                     </button>

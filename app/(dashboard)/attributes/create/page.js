@@ -226,12 +226,16 @@ export default function CreateAttributePage() {
               <PlusCircle className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-gray-500" />
               <input
                 type="text"
-                className="w-full h-12 rounded-lg border border-violet-500/20 bg-violet-500/5 pl-10 pr-4 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 transition-all dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder:text-gray-500"
+                maxLength={30}
+                className="w-full h-12 rounded-lg border border-violet-500/20 bg-violet-500/5 pl-10 pr-14 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 transition-all dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder:text-gray-500"
                 placeholder="Type a value and press Enter or Add"
                 value={newValue}
                 onChange={(e) => setNewValue(e.target.value.replace(/[^a-zA-Z0-9- ]/g, ''))}
                 onKeyDown={handleKeyDown}
               />
+              <span className="absolute right-3 bottom-1.5 text-[10px] font-medium text-slate-400 dark:text-gray-500 pointer-events-none">
+                {newValue.length}/30
+              </span>
             </div>
             <button
               type="button"
@@ -248,13 +252,13 @@ export default function CreateAttributePage() {
               {values.map((v) => (
                 <div
                   key={v}
-                  className="group flex items-center gap-2 rounded-lg bg-violet-500 px-4 py-2 text-white shadow-sm hover:shadow-md transition-all"
+                  className="group flex items-center gap-2 rounded-lg bg-violet-500 px-4 py-2 text-white shadow-sm hover:shadow-md transition-all max-w-full"
                 >
-                  <span className="font-medium text-sm">{v}</span>
+                  <span className="font-medium text-sm break-all">{v}</span>
                   <button
                     type="button"
                     onClick={() => removeValue(v)}
-                    className="flex h-5 w-5 items-center justify-center rounded-full hover:bg-white/20 transition-colors"
+                    className="flex-shrink-0 flex h-5 w-5 items-center justify-center rounded-full hover:bg-white/20 transition-colors"
                   >
                     <X className="w-3.5 h-3.5" />
                   </button>

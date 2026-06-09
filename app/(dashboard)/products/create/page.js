@@ -499,6 +499,16 @@ export default function CreateProductPage() {
       toast.error('Price is required');
       return false;
     }
+    if (formData.price.replace(/\D/g, '').length > 10) {
+      setErrors({ price: 'Please enter a valid price (maximum 10 digits allowed).' });
+      toast.error('Please enter a valid price (maximum 10 digits allowed).');
+      return false;
+    }
+    if (formData.compare_at_price && formData.compare_at_price.replace(/\D/g, '').length > 10) {
+      setErrors({ compare_at_price: 'Please enter a valid price (maximum 10 digits allowed).' });
+      toast.error('Please enter a valid price (maximum 10 digits allowed).');
+      return false;
+    }
     if (!formData.category) {
       setErrors({ category: 'Category is required' });
       toast.error('Category is required');
@@ -515,6 +525,17 @@ export default function CreateProductPage() {
       if (catalogCombos.length === 0) {
         toast.error('Please add at least one catalog combination');
         return false;
+      }
+      for (let i = 0; i < catalogCombos.length; i++) {
+        const c = catalogCombos[i];
+        if (c.price && String(c.price).replace(/\D/g, '').length > 10) {
+          toast.error('Please enter a valid price (maximum 10 digits allowed).');
+          return false;
+        }
+        if (c.stock && String(c.stock).replace(/\D/g, '').length > 5) {
+          toast.error('Please enter a valid stock (maximum 5 digits allowed).');
+          return false;
+        }
       }
     }
 
@@ -626,7 +647,20 @@ export default function CreateProductPage() {
       toast.success('Product & catalog variants created!');
     } catch (err) {
       console.error('generateCatalog error:', err.response?.data);
-      const msg = err.response?.data?.error || JSON.stringify(err.response?.data) || 'Catalog generation failed';
+      const errData = err.response?.data;
+      let msg = 'Catalog generation failed';
+      if (errData?.error) {
+        msg = errData.error;
+      } else if (errData?.selected_combinations && Array.isArray(errData.selected_combinations)) {
+        const firstComboErr = errData.selected_combinations.find(e => e && Object.keys(e).length > 0);
+        if (firstComboErr) {
+           const firstField = Object.values(firstComboErr)[0];
+           msg = Array.isArray(firstField) ? firstField[0] : firstField;
+        }
+      } else if (errData && typeof errData === 'object') {
+        const firstField = Object.values(errData)[0];
+        msg = Array.isArray(firstField) ? firstField[0] : JSON.stringify(errData);
+      }
       toast.error(`Product created but ${msg}`);
     }
 

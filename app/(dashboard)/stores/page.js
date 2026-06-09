@@ -174,7 +174,7 @@ export default function StoresPage() {
               <button
                 type="button"
                 onClick={() => { setSearchQuery(''); setCurrentPage(1); }}
-                className="absolute right-1 top-1/2 -translate-y-1/2 p-1 text-slate-600 dark:text-gray-400 hover:text-slate-800 dark:hover:text-gray-200 transition-colors"
+                className="flex items-center justify-center px-3 text-slate-400 hover:text-slate-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors"
               >
                 <X size={20} strokeWidth={2.5} />
               </button>
@@ -226,15 +226,28 @@ export default function StoresPage() {
                             <div className="flex items-center justify-start gap-3">
                               <div className="size-10 bg-slate-100 dark:bg-gray-700 rounded-lg flex items-center justify-center text-lg flex-shrink-0">🏪</div>
                               <div className="min-w-0">
-                                <p className="text-sm font-semibold truncate text-slate-900 dark:text-white">{store.name}</p>
-                                <p className="text-xs text-violet-500">{store.full_domain || `${store.subdomain}.localhost:3000`}</p>
+                                <p 
+                                  className="text-sm font-semibold truncate text-slate-900 dark:text-white max-w-[200px]"
+                                  title={store.name}
+                                >
+                                  {store.name}
+                                </p>
+                                <p 
+                                  className="text-xs text-violet-500 truncate max-w-[200px]"
+                                  title={store.full_domain || `${store.subdomain}.localhost:3000`}
+                                >
+                                  {store.full_domain || `${store.subdomain}.localhost:3000`}
+                                </p>
                               </div>
                             </div>
                           </td>
 
                           {/* Description */}
                           <td className="admin-td text-left max-w-[200px]">
-                            <span className="text-slate-500 dark:text-gray-400 text-sm block truncate">
+                            <span 
+                              className="text-slate-500 dark:text-gray-400 text-sm block truncate"
+                              title={store.description || '—'}
+                            >
                               {store.description || '—'}
                             </span>
                           </td>

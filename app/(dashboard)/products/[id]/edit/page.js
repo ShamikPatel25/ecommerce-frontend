@@ -159,6 +159,16 @@ export default function EditProductPage() {
       toast.error('Price is required');
       return;
     }
+    if (formData.price.replace(/\D/g, '').length > 10) {
+      setErrors({ price: 'Please enter a valid price (maximum 10 digits allowed).' });
+      toast.error('Please enter a valid price (maximum 10 digits allowed).');
+      return;
+    }
+    if (formData.compare_at_price && formData.compare_at_price.replace(/\D/g, '').length > 10) {
+      setErrors({ compare_at_price: 'Please enter a valid price (maximum 10 digits allowed).' });
+      toast.error('Please enter a valid price (maximum 10 digits allowed).');
+      return;
+    }
     if (formData.compare_at_price && Number.parseFloat(formData.compare_at_price) <= Number.parseFloat(formData.price)) {
       setErrors({ compare_at_price: 'Compare price must be higher than selling price' });
       toast.error('Compare price must be higher than selling price');
@@ -312,6 +322,19 @@ export default function EditProductPage() {
   const handleGenerateCatalog = async () => {
     const newCatalogs = catalogs.filter(c => c.is_new);
     if (newCatalogs.length === 0) { toast.error('No new catalogs to generate'); return; }
+
+    for (let i = 0; i < newCatalogs.length; i++) {
+      const c = newCatalogs[i];
+      if (c.price && String(c.price).replace(/\D/g, '').length > 10) {
+        toast.error('Catalog variant price cannot exceed 10 digits');
+        return;
+      }
+      if (c.stock && String(c.stock).replace(/\D/g, '').length > 5) {
+        toast.error('Please enter a valid stock (maximum 5 digits allowed).');
+        return;
+      }
+    }
+
     setSubmitting(true);
     try {
       const selectedCombinations = newCatalogs.map(c => ({
@@ -325,8 +348,22 @@ export default function EditProductPage() {
       });
       toast.success(`Generated ${newCatalogs.length} variant(s)!`);
       fetchProduct(); // only product data changed, no need to re-fetch categories
-    } catch {
-      toast.error('Failed to generate catalog');
+    } catch (err) {
+      const errData = err?.response?.data;
+      let msg = 'Failed to generate catalog';
+      if (errData?.error) {
+        msg = errData.error;
+      } else if (errData?.selected_combinations && Array.isArray(errData.selected_combinations)) {
+        const firstComboErr = errData.selected_combinations.find(e => e && Object.keys(e).length > 0);
+        if (firstComboErr) {
+           const firstField = Object.values(firstComboErr)[0];
+           msg = Array.isArray(firstField) ? firstField[0] : firstField;
+        }
+      } else if (errData && typeof errData === 'object') {
+        const firstField = Object.values(errData)[0];
+        msg = Array.isArray(firstField) ? firstField[0] : JSON.stringify(errData);
+      }
+      toast.error(msg);
     } finally {
       setSubmitting(false);
     }
@@ -337,6 +374,15 @@ export default function EditProductPage() {
   };
 
   const handleSaveVariant = async (catalog) => {
+    if (catalog.price && String(catalog.price).replace(/\D/g, '').length > 10) {
+      toast.error('Please enter a valid price (maximum 10 digits allowed).');
+      return;
+    }
+    if (catalog.stock && String(catalog.stock).replace(/\D/g, '').length > 5) {
+      toast.error('Please enter a valid stock (maximum 5 digits allowed).');
+      return;
+    }
+
     try {
       await productAPI.updateVariant(productId, catalog.id, {
         stock: Number.parseInt(catalog.stock) || 0,
@@ -344,8 +390,16 @@ export default function EditProductPage() {
       });
       toast.success('Variant updated!');
       setCatalogs(prev => prev.map(c => c.id === catalog.id ? { ...c, isDirty: false } : c));
-    } catch {
-      toast.error('Failed to update variant');
+    } catch (err) {
+      const errData = err?.response?.data;
+      let msg = 'Failed to update variant';
+      if (errData?.error) {
+        msg = errData.error;
+      } else if (errData && typeof errData === 'object') {
+        const firstField = Object.values(errData)[0];
+        msg = Array.isArray(firstField) ? firstField[0] : JSON.stringify(errData);
+      }
+      toast.error(msg);
     }
   };
 
