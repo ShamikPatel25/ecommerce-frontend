@@ -249,7 +249,7 @@ export default function ProductsPage() {
               <button
                 type="button"
                 onClick={() => { setSearchQuery(''); setCurrentPage(1); }}
-                className="flex items-center justify-center px-3 text-slate-400 hover:text-slate-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors"
+                className="absolute right-1 top-1/2 -translate-y-1/2 p-1 text-slate-600 dark:text-gray-400 hover:text-slate-800 dark:hover:text-gray-200 transition-colors"
               >
                 <X size={20} strokeWidth={2.5} />
               </button>
@@ -307,8 +307,8 @@ export default function ProductsPage() {
                       <th className="admin-th w-[30%] text-left">Product</th>
                       <th className="admin-th w-[15%] text-left">SKU</th>
                       <th className="admin-th w-[15%]">Stock Level</th>
-                      <th className="admin-th w-[10%]">Catalog</th>
-                      <th className="admin-th w-[20%] text-left">Price</th>
+                      <th className="admin-th w-[15%]">Catalog</th>
+                      <th className="admin-th w-[15%] text-left">Price</th>
                       <th className="admin-th w-[10%] text-center">Actions</th>
                     </tr>
                   </thead>
@@ -356,7 +356,7 @@ export default function ProductsPage() {
                                 </div>
                                 <div className="min-w-0 flex-1">
                                   <div className="flex items-center justify-start gap-2 max-w-full">
-                                    <p 
+                                    <p
                                       className={`text-sm font-medium text-left truncate max-w-[200px] lg:max-w-[300px] block ${product.is_active ? 'text-slate-900 dark:text-white' : 'text-slate-400 dark:text-gray-500'}`}
                                       title={product.name}
                                     >
@@ -366,7 +366,7 @@ export default function ProductsPage() {
                                       <Star className="w-3.5 h-3.5 text-violet-500 fill-violet-500 flex-shrink-0" />
                                     )}
                                   </div>
-                                  <p 
+                                  <p
                                     className="text-slate-500 dark:text-gray-400 text-left text-xs truncate max-w-[150px] lg:max-w-[250px] block mt-0.5"
                                     title={getCategoryName(product.category)}
                                   >
@@ -378,7 +378,7 @@ export default function ProductsPage() {
 
                             {/* SKU */}
                             <td className="admin-td text-left">
-                              <span 
+                              <span
                                 className="font-mono text-xs bg-slate-100 dark:bg-gray-700 px-2 py-1 rounded text-slate-600 dark:text-gray-300 truncate max-w-full inline-block align-bottom"
                                 title={product.sku}
                               >
