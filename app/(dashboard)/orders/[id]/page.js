@@ -340,45 +340,49 @@ export default function OrderDetailPage() {
         </nav>
 
         {/* Page Header */}
-        <div className="flex flex-wrap items-start justify-between gap-4 mb-2">
-          <div className="flex flex-wrap items-center gap-3">
+        <div className="mb-8">
+          <div className="flex items-center gap-3 mb-4">
             <button
               onClick={() => router.push('/orders')}
-              className="flex items-center gap-1.5 text-slate-500 dark:text-gray-400 hover:text-violet-500 text-sm font-medium transition-colors"
+              className="flex items-center justify-center text-slate-500 dark:text-gray-400 hover:text-violet-500 transition-colors"
             >
               <ChevronLeft className="w-7 h-7 text-slate-900 dark:text-white" strokeWidth={2.5} />
             </button>
-            <h1 className="admin-title">
+            <h1 className="admin-title !mb-0">
               {order.order_number}
             </h1>
-            <span className={`px-3 py-1 rounded-full text-xs font-bold ${STATUS_STYLES[effectiveStatus] || ''}`}>
-              {STATUS_LABELS[effectiveStatus] || effectiveStatus}
-            </span>
           </div>
 
-          <div className="flex gap-3">
-            <button
-              onClick={handlePrintInvoice}
-              className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-lg text-slate-700 dark:text-gray-300 text-sm font-bold hover:bg-slate-50 dark:hover:bg-gray-700 transition-all shadow-sm"
-            >
-              <Printer className="w-4 h-4" />
-              Print Invoice
-            </button>
-            {!isOrderFinal && allowedNext.includes('shipped') && (
+          <div className="flex flex-wrap items-start justify-between gap-4 w-full">
+            <div className="flex flex-col gap-2">
+              <span className={`w-max px-3 py-1 rounded-full text-xs font-bold ${STATUS_STYLES[effectiveStatus] || ''}`}>
+                {STATUS_LABELS[effectiveStatus] || effectiveStatus}
+              </span>
+              <span className="text-sm text-slate-500 dark:text-gray-400">
+                Placed on {formatDateTime(order.created_at)}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-3">
               <button
-                onClick={() => { setNewStatus('shipped'); }}
-                className="admin-btn-primary"
+                onClick={handlePrintInvoice}
+                className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-lg text-slate-700 dark:text-gray-300 text-sm font-bold hover:bg-slate-50 dark:hover:bg-gray-700 transition-all shadow-sm"
               >
-                <Truck className="w-4 h-4" />
-                Fulfill Order
+                <Printer className="w-4 h-4" />
+                Print Invoice
               </button>
-            )}
+              {!isOrderFinal && allowedNext.includes('shipped') && (
+                <button
+                  onClick={() => { setNewStatus('shipped'); }}
+                  className="admin-btn-primary"
+                >
+                  <Truck className="w-4 h-4" />
+                  Fulfill Order
+                </button>
+              )}
+            </div>
           </div>
         </div>
-
-        <p className="admin-subtitle mb-8">
-          Placed on {formatDateTime(order.created_at)}
-        </p>
 
         {/* Top row: Order Items + Customer Details */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start mb-6">

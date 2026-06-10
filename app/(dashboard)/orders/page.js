@@ -188,7 +188,7 @@ export default function OrdersPage() {
               <button
                 type="button"
                 onClick={() => { setSearchQuery(''); setPage(1); }}
-                className="flex items-center justify-center px-3 text-slate-400 hover:text-slate-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors"
+                className="flex items-center justify-center px-3 text-slate-400 hover:text-slate-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors cursor-pointer"
               >
                 <X size={20} strokeWidth={2.5} />
               </button>
@@ -307,15 +307,15 @@ export default function OrdersPage() {
                             <td className="admin-td font-mono font-bold text-slate-900 dark:text-white text-sm whitespace-nowrap">
                               {order.order_number}
                             </td>
-                            <td className="admin-td max-w-0 text-left">
+                            <td className="admin-td text-left">
                               <div className="flex items-center justify-start gap-3">
                                 <div className="w-8 h-8 rounded-full bg-indigo-500/10 flex items-center justify-center text-xs font-bold text-indigo-400 flex-shrink-0">
                                   {(order.customer_name || '?').charAt(0).toUpperCase()}
                                 </div>
-                                <div className="min-w-0">
-                                  <p className="text-sm font-medium text-slate-900 dark:text-white truncate">{order.customer_name}</p>
+                                <div>
+                                  <p className="text-sm font-medium text-slate-900 dark:text-white whitespace-nowrap">{order.customer_name}</p>
                                   {order.customer_email && (
-                                    <p className="text-xs text-slate-400 dark:text-gray-500 truncate">{order.customer_email}</p>
+                                    <p className="text-xs text-slate-400 dark:text-gray-500 whitespace-nowrap">{order.customer_email}</p>
                                   )}
                                 </div>
                               </div>

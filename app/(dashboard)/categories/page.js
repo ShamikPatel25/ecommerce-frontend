@@ -27,9 +27,9 @@ import { formatDate } from '@/lib/utils';
 const PER_PAGE = 10;
 
 const TABS = [
-  { key: 'All',      label: 'All Categories' },
-  { key: 'Main',     label: 'Main Categories' },
-  { key: 'Sub',      label: 'Subcategories' },
+  { key: 'All', label: 'All Categories' },
+  { key: 'Main', label: 'Main Categories' },
+  { key: 'Sub', label: 'Subcategories' },
 ];
 
 /* Flatten a category list into tree order:
@@ -59,15 +59,15 @@ export default function CategoriesPage() {
   const { activeStore } = useStoreStore();
   const invalidateDashboard = useDashboardStore((s) => s.invalidate);
 
-  const [categories,   setCategories]   = useState([]);
-  const [loading,      setLoading]      = useState(true);
-  const [error,        setError]        = useState(false);
-  const [searchQuery,  setSearchQuery]  = useState('');
-  const [activeTab,    setActiveTab]    = useState('All');
-  const [page,         setPage]         = useState(1);
-  const [deleteModal,  setDeleteModal]  = useState(null);
-  const [deleting,     setDeleting]     = useState(false);
-  const [filterOpen,   setFilterOpen]   = useState(false);
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeTab, setActiveTab] = useState('All');
+  const [page, setPage] = useState(1);
+  const [deleteModal, setDeleteModal] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+  const [filterOpen, setFilterOpen] = useState(false);
   const filterRef = useRef(null);
   const fetchingRef = useRef(false);
 
@@ -89,11 +89,11 @@ export default function CategoriesPage() {
     setLoading(true);
     setError(false);
     try {
-      const res  = await categoryAPI.list();
+      const res = await categoryAPI.list();
       const data = res.data;
-      if (Array.isArray(data))    setCategories(data);
-      else if (data?.results)     setCategories(data.results);
-      else                        setCategories([]);
+      if (Array.isArray(data)) setCategories(data);
+      else if (data?.results) setCategories(data.results);
+      else setCategories([]);
     } catch (err) {
       if (!isCancelledError(err)) {
         setError(true);
@@ -148,7 +148,7 @@ export default function CategoriesPage() {
   const getLevelBadge = (level) => {
     if (level === 0) return { cls: 'bg-blue-500/10 text-blue-400 border border-blue-500/20', label: 'Main' };
     if (level === 1) return { cls: 'bg-green-500/10 text-green-400 border border-green-500/20', label: 'Sub' };
-    return               { cls: 'bg-violet-500/10 text-violet-400 border border-violet-500/20', label: 'Sub-sub' };
+    return { cls: 'bg-violet-500/10 text-violet-400 border border-violet-500/20', label: 'Sub-sub' };
   };
 
   /* ── filter + paginate ── */
@@ -156,8 +156,8 @@ export default function CategoriesPage() {
   const baseFiltered = categories.filter((c) => {
     const matchSearch = c.name?.toLowerCase().includes(lowerQuery);
     if (!matchSearch) return false;
-    if (activeTab === 'Main')     return c.level === 0;
-    if (activeTab === 'Sub')      return c.level >= 1;
+    if (activeTab === 'Main') return c.level === 0;
+    if (activeTab === 'Sub') return c.level >= 1;
     return true;
   });
 
@@ -167,7 +167,7 @@ export default function CategoriesPage() {
       : [...baseFiltered].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
-  const paginated  = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
+  const paginated = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
 
   const handleCreate = () => {
     sessionStorage.removeItem('form-draft:category-create');
@@ -178,241 +178,240 @@ export default function CategoriesPage() {
     <div className="admin-page">
       <div className="admin-container">
 
-      {/* ── Page Header ── */}
-      <div className="admin-page-header">
-        <div>
-          <h2 className="admin-title">Categories</h2>
-          <p className="admin-subtitle">Organize your store hierarchy for better customer navigation.</p>
-        </div>
-        <button
-          onClick={handleCreate}
-          className="admin-btn-primary"
-        >
-          <Plus size={20} />
-          <span>Add Category</span>
-        </button>
-      </div>
-
-      {/* ── Search Bar ── */}
-      <div className="admin-search-wrapper" ref={filterRef}>
-        <div className="admin-search-box">
-          <div className="admin-search-icon">
-            <Search size={20} />
+        {/* ── Page Header ── */}
+        <div className="admin-page-header">
+          <div>
+            <h2 className="admin-title">Categories</h2>
+            <p className="admin-subtitle">Organize your store hierarchy for better customer navigation.</p>
           </div>
-          <input
-            className="admin-search-input"
-            placeholder="Search categories by name..."
-            value={searchQuery}
-            onChange={(e) => { setSearchQuery(e.target.value); setPage(1); }}
-          />
-          {searchQuery && (
-            <button
-              type="button"
-              onClick={() => { setSearchQuery(''); setPage(1); }}
-              className="flex items-center justify-center px-3 text-slate-400 hover:text-slate-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors"
-            >
-              <X size={20} strokeWidth={2.5} />
-            </button>
-          )}
           <button
-            onClick={() => setFilterOpen(!filterOpen)}
-            className={activeTab !== 'All' ? 'admin-filter-toggle-active' : 'admin-filter-toggle'}
+            onClick={handleCreate}
+            className="admin-btn-primary"
           >
-            <SlidersHorizontal size={18} />
+            <Plus size={20} />
+            <span>Add Category</span>
           </button>
         </div>
 
-        {filterOpen && (
-          <div className="admin-filters-mobile">
-            {TABS.map(({ key, label }) => (
+        {/* ── Search Bar ── */}
+        <div className="admin-search-wrapper" ref={filterRef}>
+          <div className="admin-search-box">
+            <div className="admin-search-icon">
+              <Search size={20} />
+            </div>
+            <input
+              className="admin-search-input"
+              placeholder="Search categories by name..."
+              value={searchQuery}
+              onChange={(e) => { setSearchQuery(e.target.value); setPage(1); }}
+            />
+            {searchQuery && (
               <button
-                key={key}
-                onClick={() => { setActiveTab(key); setPage(1); setFilterOpen(false); }}
-                className={activeTab === key ? 'admin-filter-mobile-item-active' : 'admin-filter-mobile-item'}
+                type="button"
+                onClick={() => { setSearchQuery(''); setPage(1); }}
+                className="flex items-center justify-center px-3 text-slate-400 hover:text-slate-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors cursor-pointer"
               >
-                {label}
+                <X size={20} strokeWidth={2.5} />
               </button>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* ── Filter Tabs ── */}
-      <div className="admin-filters">
-        {TABS.map(({ key, label }) => (
-          <button
-            key={key}
-            onClick={() => { setActiveTab(key); setPage(1); }}
-            className={activeTab === key ? 'admin-filter-btn-active' : 'admin-filter-btn'}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-
-      {/* ── Table Card ── */}
-      <div className="admin-table-card">
-
-        {loading ? (
-          <div className="admin-loading">
-            <div className="admin-spinner"></div>
+            )}
+            <button
+              onClick={() => setFilterOpen(!filterOpen)}
+              className={activeTab !== 'All' ? 'admin-filter-toggle-active' : 'admin-filter-toggle'}
+            >
+              <SlidersHorizontal size={18} />
+            </button>
           </div>
 
-        ) : error ? (
-          <DataError message="Failed to load categories" onRetry={fetchCategories} retrying={loading} />
+          {filterOpen && (
+            <div className="admin-filters-mobile">
+              {TABS.map(({ key, label }) => (
+                <button
+                  key={key}
+                  onClick={() => { setActiveTab(key); setPage(1); setFilterOpen(false); }}
+                  className={activeTab === key ? 'admin-filter-mobile-item-active' : 'admin-filter-mobile-item'}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
 
-        ) : paginated.length === 0 ? (
-          <div className="admin-empty admin-empty-text flex flex-col items-center justify-center">
-            <Tag className="w-10 h-10 mb-3 opacity-40" />
-            <p className="text-sm font-medium">No categories found.</p>
-          </div>
+        {/* ── Filter Tabs ── */}
+        <div className="admin-filters">
+          {TABS.map(({ key, label }) => (
+            <button
+              key={key}
+              onClick={() => { setActiveTab(key); setPage(1); }}
+              className={activeTab === key ? 'admin-filter-btn-active' : 'admin-filter-btn'}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
 
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="admin-table table-fixed min-w-[850px] w-full">
-              <thead>
-                <tr className="admin-thead-row">
-                  <th className="admin-th w-[25%] text-left">Category Name</th>
-                  <th className="admin-th w-[20%] text-left">URL Handle</th>
-                  <th className="admin-th w-[15%] text-left">Parent</th>
-                  <th className="admin-th w-[10%]">Products</th>
-                  <th className="admin-th w-[12%]">Status</th>
-                  <th className="admin-th w-[10%]">Updated</th>
-                  <th className="admin-th w-[8%]">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="admin-tbody">
-                {paginated.map((cat) => {
-                  const { cls, label } = getLevelBadge(cat.level);
-                  return (
-                    <tr
-                      key={cat.id}
-                      className={`admin-tr group ${!cat.is_active ? 'opacity-60' : ''}`}
-                      onClick={() => router.push(`/categories/${cat.id}/edit`)}
-                    >
-                      {/* Name */}
-                      <td className="admin-td text-left">
-                        <div className="flex items-center justify-start gap-3 w-full min-w-0">
-                          <span 
-                            className="font-medium text-sm text-slate-900 dark:text-white truncate max-w-[150px] md:max-w-[200px] lg:max-w-[250px] block"
-                            title={cat.name}
+        {/* ── Table Card ── */}
+        <div className="admin-table-card">
+
+          {loading ? (
+            <div className="admin-loading">
+              <div className="admin-spinner"></div>
+            </div>
+
+          ) : error ? (
+            <DataError message="Failed to load categories" onRetry={fetchCategories} retrying={loading} />
+
+          ) : paginated.length === 0 ? (
+            <div className="admin-empty admin-empty-text flex flex-col items-center justify-center">
+              <Tag className="w-10 h-10 mb-3 opacity-40" />
+              <p className="text-sm font-medium">No categories found.</p>
+            </div>
+
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="admin-table table-fixed min-w-[850px] w-full">
+                <thead>
+                  <tr className="admin-thead-row">
+                    <th className="admin-th w-[25%] text-left">Category Name</th>
+                    <th className="admin-th w-[20%] text-left">URL Handle</th>
+                    <th className="admin-th w-[15%] text-left">Parent</th>
+                    <th className="admin-th w-[10%]">Products</th>
+                    <th className="admin-th w-[12%]">Status</th>
+                    <th className="admin-th w-[10%]">Updated</th>
+                    <th className="admin-th w-[8%]">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="admin-tbody">
+                  {paginated.map((cat) => {
+                    const { cls, label } = getLevelBadge(cat.level);
+                    return (
+                      <tr
+                        key={cat.id}
+                        className={`admin-tr group ${!cat.is_active ? 'opacity-60' : ''}`}
+                        onClick={() => router.push(`/categories/${cat.id}/edit`)}
+                      >
+                        {/* Name */}
+                        <td className="admin-td text-left">
+                          <div className="flex items-center justify-start gap-3 w-full min-w-0">
+                            <span
+                              className="font-medium text-sm text-slate-900 dark:text-white truncate max-w-[150px] md:max-w-[200px] lg:max-w-[250px] block"
+                              title={cat.name}
+                            >
+                              {cat.name}
+                            </span>
+                          </div>
+                        </td>
+
+                        {/* URL Handle */}
+                        <td className="admin-td text-left">
+                          <code
+                            className="text-xs font-mono bg-slate-100 dark:bg-gray-700 px-2 py-1 rounded text-slate-500 dark:text-gray-400 truncate max-w-[150px] md:max-w-[200px] lg:max-w-[250px] inline-block align-bottom"
+                            title={`/${cat.full_slug || cat.slug}`}
                           >
-                            {cat.name}
+                            /{cat.full_slug || cat.slug}
+                          </code>
+                        </td>
+
+                        {/* Parent */}
+                        <td className="admin-td text-sm text-slate-500 dark:text-gray-400 text-left">
+                          {cat.parent ? (
+                            <span
+                              className="inline-block px-2.5 py-1 rounded-md bg-slate-100 dark:bg-gray-700 text-xs font-medium text-slate-600 dark:text-gray-300 truncate max-w-[120px] md:max-w-[150px] lg:max-w-[200px] align-bottom"
+                              title={getParentName(cat.parent)}
+                            >
+                              {getParentName(cat.parent)}
+                            </span>
+                          ) : (
+                            <span className="text-slate-300 dark:text-gray-600">—</span>
+                          )}
+                        </td>
+
+                        {/* Products */}
+                        <td className="admin-td whitespace-nowrap">
+                          <span className="inline-block px-2.5 py-1 rounded-md bg-violet-500/10 text-violet-500 border border-violet-500/20 text-xs font-bold">
+                            {(cat.product_count ?? 0).toLocaleString()}
                           </span>
-                        </div>
-                      </td>
+                        </td>
 
-                      {/* URL Handle */}
-                      <td className="admin-td text-left">
-                        <code 
-                          className="text-xs font-mono bg-slate-100 dark:bg-gray-700 px-2 py-1 rounded text-slate-500 dark:text-gray-400 truncate max-w-[150px] md:max-w-[200px] lg:max-w-[250px] inline-block align-bottom"
-                          title={`/${cat.full_slug || cat.slug}`}
-                        >
-                          /{cat.full_slug || cat.slug}
-                        </code>
-                      </td>
-
-                      {/* Parent */}
-                      <td className="admin-td text-sm text-slate-500 dark:text-gray-400 text-left">
-                        {cat.parent ? (
-                          <span 
-                            className="inline-block px-2.5 py-1 rounded-md bg-slate-100 dark:bg-gray-700 text-xs font-medium text-slate-600 dark:text-gray-300 truncate max-w-[120px] md:max-w-[150px] lg:max-w-[200px] align-bottom"
-                            title={getParentName(cat.parent)}
-                          >
-                            {getParentName(cat.parent)}
+                        {/* Status */}
+                        <td className="admin-td whitespace-nowrap">
+                          <span className={`inline-flex items-center justify-center gap-1.5 min-w-[5.5rem] px-3 py-1 rounded-full text-xs font-bold ${cat.is_active
+                              ? 'bg-green-500/10 text-green-400 border border-green-500/20'
+                              : 'bg-red-500/10 text-red-400 border border-red-500/20'
+                            }`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${cat.is_active ? 'bg-green-500' : 'bg-red-500'}`} />
+                            {cat.is_active ? 'Active' : 'Inactive'}
                           </span>
-                        ) : (
-                          <span className="text-slate-300 dark:text-gray-600">—</span>
-                        )}
-                      </td>
+                        </td>
 
-                      {/* Products */}
-                      <td className="admin-td whitespace-nowrap">
-                        <span className="inline-block px-2.5 py-1 rounded-md bg-violet-500/10 text-violet-500 border border-violet-500/20 text-xs font-bold">
-                          {(cat.product_count ?? 0).toLocaleString()}
-                        </span>
-                      </td>
+                        {/* Updated */}
+                        <td className="admin-td whitespace-nowrap text-sm text-slate-500 dark:text-gray-400">
+                          {formatDate(cat.updated_at)}
+                        </td>
 
-                      {/* Status */}
-                      <td className="admin-td whitespace-nowrap">
-                        <span className={`inline-flex items-center justify-center gap-1.5 min-w-[5.5rem] px-3 py-1 rounded-full text-xs font-bold ${
-                          cat.is_active
-                            ? 'bg-green-500/10 text-green-400 border border-green-500/20'
-                            : 'bg-red-500/10 text-red-400 border border-red-500/20'
-                        }`}>
-                          <span className={`w-1.5 h-1.5 rounded-full ${cat.is_active ? 'bg-green-500' : 'bg-red-500'}`} />
-                          {cat.is_active ? 'Active' : 'Inactive'}
-                        </span>
-                      </td>
-
-                      {/* Updated */}
-                      <td className="admin-td whitespace-nowrap text-sm text-slate-500 dark:text-gray-400">
-                        {formatDate(cat.updated_at)}
-                      </td>
-
-                      {/* Actions */}
-                      <td className="admin-td whitespace-nowrap text-center">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger
-                            onClick={(e) => e.stopPropagation()}
-                            className="inline-flex items-center justify-center size-8 rounded-lg text-slate-600 dark:text-gray-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-gray-700 transition-all"
-                          >
-                            <MoreHorizontal size={18} />
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" sideOffset={8} className="w-44 rounded-xl shadow-lg border border-slate-200 dark:border-gray-700 p-1.5 bg-white dark:bg-gray-800 z-[100]">
-                            <DropdownMenuItem
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                router.push(`/categories/${cat.id}/edit`);
-                              }}
-                              className="cursor-pointer flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-700 dark:text-gray-300 hover:bg-slate-50 dark:hover:bg-gray-700"
+                        {/* Actions */}
+                        <td className="admin-td whitespace-nowrap text-center">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger
+                              onClick={(e) => e.stopPropagation()}
+                              className="inline-flex items-center justify-center size-8 rounded-lg text-slate-600 dark:text-gray-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-gray-700 transition-all"
                             >
-                              <Pencil size={16} className="text-slate-400 dark:text-gray-500" />
-                              <span>Edit</span>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleToggleActive(cat);
-                              }}
-                              className="cursor-pointer flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-700 dark:text-gray-300 hover:bg-slate-50 dark:hover:bg-gray-700"
-                            >
-                              {cat.is_active ? <EyeOff size={16} className="text-slate-400 dark:text-gray-500" /> : <Eye size={16} className="text-slate-400 dark:text-gray-500" />}
-                              <span>{cat.is_active ? 'Deactivate' : 'Activate'}</span>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setDeleteModal({ id: cat.id, name: cat.name });
-                              }}
-                              className="cursor-pointer flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30"
-                            >
-                              <Trash2 size={16} />
-                              <span>Delete</span>
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
+                              <MoreHorizontal size={18} />
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" sideOffset={8} className="w-44 rounded-xl shadow-lg border border-slate-200 dark:border-gray-700 p-1.5 bg-white dark:bg-gray-800 z-[100]">
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  router.push(`/categories/${cat.id}/edit`);
+                                }}
+                                className="cursor-pointer flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-700 dark:text-gray-300 hover:bg-slate-50 dark:hover:bg-gray-700"
+                              >
+                                <Pencil size={16} className="text-slate-400 dark:text-gray-500" />
+                                <span>Edit</span>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleToggleActive(cat);
+                                }}
+                                className="cursor-pointer flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-700 dark:text-gray-300 hover:bg-slate-50 dark:hover:bg-gray-700"
+                              >
+                                {cat.is_active ? <EyeOff size={16} className="text-slate-400 dark:text-gray-500" /> : <Eye size={16} className="text-slate-400 dark:text-gray-500" />}
+                                <span>{cat.is_active ? 'Deactivate' : 'Activate'}</span>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setDeleteModal({ id: cat.id, name: cat.name });
+                                }}
+                                className="cursor-pointer flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30"
+                              >
+                                <Trash2 size={16} />
+                                <span>Delete</span>
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
 
-        {/* Pagination */}
-        {!loading && filtered.length > PER_PAGE && (
-          <Pagination
-            currentPage={page}
-            totalPages={totalPages}
-            onPageChange={setPage}
-            totalItems={filtered.length}
-            perPage={PER_PAGE}
-            itemLabel="categories"
-          />
-        )}
-      </div>
+          {/* Pagination */}
+          {!loading && filtered.length > PER_PAGE && (
+            <Pagination
+              currentPage={page}
+              totalPages={totalPages}
+              onPageChange={setPage}
+              totalItems={filtered.length}
+              perPage={PER_PAGE}
+              itemLabel="categories"
+            />
+          )}
+        </div>
       </div>
 
       {/* ── Delete Confirmation Modal ── */}

@@ -174,7 +174,7 @@ export default function StoresPage() {
               <button
                 type="button"
                 onClick={() => { setSearchQuery(''); setCurrentPage(1); }}
-                className="flex items-center justify-center px-3 text-slate-400 hover:text-slate-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors"
+                className="flex items-center justify-center px-3 text-slate-400 hover:text-slate-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors cursor-pointer"
               >
                 <X size={20} strokeWidth={2.5} />
               </button>
@@ -226,13 +226,13 @@ export default function StoresPage() {
                             <div className="flex items-center justify-start gap-3">
                               <div className="size-10 bg-slate-100 dark:bg-gray-700 rounded-lg flex items-center justify-center text-lg flex-shrink-0">🏪</div>
                               <div className="min-w-0">
-                                <p 
+                                <p
                                   className="text-sm font-semibold truncate text-slate-900 dark:text-white max-w-[200px]"
                                   title={store.name}
                                 >
                                   {store.name}
                                 </p>
-                                <p 
+                                <p
                                   className="text-xs text-violet-500 truncate max-w-[200px]"
                                   title={store.full_domain || `${store.subdomain}.localhost:3000`}
                                 >
@@ -244,7 +244,7 @@ export default function StoresPage() {
 
                           {/* Description */}
                           <td className="admin-td text-left max-w-[200px]">
-                            <span 
+                            <span
                               className="text-slate-500 dark:text-gray-400 text-sm block truncate"
                               title={store.description || '—'}
                             >
@@ -259,11 +259,10 @@ export default function StoresPage() {
 
                           {/* Status */}
                           <td className="admin-td">
-                            <span className={`inline-flex items-center justify-center gap-1.5 min-w-[5.5rem] px-3 py-1 rounded-full text-xs font-bold ${
-                              store.is_active
+                            <span className={`inline-flex items-center justify-center gap-1.5 min-w-[5.5rem] px-3 py-1 rounded-full text-xs font-bold ${store.is_active
                                 ? 'bg-green-500/10 text-green-400 border border-green-500/20'
                                 : 'bg-red-500/10 text-red-400 border border-red-500/20'
-                            }`}>
+                              }`}>
                               <span className={`w-1.5 h-1.5 rounded-full ${store.is_active ? 'bg-green-500' : 'bg-red-500'}`} />
                               {store.is_active ? 'Active' : 'Inactive'}
                             </span>

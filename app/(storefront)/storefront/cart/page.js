@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCartStore } from '@/store/cartStore';
+import { useStorefrontAuthStore } from '@/store/storefrontAuthStore';
 import { Minus, Plus, Trash2, ArrowRight, ShoppingBag } from 'lucide-react';
 import { PageTransition, MagneticButton } from '@/components/storefront/animations';
 import { useStorefrontPath } from '@/lib/useStorefrontPath';
@@ -14,6 +15,10 @@ import { useStoreInfo } from '@/lib/StorefrontContext';
 export default function CartPage() {
   const [hydrated, setHydrated] = useState(false);
   const { items, removeItem, updateQuantity } = useCartStore();
+  const customer = useStorefrontAuthStore((state) => state.customer);
+  const accessToken = useStorefrontAuthStore((state) => state.accessToken);
+  const isLoggedIn = !!(customer && accessToken);
+  
   const { href } = useStorefrontPath();
   const storeInfo = useStoreInfo();
   const currency = storeInfo?.currency;
@@ -201,7 +206,15 @@ export default function CartPage() {
                   <span className="font-black text-gray-900 text-2xl">{formatCurrency(subtotal, currency)}</span>
                 </div>
               </div>
-              <Link href={href('/checkout')}>
+              <Link 
+                href={href('/checkout')}
+                onClick={(e) => {
+                  if (!isLoggedIn) {
+                    e.preventDefault();
+                    window.dispatchEvent(new CustomEvent('open-auth-modal', { detail: 'signin' }));
+                  }
+                }}
+              >
                 <MagneticButton
                   as="div"
                   className="mt-7 w-full flex items-center justify-center gap-2 bg-gradient-to-r from-orange-500 to-pink-500 text-white py-4 rounded-2xl font-bold text-lg shadow-2xl shadow-orange-500/25 cursor-pointer"

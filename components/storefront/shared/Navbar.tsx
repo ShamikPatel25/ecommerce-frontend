@@ -127,23 +127,25 @@ export function Navbar({ storeName, onOpenAuth, onOpenCart }) {
                 <span className="sr-only">Favorites</span>
               </button>
 
+              {isMounted && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="hidden md:flex relative h-10 w-10 rounded-full text-foreground/70 hover:text-foreground hover:bg-muted"
+                  onClick={onOpenCart}
+                >
+                  <ShoppingBag className="h-5 w-5" />
+                  {itemCount > 0 && (
+                    <Badge className="absolute -top-1 -right-1 h-5 min-w-5 flex items-center justify-center p-0 rounded-full bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary">
+                      {itemCount > 99 ? '99+' : itemCount}
+                    </Badge>
+                  )}
+                  <span className="sr-only">Cart</span>
+                </Button>
+              )}
+
               {isMounted && isLoggedIn ? (
                 <>
-                  {/* Cart - Desktop only (mobile has bottom nav) */}
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="hidden md:flex relative h-10 w-10 rounded-full text-foreground/70 hover:text-foreground hover:bg-muted"
-                    onClick={onOpenCart}
-                  >
-                    <ShoppingBag className="h-5 w-5" />
-                    {itemCount > 0 && (
-                      <Badge className="absolute -top-1 -right-1 h-5 min-w-5 flex items-center justify-center p-0 rounded-full bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary">
-                        {itemCount > 99 ? '99+' : itemCount}
-                      </Badge>
-                    )}
-                    <span className="sr-only">Cart</span>
-                  </Button>
 
                   {/* User Avatar/Menu */}
                   <DropdownMenu>

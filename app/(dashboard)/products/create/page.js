@@ -131,20 +131,7 @@ const reclassifyImages = (prevImages, selAttrs, allAttrs) => {
   return updated;
 };
 
-const validateCatalogFields = (formData, selectedAttributes, attributes) => {
-  if (!formData.name.trim() || !formData.sku.trim() || !formData.price) {
-    return 'Please fill in Product Name, SKU and Price first';
-  }
-  if (!formData.category) {
-    return 'Please select a category for catalog products';
-  }
-  if (selectedAttributes.length === 0) {
-    return attributes.length === 0
-      ? 'This category has no attributes. Create attributes first.'
-      : 'Please select at least one attribute';
-  }
-  return null;
-};
+
 
 const removeImageAtIndex = (images, idx) => {
   const removed = images[idx];
@@ -337,22 +324,9 @@ export default function CreateProductPage() {
 
   /* ── Step 1 → Step 2 (Generate Catalog clicked) ── */
   const handleGenerateCatalog = async () => {
-    const validationError = validateCatalogFields(formData, selectedAttributes, attributes);
-    if (validationError) {
-      toast.error(validationError);
-      return;
-    }
-
-    try {
-      const res = await productAPI.checkSku(formData.sku.trim());
-      if (res.data?.exists) {
-        setSkuError('A product with this SKU already exists.');
-        toast.error('A product with this SKU already exists.');
-        return;
-      }
-    } catch {
-      /* SKU check failed, will be validated on submit */
-    }
+    setErrors({});
+    const isValid = await validateForm(true);
+    if (!isValid) return;
 
     setSkuError('');
     resetSelections();
@@ -482,7 +456,7 @@ export default function CreateProductPage() {
 
   /* ── Submit helpers (extracted to reduce cognitive complexity) ── */
 
-  const validateForm = async () => {
+  const validateForm = async (isStep1Check = false) => {
     // Validate required fields one at a time
     if (!formData.name.trim()) {
       setErrors({ name: 'Product name is required' });
@@ -499,14 +473,14 @@ export default function CreateProductPage() {
       toast.error('Price is required');
       return false;
     }
-    if (formData.price.replace(/\D/g, '').length > 10) {
-      setErrors({ price: 'Please enter a valid price (maximum 10 digits allowed).' });
-      toast.error('Please enter a valid price (maximum 10 digits allowed).');
+    if (formData.price.split('.')[0].replace(/\D/g, '').length > 8) {
+      setErrors({ price: 'Please enter a valid price (maximum 8 digits allowed).' });
+      toast.error('Please enter a valid price (maximum 8 digits allowed).');
       return false;
     }
-    if (formData.compare_at_price && formData.compare_at_price.replace(/\D/g, '').length > 10) {
-      setErrors({ compare_at_price: 'Please enter a valid price (maximum 10 digits allowed).' });
-      toast.error('Please enter a valid price (maximum 10 digits allowed).');
+    if (formData.compare_at_price && formData.compare_at_price.split('.')[0].replace(/\D/g, '').length > 8) {
+      setErrors({ compare_at_price: 'Please enter a valid price (maximum 8 digits allowed).' });
+      toast.error('Please enter a valid price (maximum 8 digits allowed).');
       return false;
     }
     if (!formData.category) {
@@ -521,25 +495,32 @@ export default function CreateProductPage() {
     }
 
     if (formData.product_type === 'catalog') {
-      if (step === 1) { handleGenerateCatalog(); return false; }
-      if (catalogCombos.length === 0) {
-        toast.error('Please add at least one catalog combination');
-        return false;
-      }
-      for (let i = 0; i < catalogCombos.length; i++) {
-        const c = catalogCombos[i];
-        if (c.price && String(c.price).replace(/\D/g, '').length > 10) {
-          toast.error('Please enter a valid price (maximum 10 digits allowed).');
+      if (isStep1Check) {
+        if (selectedAttributes.length === 0) {
+          toast.error(attributes.length === 0 ? 'This category has no attributes. Create attributes first.' : 'Please select at least one attribute');
           return false;
         }
-        if (c.stock && String(c.stock).replace(/\D/g, '').length > 5) {
-          toast.error('Please enter a valid stock (maximum 5 digits allowed).');
+      } else {
+        if (step === 1) { handleGenerateCatalog(); return false; }
+        if (catalogCombos.length === 0) {
+          toast.error('Please add at least one catalog combination');
           return false;
+        }
+        for (let i = 0; i < catalogCombos.length; i++) {
+          const c = catalogCombos[i];
+          if (c.price && String(c.price).split('.')[0].replace(/\D/g, '').length > 8) {
+            toast.error('Please enter a valid price (maximum 8 digits allowed).');
+            return false;
+          }
+          if (c.stock && String(c.stock).replace(/\D/g, '').length > 5) {
+            toast.error('Please enter a valid stock (maximum 5 digits allowed).');
+            return false;
+          }
         }
       }
     }
 
-    if (formData.product_type === 'single') {
+    if (formData.product_type === 'single' || isStep1Check) {
       try {
         const res = await productAPI.checkSku(formData.sku.trim());
         if (res.data?.exists) {
@@ -1055,8 +1036,19 @@ export default function CreateProductPage() {
                           placeholder={formData.price || '0.00'}
                           value={combo.price}
                           onChange={(e) => {
-                            const val = e.target.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');
+                            const val = e.target.value.replace(/[^0-9]/g, '');
                             updateComboField(idx, 'price', val);
+                          }}
+                          onFocus={() => {
+                            if (combo.price && String(combo.price).endsWith('.00')) {
+                              updateComboField(idx, 'price', String(combo.price).replace(/\.00$/, ''));
+                            }
+                          }}
+                          onBlur={(e) => {
+                            const val = e.target.value;
+                            if (val && !isNaN(val)) {
+                              updateComboField(idx, 'price', Number.parseFloat(val).toFixed(2));
+                            }
                           }}
                           className="w-24 px-2 py-1.5 rounded-md border border-violet-500/20 bg-violet-500/5 text-sm focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/20 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                         />
@@ -1227,6 +1219,17 @@ export default function CreateProductPage() {
                     setFormData({ ...formData, price: val });
                     if (errors.price) setErrors({ ...errors, price: null });
                   }}
+                  onFocus={() => {
+                    if (formData.price && String(formData.price).endsWith('.00')) {
+                      setFormData({ ...formData, price: String(formData.price).replace(/\.00$/, '') });
+                    }
+                  }}
+                  onBlur={(e) => {
+                    const val = e.target.value;
+                    if (val && !isNaN(val)) {
+                      setFormData({ ...formData, price: Number.parseFloat(val).toFixed(2) });
+                    }
+                  }}
                 />
               </div>
               {errors.price && <p className="text-xs text-red-500">{errors.price}</p>}
@@ -1248,6 +1251,17 @@ export default function CreateProductPage() {
                     const val = e.target.value.replace(/[^0-9]/g, '');
                     setFormData({ ...formData, compare_at_price: val });
                     if (errors.compare_at_price) setErrors({ ...errors, compare_at_price: null });
+                  }}
+                  onFocus={() => {
+                    if (formData.compare_at_price && String(formData.compare_at_price).endsWith('.00')) {
+                      setFormData({ ...formData, compare_at_price: String(formData.compare_at_price).replace(/\.00$/, '') });
+                    }
+                  }}
+                  onBlur={(e) => {
+                    const val = e.target.value;
+                    if (val && !isNaN(val)) {
+                      setFormData({ ...formData, compare_at_price: Number.parseFloat(val).toFixed(2) });
+                    }
                   }}
                 />
               </div>

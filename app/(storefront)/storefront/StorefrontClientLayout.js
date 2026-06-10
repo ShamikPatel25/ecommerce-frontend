@@ -39,6 +39,15 @@ export default function StorefrontClientLayout({ children }) {
   const closeAuth = useCallback(() => setAuthOpen(false), []);
   const closeCart = useCallback(() => setCartOpen(false), []);
 
+  useEffect(() => {
+    const handleOpenAuth = (e) => {
+      setAuthTab(e.detail || 'signin');
+      setAuthOpen(true);
+    };
+    window.addEventListener('open-auth-modal', handleOpenAuth);
+    return () => window.removeEventListener('open-auth-modal', handleOpenAuth);
+  }, []);
+
   if (storeNotFound) {
     return (
       <ThemeProvider

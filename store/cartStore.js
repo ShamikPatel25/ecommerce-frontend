@@ -17,10 +17,10 @@ export const useCartStore = create(
           const existing = updated[existingIndex];
           const newMaxStock = item.maxStock ?? existing.maxStock;
           let newQty = existing.quantity + item.quantity;
-          // Cap at maxStock if known
           if (newMaxStock != null && newQty > newMaxStock) {
             newQty = newMaxStock;
           }
+          if (newQty > 20) newQty = 20;
           updated[existingIndex] = {
             ...existing,
             quantity: newQty,
@@ -63,8 +63,9 @@ export const useCartStore = create(
         set({
           items: get().items.map((i) => {
             if (!((i.product || i.id) === product && i.variant === variant)) return i;
-            // Cap at maxStock if known
-            const capped = (i.maxStock != null && quantity > i.maxStock) ? i.maxStock : quantity;
+            // Cap at maxStock if known and absolute max of 20
+            let capped = (i.maxStock != null && quantity > i.maxStock) ? i.maxStock : quantity;
+            if (capped > 20) capped = 20;
             return { ...i, quantity: capped };
           }),
         });
@@ -82,13 +83,50 @@ export const useCartStore = create(
         if (!userId) return;
         try {
           const saved = localStorage.getItem(`cart-storage-${userId}`);
+          const currentItems = get().items || [];
+          
           if (saved) {
-            set({ items: JSON.parse(saved) });
+            const savedItems = JSON.parse(saved);
+            
+            // Merge current guest items into saved user items
+            const mergedItems = [...savedItems];
+            
+            currentItems.forEach((guestItem) => {
+              const existingIndex = mergedItems.findIndex(
+                (i) => (i.product || i.id) === (guestItem.product || guestItem.id) && i.variant === guestItem.variant
+              );
+              
+              if (existingIndex >= 0) {
+                // Item exists, sum quantities
+                const existing = mergedItems[existingIndex];
+                const newMaxStock = guestItem.maxStock ?? existing.maxStock;
+                let newQty = existing.quantity + guestItem.quantity;
+                if (newMaxStock != null && newQty > newMaxStock) {
+                  newQty = newMaxStock;
+                }
+                if (newQty > 20) newQty = 20;
+                mergedItems[existingIndex] = {
+                  ...existing,
+                  quantity: newQty,
+                  maxStock: newMaxStock,
+                };
+              } else {
+                // New item from guest session
+                mergedItems.push(guestItem);
+              }
+            });
+            
+            set({ items: mergedItems });
+          } else if (currentItems.length > 0) {
+            // User had no saved cart, but has guest cart, just keep the guest cart
+            set({ items: currentItems });
           } else {
             set({ items: [] });
           }
         } catch {
-          set({ items: [] });
+          // Keep current items if parsing fails
+          const currentItems = get().items || [];
+          set({ items: currentItems });
         }
       },
     }),

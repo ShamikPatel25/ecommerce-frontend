@@ -215,11 +215,15 @@ export default function ProductDetailClient({ slug, initialVariantSku = null }) 
     return cartItem?.quantity || 0;
   }, [product, variantInfo.variant, cartItems]);
 
-  // Remaining stock = total stock - items already in cart
-  const remainingStock = Math.max(0, maxStock - cartQuantity);
+  const rawRemainingStock = Math.max(0, maxStock - cartQuantity);
 
-  const catalogInStock = variantInfo.variant ? remainingStock > 0 : false;
-  const inStock = isCatalog ? catalogInStock : (Math.max(0, (product?.stock || 0) - cartQuantity) > 0);
+  // Remaining stock = effective stock - items already in cart
+  const effectiveMaxStock = Math.min(maxStock, 20);
+  const remainingStock = Math.max(0, effectiveMaxStock - cartQuantity);
+
+  const catalogInStock = variantInfo.variant ? rawRemainingStock > 0 : false;
+  const inStock = isCatalog ? catalogInStock : (rawRemainingStock > 0);
+  const isLimitReached = inStock && remainingStock === 0;
 
   /* eslint-disable react-hooks/set-state-in-effect -- clamp quantity to stock */
   useEffect(() => {
@@ -506,14 +510,16 @@ export default function ProductDetailClient({ slug, initialVariantSku = null }) 
 
               <Button
                 onClick={handleAddToCart}
-                disabled={!inStock}
+                disabled={!inStock || isLimitReached}
                 size="lg"
-                className={`flex-1 h-14 text-lg font-bold rounded-2xl ${!inStock ? 'bg-muted text-muted-foreground cursor-not-allowed' : addedToCart ? 'bg-green-600 hover:bg-green-600/90 text-white shadow-green-600/20 shadow-lg' : 'shadow-primary/20 shadow-lg'}`}
+                className={`flex-1 h-14 text-lg font-bold rounded-2xl ${(!inStock || isLimitReached) ? 'bg-muted text-muted-foreground cursor-not-allowed' : addedToCart ? 'bg-green-600 hover:bg-green-600/90 text-white shadow-green-600/20 shadow-lg' : 'shadow-primary/20 shadow-lg'}`}
               >
                 {addedToCart ? (
                   <span className="flex items-center"><Check className="w-6 h-6 mr-2" /> Added to Cart</span>
                 ) : !inStock ? (
                   'Out of Stock'
+                ) : isLimitReached ? (
+                  'Limit Reached'
                 ) : (
                   'Add to Cart'
                 )}
@@ -522,7 +528,12 @@ export default function ProductDetailClient({ slug, initialVariantSku = null }) 
 
             {/* Stock indicator */}
             <div className="mb-10">
-              {inStock ? (
+              {isLimitReached ? (
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  <div className="w-2.5 h-2.5 rounded-full bg-orange-500"></div>
+                  <span className="text-orange-500">Maximum limit of 20 items per order reached.</span>
+                </div>
+              ) : inStock ? (
                 <div className="flex items-center gap-2 text-sm font-medium">
                   <div className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse"></div>
                   <span className="text-green-500">In Stock and Ready to Ship</span>

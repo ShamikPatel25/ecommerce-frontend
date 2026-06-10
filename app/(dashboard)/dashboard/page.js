@@ -215,10 +215,10 @@ export default function DashboardPage() {
                 </td>
                 <td className="admin-td text-left">
                   <div className="flex items-center justify-start gap-2.5">
-                    <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                    <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex flex-shrink-0 items-center justify-center text-[11px] font-semibold text-slate-500 dark:text-slate-400">
                       {getInitials(order.customer_name)}
                     </div>
-                    <span className="text-sm text-slate-700 dark:text-slate-300">{order.customer_name || 'Unknown'}</span>
+                    <span className="text-sm text-slate-700 dark:text-slate-300 whitespace-nowrap">{order.customer_name || 'Unknown'}</span>
                   </div>
                 </td>
                 <td className="admin-td text-sm text-slate-500 dark:text-slate-400">

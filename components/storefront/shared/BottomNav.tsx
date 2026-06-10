@@ -54,14 +54,8 @@ export function BottomNav({ onOpenAuth, onOpenCart }: BottomNavProps) {
       label: 'Cart',
       href: '/cart',
       isLink: false,
-      onClick: () => {
-        if (isLoggedIn) {
-          onOpenCart();
-        } else {
-          onOpenAuth('signin');
-        }
-      },
-      badge: isLoggedIn ? itemCount : 0,
+      onClick: onOpenCart,
+      badge: itemCount,
     },
     {
       icon: User,

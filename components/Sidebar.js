@@ -78,7 +78,7 @@ export default function Sidebar() {
   // Close dropdowns on outside click/tap
   useEffect(() => {
     const handleClick = (e) => {
-      if (storeDropdownRef.current && !storeDropdownRef.current.contains(e.target)) {
+      if (!e.target.closest('.store-switcher-container')) {
         setStoreDropdownOpen(false);
       }
     };
@@ -98,10 +98,13 @@ export default function Sidebar() {
     }
     setActiveStore(store);
     setStoreDropdownOpen(false);
-    // Small delay to ensure zustand persists to localStorage before reload
+    
+    // Use Next.js router instead of hard reload to prevent network request cancellation
     setTimeout(() => {
-      window.location.href = '/dashboard';
-    }, 100);
+      if (pathname !== '/dashboard') {
+        router.push('/dashboard');
+      }
+    }, 50);
   };
 
   // Pending orders count for badge
@@ -161,7 +164,7 @@ export default function Sidebar() {
       </div>
 
       {/* Store Switcher */}
-      <div className="px-3 py-3 border-b border-gray-200 dark:border-gray-800" ref={storeDropdownRef}>
+      <div className="px-3 py-3 border-b border-gray-200 dark:border-gray-800 store-switcher-container">
         {stores.length === 0 && !activeStore ? (
           <Link
             href="/stores/create"

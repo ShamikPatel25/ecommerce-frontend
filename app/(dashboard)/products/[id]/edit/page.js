@@ -159,14 +159,14 @@ export default function EditProductPage() {
       toast.error('Price is required');
       return;
     }
-    if (formData.price.replace(/\D/g, '').length > 10) {
-      setErrors({ price: 'Please enter a valid price (maximum 10 digits allowed).' });
-      toast.error('Please enter a valid price (maximum 10 digits allowed).');
+    if (formData.price.split('.')[0].replace(/\D/g, '').length > 8) {
+      setErrors({ price: 'Please enter a valid price (maximum 8 digits allowed).' });
+      toast.error('Please enter a valid price (maximum 8 digits allowed).');
       return;
     }
-    if (formData.compare_at_price && formData.compare_at_price.replace(/\D/g, '').length > 10) {
-      setErrors({ compare_at_price: 'Please enter a valid price (maximum 10 digits allowed).' });
-      toast.error('Please enter a valid price (maximum 10 digits allowed).');
+    if (formData.compare_at_price && formData.compare_at_price.split('.')[0].replace(/\D/g, '').length > 8) {
+      setErrors({ compare_at_price: 'Please enter a valid price (maximum 8 digits allowed).' });
+      toast.error('Please enter a valid price (maximum 8 digits allowed).');
       return;
     }
     if (formData.compare_at_price && Number.parseFloat(formData.compare_at_price) <= Number.parseFloat(formData.price)) {
@@ -325,8 +325,8 @@ export default function EditProductPage() {
 
     for (let i = 0; i < newCatalogs.length; i++) {
       const c = newCatalogs[i];
-      if (c.price && String(c.price).replace(/\D/g, '').length > 10) {
-        toast.error('Catalog variant price cannot exceed 10 digits');
+      if (c.price && String(c.price).split('.')[0].replace(/\D/g, '').length > 8) {
+        toast.error('Catalog variant price cannot exceed 8 digits');
         return;
       }
       if (c.stock && String(c.stock).replace(/\D/g, '').length > 5) {
@@ -374,8 +374,8 @@ export default function EditProductPage() {
   };
 
   const handleSaveVariant = async (catalog) => {
-    if (catalog.price && String(catalog.price).replace(/\D/g, '').length > 10) {
-      toast.error('Please enter a valid price (maximum 10 digits allowed).');
+    if (catalog.price && String(catalog.price).split('.')[0].replace(/\D/g, '').length > 8) {
+      toast.error('Please enter a valid price (maximum 8 digits allowed).');
       return;
     }
     if (catalog.stock && String(catalog.stock).replace(/\D/g, '').length > 5) {
@@ -442,8 +442,8 @@ export default function EditProductPage() {
   const hasFormChanges = originalData && (
     formData.name !== originalData.name ||
     formData.sku !== originalData.sku ||
-    formData.price !== originalData.price ||
-    formData.compare_at_price !== originalData.compare_at_price ||
+    Number.parseFloat(formData.price || 0) !== Number.parseFloat(originalData.price || 0) ||
+    Number.parseFloat(formData.compare_at_price || 0) !== Number.parseFloat(originalData.compare_at_price || 0) ||
     formData.stock !== originalData.stock ||
     formData.description !== originalData.description ||
     formData.is_active !== originalData.is_active ||
@@ -548,6 +548,17 @@ export default function EditProductPage() {
                     setFormData({ ...formData, price: val });
                     if (errors.price) setErrors({ ...errors, price: null });
                   }}
+                  onFocus={() => {
+                    if (formData.price && String(formData.price).endsWith('.00')) {
+                      setFormData({ ...formData, price: String(formData.price).replace(/\.00$/, '') });
+                    }
+                  }}
+                  onBlur={(e) => {
+                    const val = e.target.value;
+                    if (val && !isNaN(val)) {
+                      setFormData({ ...formData, price: Number.parseFloat(val).toFixed(2) });
+                    }
+                  }}
                 />
               </div>
               {errors.price && <p className="text-xs text-red-500">{errors.price}</p>}
@@ -566,6 +577,17 @@ export default function EditProductPage() {
                     const val = e.target.value.replace(/[^0-9]/g, '');
                     setFormData({ ...formData, compare_at_price: val });
                     if (errors.compare_at_price) setErrors({ ...errors, compare_at_price: null });
+                  }}
+                  onFocus={() => {
+                    if (formData.compare_at_price && String(formData.compare_at_price).endsWith('.00')) {
+                      setFormData({ ...formData, compare_at_price: String(formData.compare_at_price).replace(/\.00$/, '') });
+                    }
+                  }}
+                  onBlur={(e) => {
+                    const val = e.target.value;
+                    if (val && !isNaN(val)) {
+                      setFormData({ ...formData, compare_at_price: Number.parseFloat(val).toFixed(2) });
+                    }
                   }}
                 />
               </div>
@@ -804,8 +826,8 @@ export default function EditProductPage() {
                               onChange={(e) => {
                                 const val = e.target.value.replace(/[^0-9]/g, '');
                                 updateCatalogField(catalog.id, 'stock', val);
+                                if (!isNew) updateCatalogField(catalog.id, 'isDirty', true);
                               }}
-                              onFocus={() => !isNew && updateCatalogField(catalog.id, 'isDirty', true)}
                               className="w-24 h-10 px-2 border border-violet-500/20 bg-violet-500/5 rounded-lg text-sm focus:outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                               placeholder="0"
                             />
@@ -820,9 +842,20 @@ export default function EditProductPage() {
                               value={catalog.price ?? ''}
                               disabled={isPendingDelete}
                               onChange={(e) => {
-                                const val = e.target.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');
+                                const val = e.target.value.replace(/[^0-9]/g, '');
                                 updateCatalogField(catalog.id, 'price', val);
                                 if (!isNew) updateCatalogField(catalog.id, 'isDirty', true);
+                              }}
+                              onFocus={() => {
+                                if (catalog.price && String(catalog.price).endsWith('.00')) {
+                                  updateCatalogField(catalog.id, 'price', String(catalog.price).replace(/\.00$/, ''));
+                                }
+                              }}
+                              onBlur={(e) => {
+                                const val = e.target.value;
+                                if (val && !isNaN(val)) {
+                                  updateCatalogField(catalog.id, 'price', Number.parseFloat(val).toFixed(2));
+                                }
                               }}
                               className="w-28 h-10 px-2 border border-violet-500/20 bg-violet-500/5 rounded-lg text-sm focus:outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                               placeholder={product.price}

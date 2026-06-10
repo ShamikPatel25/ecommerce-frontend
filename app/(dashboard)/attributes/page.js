@@ -146,7 +146,7 @@ export default function AttributesPage() {
               <button
                 type="button"
                 onClick={() => { setSearchQuery(''); setCurrentPage(1); }}
-                className="flex items-center justify-center px-3 text-slate-400 hover:text-slate-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors"
+                className="flex items-center justify-center px-3 text-slate-400 hover:text-slate-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors cursor-pointer"
               >
                 <X size={20} strokeWidth={2.5} />
               </button>
@@ -196,7 +196,7 @@ export default function AttributesPage() {
                           {/* Attribute Name */}
                           <td className="admin-td text-left">
                             <div className="flex items-center justify-start gap-3 w-full min-w-0">
-                              <span 
+                              <span
                                 className="text-slate-900 dark:text-white text-sm font-medium truncate max-w-[150px] lg:max-w-[250px] block"
                                 title={attr.name}
                               >
@@ -207,7 +207,7 @@ export default function AttributesPage() {
 
                           {/* Category */}
                           <td className="admin-td text-left">
-                            <span 
+                            <span
                               className="text-sm font-medium text-violet-500 truncate max-w-[150px] lg:max-w-[250px] block"
                               title={getCategoryName(attr.category)}
                             >

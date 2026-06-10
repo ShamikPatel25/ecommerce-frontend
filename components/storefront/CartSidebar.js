@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useCartStore } from '@/store/cartStore';
+import { useStorefrontAuthStore } from '@/store/storefrontAuthStore';
 import { useStorefrontPath } from '@/lib/useStorefrontPath';
 import { validateCartStock } from '@/lib/stockValidation';
 import { X, ShoppingBag, Minus, Plus, Image as ImageIcon, AlertTriangle, Loader2 } from 'lucide-react';
@@ -17,6 +18,9 @@ export default function CartSidebar({ open, onClose }) {
   const removeItem = useCartStore((s) => s.removeItem);
   const removeOutOfStock = useCartStore((s) => s.removeOutOfStock);
   const updateItemStock = useCartStore((s) => s.updateItemStock);
+  const customer = useStorefrontAuthStore((state) => state.customer);
+  const accessToken = useStorefrontAuthStore((state) => state.accessToken);
+  const isLoggedIn = !!(customer && accessToken);
   const { href } = useStorefrontPath();
   const storeInfo = useStoreInfo();
   const currency = storeInfo?.currency;
@@ -110,26 +114,36 @@ export default function CartSidebar({ open, onClose }) {
                 return (
                   <div key={uniqueKey} className={`flex gap-4 group ${isOutOfStock ? 'opacity-70' : ''}`}>
                     {/* Thumbnail */}
-                    <div className="w-24 h-24 shrink-0 rounded-xl bg-muted border border-border overflow-hidden flex items-center justify-center relative">
+                    <Link 
+                      href={href(`/products/${item.slug}`)} 
+                      onClick={onClose}
+                      className="w-24 h-24 shrink-0 rounded-xl bg-muted border border-border overflow-hidden flex items-center justify-center relative block hover:opacity-80 transition-opacity"
+                    >
                       {item.thumbnail ? (
                         <Image src={item.thumbnail} alt={item.name} fill sizes="96px" className="object-cover" />
                       ) : (
                         <ImageIcon className="w-8 h-8 text-muted-foreground opacity-30" />
                       )}
                       {isOutOfStock && (
-                        <div className="absolute inset-0 bg-background/70 backdrop-blur-sm flex items-center justify-center">
+                        <div className="absolute inset-0 bg-background/70 backdrop-blur-sm flex items-center justify-center pointer-events-none">
                           <span className="text-[9px] tracking-widest uppercase font-bold text-red-400 text-center px-1">
                             Out of Stock
                           </span>
                         </div>
                       )}
-                    </div>
+                    </Link>
 
                     {/* Info */}
                     <div className="flex-1 flex flex-col justify-between">
                       <div>
                         <div className="flex justify-between items-start gap-2">
-                          <h4 className="font-semibold text-card-foreground line-clamp-2 leading-tight">{item.name}</h4>
+                          <Link 
+                            href={href(`/products/${item.slug}`)} 
+                            onClick={onClose}
+                            className="font-semibold text-card-foreground line-clamp-2 leading-tight hover:text-primary transition-colors"
+                          >
+                            {item.name}
+                          </Link>
                           <button
                             onClick={() => removeItem(item.product || item.id, item.variant)}
                             className="text-muted-foreground hover:text-red-500 transition-colors"
@@ -205,8 +219,18 @@ export default function CartSidebar({ open, onClose }) {
                   </Button>
                 ) : (
                   <Link
-                    href={hasOutOfStockItems || validating ? '#' : href('/checkout')}
-                    onClick={hasOutOfStockItems || validating ? (e) => e.preventDefault() : onClose}
+                    href={hasOutOfStockItems || validating || !isLoggedIn ? '#' : href('/checkout')}
+                    onClick={(e) => {
+                      if (hasOutOfStockItems || validating) {
+                        e.preventDefault();
+                      } else if (!isLoggedIn) {
+                        e.preventDefault();
+                        onClose(); // Close cart sidebar first
+                        window.dispatchEvent(new CustomEvent('open-auth-modal', { detail: 'signin' }));
+                      } else {
+                        onClose();
+                      }
+                    }}
                     aria-disabled={hasOutOfStockItems || validating}
                     className={`${buttonVariants({ size: 'lg' })} w-full font-bold text-lg rounded-xl shadow-[0_0_20px_rgba(212,175,55,0.2)] ${
                       hasOutOfStockItems || validating ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''

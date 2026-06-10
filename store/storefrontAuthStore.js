@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { useCartStore } from './cartStore';
+import { useFavoritesStore } from './favoritesStore';
 
 export const useStorefrontAuthStore = create(
   persist(
@@ -13,6 +14,7 @@ export const useStorefrontAuthStore = create(
         set({ customer, accessToken, refreshToken });
         if (customer?.id) {
           useCartStore.getState().loadForUser(customer.id);
+          useFavoritesStore.getState().loadForUser(customer.id);
         }
       },
 
@@ -22,8 +24,9 @@ export const useStorefrontAuthStore = create(
         const { customer } = get();
         if (customer?.id) {
           useCartStore.getState().saveForUser(customer.id);
+          useFavoritesStore.getState().saveForUser(customer.id);
         }
-        // Only clear auth state — don't clear the cart on logout
+        // Only clear auth state — don't clear the cart/favorites on logout
         // Cart is preserved so users can continue shopping after re-login
         set({ customer: null, accessToken: null, refreshToken: null });
       },
@@ -33,8 +36,10 @@ export const useStorefrontAuthStore = create(
         const { customer } = get();
         if (customer?.id) {
           useCartStore.getState().saveForUser(customer.id);
+          useFavoritesStore.getState().saveForUser(customer.id);
         }
         useCartStore.getState().clearCart();
+        useFavoritesStore.getState().clearFavorites();
         set({ customer: null, accessToken: null, refreshToken: null });
       },
     }),
