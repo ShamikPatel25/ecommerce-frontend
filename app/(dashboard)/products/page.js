@@ -29,6 +29,8 @@ export default function ProductsPage() {
   const [error, setError] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [perPage, setPerPage] = useState(10);
+  const [totalItems, setTotalItems] = useState(0);
   const [activeFilter, setActiveFilter] = useState('all');
   const [deleteModal, setDeleteModal] = useState({ open: false, product: null });
   const [filterOpen, setFilterOpen] = useState(false);
@@ -45,7 +47,7 @@ export default function ProductsPage() {
       document.removeEventListener('pointerdown', handleClick);
     };
   }, [filterOpen]);
-  const itemsPerPage = 10;
+  
 
   const fetchProducts = useCallback(async () => {
     setLoading(true);
@@ -173,11 +175,11 @@ export default function ProductsPage() {
   }, [products, activeFilter, lowerQuery]);
 
   // Pagination
-  const totalPages = Math.max(1, Math.ceil(filteredProducts.length / itemsPerPage));
+  const totalPages = Math.max(1, Math.ceil(products.length / perPage));
   const safeCurrentPage = Math.min(currentPage, totalPages);
   const paginatedProducts = filteredProducts.slice(
-    (safeCurrentPage - 1) * itemsPerPage,
-    safeCurrentPage * itemsPerPage
+    (safeCurrentPage - 1) * perPage,
+    safeCurrentPage * perPage
   );
 
   const getStockColor = (stock) => {
@@ -216,65 +218,67 @@ export default function ProductsPage() {
   };
 
   return (
-    <div className="admin-page">
-      <div className="admin-container">
+    <div className="admin-page h-[calc(100vh-64px)] flex flex-col overflow-hidden">
+      <div className="admin-container flex-1 flex flex-col min-h-0">
         {/* Page Header */}
         <div className="admin-page-header">
           <div>
             <h2 className="admin-title">Products</h2>
             <p className="admin-subtitle">Manage your catalog, stock levels, and pricing.</p>
           </div>
-          <button
-            onClick={handleCreate}
-            className="admin-btn-primary"
-          >
-            <Plus size={20} />
-            <span>Add Product</span>
-          </button>
-        </div>
+          <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto mt-4 sm:mt-0">
+            {/* Search Bar */}
+            <div className="admin-search-wrapper !mb-0 w-full sm:w-96" ref={filterRef}>
+              <div className="admin-search-box !h-11">
+                <div className="admin-search-icon">
+                  <Search size={20} />
+                </div>
+                <input
+                  className="admin-search-input"
+                  placeholder="Search products by name or SKU"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => { setSearchQuery(''); setCurrentPage(1); }}
+                    className="flex items-center justify-center px-3 text-slate-400 hover:text-slate-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors cursor-pointer"
+                  >
+                    <X size={20} strokeWidth={2.5} />
+                  </button>
+                )}
+                <button
+                  onClick={() => setFilterOpen(!filterOpen)}
+                  className={activeFilter !== 'all' ? 'admin-filter-toggle-active' : 'admin-filter-toggle'}
+                >
+                  <SlidersHorizontal size={18} />
+                </button>
+              </div>
 
-        {/* Search Bar */}
-        <div className="admin-search-wrapper" ref={filterRef}>
-          <div className="admin-search-box">
-            <div className="admin-search-icon">
-              <Search size={20} />
+              {filterOpen && (
+                <div className="admin-filters-mobile">
+                  {filterTabs.map((tab) => (
+                    <button
+                      key={tab.key}
+                      onClick={() => { setActiveFilter(tab.key); setFilterOpen(false); }}
+                      className={activeFilter === tab.key ? 'admin-filter-mobile-item-active' : 'admin-filter-mobile-item'}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
-            <input
-              className="admin-search-input"
-              placeholder="Search products by name, SKU or category..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-            {searchQuery && (
-              <button
-                type="button"
-                onClick={() => { setSearchQuery(''); setCurrentPage(1); }}
-                className="flex items-center justify-center px-3 text-slate-400 hover:text-slate-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors cursor-pointer"
-              >
-                <X size={20} strokeWidth={2.5} />
-              </button>
-            )}
+
             <button
-              onClick={() => setFilterOpen(!filterOpen)}
-              className={activeFilter !== 'all' ? 'admin-filter-toggle-active' : 'admin-filter-toggle'}
+              onClick={handleCreate}
+              className="admin-btn-primary"
             >
-              <SlidersHorizontal size={18} />
+              <Plus size={20} />
+              <span>Add Product</span>
             </button>
           </div>
-
-          {filterOpen && (
-            <div className="admin-filters-mobile">
-              {filterTabs.map((tab) => (
-                <button
-                  key={tab.key}
-                  onClick={() => { setActiveFilter(tab.key); setFilterOpen(false); }}
-                  className={activeFilter === tab.key ? 'admin-filter-mobile-item-active' : 'admin-filter-mobile-item'}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-          )}
         </div>
 
         {/* Filter Tabs */}
@@ -291,7 +295,7 @@ export default function ProductsPage() {
         </div>
 
         {/* DataTable Container */}
-        <div className="admin-table-card">
+        <div className="admin-table-card flex-1 flex flex-col min-h-0">
           {loading ? (
             <div className="admin-loading">
               <div className="admin-spinner"></div>
@@ -300,8 +304,8 @@ export default function ProductsPage() {
             <DataError message="Failed to load products" onRetry={fetchData} retrying={loading} />
           ) : (
             <>
-              <div className="overflow-x-auto">
-                <table className="admin-table table-fixed min-w-[950px] w-full">
+              <div className="overflow-auto flex-1 h-0">
+                <div className="min-w-full"><table className="admin-table table-fixed min-w-[950px] w-full">
                   <thead>
                     <tr className="admin-thead-row">
                       <th className="admin-th w-[30%] text-left">Product</th>
@@ -313,7 +317,7 @@ export default function ProductsPage() {
                     </tr>
                   </thead>
                   <tbody className="admin-tbody">
-                    {paginatedProducts.length === 0 ? (
+                    {products.length === 0 ? (
                       <tr>
                         <td colSpan={6} className="admin-empty">
                           <div className="admin-empty-text">
@@ -324,7 +328,7 @@ export default function ProductsPage() {
                         </td>
                       </tr>
                     ) : (
-                      paginatedProducts.map((product) => {
+                      products.map((product) => {
                         const stock = getTotalStock(product);
                         const reserved = getTotalReserved(product);
                         const variantCount = getVariantCount(product);
@@ -469,19 +473,19 @@ export default function ProductsPage() {
                       })
                     )}
                   </tbody>
-                </table>
+                </table></div>
               </div>
 
               {/* Table Footer / Pagination */}
-              {filteredProducts.length > 0 && (
+              {products.length > 0 && (
                 <Pagination
                   currentPage={safeCurrentPage}
                   totalPages={totalPages}
                   onPageChange={setCurrentPage}
-                  totalItems={filteredProducts.length}
-                  perPage={itemsPerPage}
+                  totalItems={totalItems}
+                  perPage={perPage}
                   itemLabel="products"
-                />
+                 onPerPageChange={(val) => { setPerPage(val); setCurrentPage(1); }} />
               )}
             </>
           )}

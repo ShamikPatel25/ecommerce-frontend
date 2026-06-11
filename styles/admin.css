@@ -5,11 +5,11 @@
 
   /* ── Page Layout ── */
   .admin-page {
-    @apply p-4 md:p-8;
+    @apply p-4 md:p-6;
   }
 
   .admin-container {
-    @apply max-w-6xl mx-auto;
+    @apply w-full;
   }
 
   /* ── Page Header ── */
@@ -35,7 +35,7 @@
   }
 
   .admin-search-box {
-    @apply flex w-full items-stretch rounded-xl h-12 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden transition-all;
+    @apply flex w-full items-stretch rounded-lg h-12 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden transition-all;
   }
 
   .admin-search-box:focus-within {
@@ -47,11 +47,11 @@
   }
 
   .admin-search-input {
-    @apply flex-1 min-w-0 bg-transparent border-none focus:ring-0 focus:outline-none text-slate-900 dark:text-white text-base;
+    @apply flex-1 min-w-0 bg-transparent border-none focus:ring-0 focus:outline-none text-slate-900 dark:text-white text-[13px] sm:text-sm md:text-base truncate tracking-tight;
   }
 
   .admin-search-input::placeholder {
-    @apply text-slate-400 dark:text-gray-500;
+    @apply text-slate-400 dark:text-gray-500 truncate;
   }
 
   /* ── Table ── */
@@ -64,7 +64,7 @@
   }
 
   .admin-th {
-    @apply px-3 lg:px-6 py-3 text-[11px] font-semibold uppercase tracking-wider text-violet-500 whitespace-nowrap text-center;
+    @apply px-3 lg:px-6 py-3 text-[11px] font-semibold uppercase tracking-wider text-violet-600 dark:text-violet-400 whitespace-nowrap text-center bg-gray-50 dark:bg-gray-800/80 sticky top-0 z-10 backdrop-blur-md border-b border-gray-200 dark:border-gray-700;
   }
 
   .admin-thead-row {

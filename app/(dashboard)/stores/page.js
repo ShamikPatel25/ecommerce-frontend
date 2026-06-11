@@ -24,10 +24,12 @@ export default function StoresPage() {
   const [error, setError] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [perPage, setPerPage] = useState(10);
+  const [totalItems, setTotalItems] = useState(0);
   const [deleteModal, setDeleteModal] = useState({ open: false, store: null });
   const [showDeactivatedModal, setShowDeactivatedModal] = useState(false);
   const { activeStore, setActiveStore, setStores: setGlobalStores } = useStoreStore();
-  const itemsPerPage = 10;
+  
   const fetchingRef = useRef(false);
 
   const fetchStores = useCallback(async (force = false) => {
@@ -125,11 +127,11 @@ export default function StoresPage() {
   );
 
   // Pagination
-  const totalPages = Math.max(1, Math.ceil(filteredStores.length / itemsPerPage));
+  const totalPages = Math.max(1, Math.ceil(stores.length / perPage));
   const safeCurrentPage = Math.min(currentPage, totalPages);
   const paginatedStores = filteredStores.slice(
-    (safeCurrentPage - 1) * itemsPerPage,
-    safeCurrentPage * itemsPerPage
+    (safeCurrentPage - 1) * perPage,
+    safeCurrentPage * perPage
   );
 
   useEffect(() => {
@@ -142,48 +144,50 @@ export default function StoresPage() {
   };
 
   return (
-    <div className="admin-page">
-      <div className="admin-container">
+    <div className="admin-page h-[calc(100vh-64px)] flex flex-col overflow-hidden">
+      <div className="admin-container flex-1 flex flex-col min-h-0">
         {/* Page Header */}
         <div className="admin-page-header">
           <div>
             <h2 className="admin-title">Stores</h2>
           </div>
-          <button
-            onClick={handleCreate}
-            className="admin-btn-primary"
-          >
-            <Plus size={20} />
-            <span>Create Store</span>
-          </button>
-        </div>
-
-        {/* Search Bar */}
-        <div className="admin-search-wrapper">
-          <div className="admin-search-box">
-            <div className="admin-search-icon">
-              <Search size={20} />
+          <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto mt-4 sm:mt-0">
+            {/* Search Bar */}
+            <div className="admin-search-wrapper !mb-0 w-full sm:w-96">
+              <div className="admin-search-box !h-11">
+                <div className="admin-search-icon">
+                  <Search size={20} />
+                </div>
+                <input
+                  className="admin-search-input"
+                  placeholder="Search by store name or subdomain"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => { setSearchQuery(''); setCurrentPage(1); }}
+                    className="flex items-center justify-center px-3 text-slate-400 hover:text-slate-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors cursor-pointer"
+                  >
+                    <X size={20} strokeWidth={2.5} />
+                  </button>
+                )}
+              </div>
             </div>
-            <input
-              className="admin-search-input"
-              placeholder="Search by store name or subdomain..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-            {searchQuery && (
-              <button
-                type="button"
-                onClick={() => { setSearchQuery(''); setCurrentPage(1); }}
-                className="flex items-center justify-center px-3 text-slate-400 hover:text-slate-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors cursor-pointer"
-              >
-                <X size={20} strokeWidth={2.5} />
-              </button>
-            )}
+
+            <button
+              onClick={handleCreate}
+              className="admin-btn-primary"
+            >
+              <Plus size={20} />
+              <span>Create Store</span>
+            </button>
           </div>
         </div>
 
         {/* DataTable Container */}
-        <div className="admin-table-card">
+        <div className="admin-table-card flex-1 flex flex-col min-h-0">
           {loading ? (
             <div className="admin-loading">
               <div className="admin-spinner"></div>
@@ -192,8 +196,8 @@ export default function StoresPage() {
             <DataError message="Failed to load stores" onRetry={fetchStores} retrying={loading} />
           ) : (
             <>
-              <div className="overflow-x-auto">
-                <table className="admin-table min-w-[800px]">
+              <div className="overflow-auto flex-1 h-0">
+                <div className="min-w-full"><table className="admin-table min-w-[800px]">
                   <thead>
                     <tr className="admin-thead-row">
                       <th className="admin-th text-left">Store</th>
@@ -204,7 +208,7 @@ export default function StoresPage() {
                     </tr>
                   </thead>
                   <tbody className="admin-tbody">
-                    {paginatedStores.length === 0 ? (
+                    {stores.length === 0 ? (
                       <tr>
                         <td colSpan={5} className="admin-empty">
                           <div className="admin-empty-text">
@@ -215,7 +219,7 @@ export default function StoresPage() {
                         </td>
                       </tr>
                     ) : (
-                      paginatedStores.map((store) => (
+                      stores.map((store) => (
                         <tr
                           key={store.id}
                           className="admin-tr group"
@@ -260,8 +264,8 @@ export default function StoresPage() {
                           {/* Status */}
                           <td className="admin-td">
                             <span className={`inline-flex items-center justify-center gap-1.5 min-w-[5.5rem] px-3 py-1 rounded-full text-xs font-bold ${store.is_active
-                                ? 'bg-green-500/10 text-green-400 border border-green-500/20'
-                                : 'bg-red-500/10 text-red-400 border border-red-500/20'
+                              ? 'bg-green-500/10 text-green-400 border border-green-500/20'
+                              : 'bg-red-500/10 text-red-400 border border-red-500/20'
                               }`}>
                               <span className={`w-1.5 h-1.5 rounded-full ${store.is_active ? 'bg-green-500' : 'bg-red-500'}`} />
                               {store.is_active ? 'Active' : 'Inactive'}
@@ -315,19 +319,19 @@ export default function StoresPage() {
                       ))
                     )}
                   </tbody>
-                </table>
+                </table></div>
               </div>
 
               {/* Pagination */}
-              {filteredStores.length > 0 && (
+              {stores.length > 0 && (
                 <Pagination
                   currentPage={safeCurrentPage}
                   totalPages={totalPages}
                   onPageChange={setCurrentPage}
-                  totalItems={filteredStores.length}
-                  perPage={itemsPerPage}
+                  totalItems={totalItems}
+                  perPage={perPage}
                   itemLabel="stores"
-                />
+                 onPerPageChange={(val) => { setPerPage(val); setCurrentPage(1); }} />
               )}
             </>
           )}

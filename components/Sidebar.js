@@ -94,10 +94,12 @@ export default function Sidebar() {
     }
     if (activeStore?.id === store.id) {
       setStoreDropdownOpen(false);
+      setOpen(false);
       return;
     }
     setActiveStore(store);
     setStoreDropdownOpen(false);
+    setOpen(false);
     
     // Use Next.js router instead of hard reload to prevent network request cancellation
     setTimeout(() => {
@@ -388,9 +390,13 @@ export default function Sidebar() {
       {/* Mobile Topbar */}
       <div className="md:hidden fixed top-0 left-0 right-0 z-40 bg-white dark:bg-gray-900 text-slate-900 dark:text-white flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-800">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-slate-200 dark:bg-slate-700 rounded-lg flex items-center justify-center text-sm font-bold text-slate-900 dark:text-white">
-            {storeInitial}
-          </div>
+          <button
+            onClick={() => setOpen(true)}
+            className="p-1 -ml-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition text-slate-700 dark:text-slate-300"
+            aria-label="Open menu"
+          >
+            <Menu className="w-6 h-6" />
+          </button>
           <span className="font-bold text-base">Store Admin</span>
         </div>
         <div className="flex items-center gap-2">
@@ -401,13 +407,9 @@ export default function Sidebar() {
             {theme === 'light' ? <Moon className="w-5 h-5 text-gray-500" /> : <Sun className="w-5 h-5 text-amber-400" />}
           </button>
           <NotificationBell />
-          <button
-            onClick={() => setOpen(true)}
-            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition"
-            aria-label="Open menu"
-          >
-            <Menu className="w-6 h-6" />
-          </button>
+          <div className="w-8 h-8 ml-1 bg-slate-200 dark:bg-slate-700 rounded-lg flex items-center justify-center text-sm font-bold text-slate-900 dark:text-white">
+            {storeInitial}
+          </div>
         </div>
       </div>
 
@@ -421,7 +423,7 @@ export default function Sidebar() {
 
       {/* Mobile Drawer */}
       <div
-        className={`md:hidden fixed top-0 right-0 h-full w-64 bg-white dark:bg-[#0f1629] text-slate-900 dark:text-white z-50 flex flex-col transform transition-transform duration-300 ease-in-out ${open ? 'translate-x-0' : 'translate-x-full'}`}
+        className={`md:hidden fixed top-0 left-0 h-full w-64 bg-white dark:bg-[#0f1629] text-slate-900 dark:text-white z-50 flex flex-col transform transition-transform duration-300 ease-in-out ${open ? 'translate-x-0' : '-translate-x-full'}`}
       >
         <button
           onClick={() => setOpen(false)}

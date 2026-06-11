@@ -24,7 +24,6 @@ import { useStoreStore } from '@/store/storeStore';
 import { useDashboardStore } from '@/store/dashboardStore';
 import { formatDate } from '@/lib/utils';
 
-const PER_PAGE = 10;
 
 const TABS = [
   { key: 'All', label: 'All Categories' },
@@ -166,8 +165,8 @@ export default function CategoriesPage() {
       ? buildTreeOrder(baseFiltered)
       : [...baseFiltered].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
-  const paginated = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / perPage));
+  const paginated = filtered.slice((page - 1) * perPage, page * perPage);
 
   const handleCreate = () => {
     sessionStorage.removeItem('form-draft:category-create');
@@ -401,15 +400,15 @@ export default function CategoriesPage() {
           )}
 
           {/* Pagination */}
-          {!loading && filtered.length > PER_PAGE && (
+          {!loading && filtered.length > perPage && (
             <Pagination
               currentPage={page}
               totalPages={totalPages}
               onPageChange={setPage}
               totalItems={filtered.length}
-              perPage={PER_PAGE}
+              perPage={perPage}
               itemLabel="categories"
-            />
+                 onPerPageChange={(val) => { setPerPage(val); setCurrentPage(1); }} />
           )}
         </div>
       </div>

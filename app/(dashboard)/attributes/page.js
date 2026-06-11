@@ -16,7 +16,6 @@ import {
   DropdownMenuItem,
 } from '@/components/ui/dropdown-menu';
 
-const PER_PAGE = 10;
 
 export default function AttributesPage() {
   const router = useRouter();
@@ -26,6 +25,7 @@ export default function AttributesPage() {
   const [error, setError] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [perPage, setPerPage] = useState(10);
   const [deleteModal, setDeleteModal] = useState({ open: false, attr: null });
   const fetchingRef = useRef(false);
 
@@ -95,11 +95,11 @@ export default function AttributesPage() {
   );
 
   // Pagination
-  const totalPages = Math.max(1, Math.ceil(filteredAttributes.length / PER_PAGE));
+  const totalPages = Math.max(1, Math.ceil(filteredAttributes.length / perPage));
   const safeCurrentPage = Math.min(currentPage, totalPages);
   const paginatedAttributes = filteredAttributes.slice(
-    (safeCurrentPage - 1) * PER_PAGE,
-    safeCurrentPage * PER_PAGE
+    (safeCurrentPage - 1) * perPage,
+    safeCurrentPage * perPage
   );
 
   useEffect(() => {
@@ -295,9 +295,9 @@ export default function AttributesPage() {
                   totalPages={totalPages}
                   onPageChange={setCurrentPage}
                   totalItems={filteredAttributes.length}
-                  perPage={PER_PAGE}
+                  perPage={perPage}
                   itemLabel="attributes"
-                />
+                 onPerPageChange={(val) => { setPerPage(val); setCurrentPage(1); }} />
               )}
             </>
           )}

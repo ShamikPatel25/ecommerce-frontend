@@ -147,7 +147,7 @@ export default function NotificationBell({ variant = 'sidebar' }) {
       </button>
 
       {open && (
-        <div className="absolute right-0 mt-2 w-96 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-2xl z-50 overflow-hidden">
+        <div className="fixed left-4 right-4 top-[72px] sm:absolute sm:left-auto sm:top-full sm:right-0 sm:mt-2 w-auto sm:w-96 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-2xl z-50 overflow-hidden">
           {/* Header */}
           <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between bg-gradient-to-r from-gray-50 to-white dark:from-gray-900 dark:to-gray-900">
             <div className="flex items-center gap-3">

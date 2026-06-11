@@ -193,11 +193,10 @@ export default function ProductDetailPage() {
                   <button
                     key={img.id}
                     onClick={() => setSelectedImage(img)}
-                    className={`flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 transition-all ${
-                      selectedImage?.id === img.id
-                        ? 'border-violet-500 ring-2 ring-violet-500/20'
-                        : 'border-slate-200 dark:border-gray-700 hover:border-violet-500/40'
-                    }`}
+                    className={`flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 transition-all ${selectedImage?.id === img.id
+                      ? 'border-violet-500 ring-2 ring-violet-500/20'
+                      : 'border-slate-200 dark:border-gray-700 hover:border-violet-500/40'
+                      }`}
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
@@ -280,13 +279,12 @@ export default function ProductDetailPage() {
                             setSelectedValues(prev => ({ ...prev, [group.attribute_name]: valueId }));
                           }}
                           disabled={isOutOfStock}
-                          className={`px-4 py-2 rounded-lg border-2 text-sm font-semibold transition-all ${
-                            isSelected
-                              ? 'border-violet-500 bg-violet-500/10 text-violet-500'
-                              : isOutOfStock
-                                ? 'border-slate-200 dark:border-gray-700 bg-slate-100 dark:bg-gray-700 text-slate-400 dark:text-gray-500 cursor-not-allowed line-through'
-                                : 'border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-slate-700 dark:text-gray-300 hover:border-violet-500/40'
-                          }`}
+                          className={`px-4 py-2 rounded-lg border-2 text-sm font-semibold transition-all ${isSelected
+                            ? 'border-violet-500 bg-violet-500/10 text-violet-500'
+                            : isOutOfStock
+                              ? 'border-slate-200 dark:border-gray-700 bg-slate-100 dark:bg-gray-700 text-slate-400 dark:text-gray-500 cursor-not-allowed line-through'
+                              : 'border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-slate-700 dark:text-gray-300 hover:border-violet-500/40'
+                            }`}
                         >
                           {valueName}
                           {!isPrimary && stock !== null && stock > 0 && (

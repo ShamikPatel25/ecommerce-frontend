@@ -11,7 +11,6 @@ import { formatCurrency } from '@/lib/utils';
 import { useStoreStore } from '@/store/storeStore';
 import { useSharedDataStore } from '@/store/sharedDataStore';
 
-const PER_PAGE = 10;
 
 export default function CatalogsPage() {
   const router = useRouter();
@@ -21,6 +20,7 @@ export default function CatalogsPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [perPage, setPerPage] = useState(10);
   const [deleteModal, setDeleteModal] = useState({ open: false, variant: null });
 
   const fetchCatalogs = useCallback(async () => {
@@ -96,11 +96,11 @@ export default function CatalogsPage() {
   );
 
   // Pagination
-  const totalPages = Math.max(1, Math.ceil(filteredCatalogs.length / PER_PAGE));
+  const totalPages = Math.max(1, Math.ceil(filteredCatalogs.length / perPage));
   const safeCurrentPage = Math.min(currentPage, totalPages);
   const paginatedCatalogs = filteredCatalogs.slice(
-    (safeCurrentPage - 1) * PER_PAGE,
-    safeCurrentPage * PER_PAGE
+    (safeCurrentPage - 1) * perPage,
+    safeCurrentPage * perPage
   );
 
   useEffect(() => {
@@ -236,9 +236,9 @@ export default function CatalogsPage() {
                   totalPages={totalPages}
                   onPageChange={setCurrentPage}
                   totalItems={filteredCatalogs.length}
-                  perPage={PER_PAGE}
+                  perPage={perPage}
                   itemLabel="catalogs"
-                />
+                 onPerPageChange={(val) => { setPerPage(val); setCurrentPage(1); }} />
               )}
             </>
           )}

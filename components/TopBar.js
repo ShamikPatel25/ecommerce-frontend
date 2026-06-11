@@ -30,11 +30,23 @@ function getPageTitle(pathname) {
   return 'Dashboard';
 }
 
+const HIDE_TITLE_PATHS = [
+  '/orders',
+  '/products',
+  '/catalogs',
+  '/categories',
+  '/attributes',
+  '/customers',
+  '/stores'
+];
+
 export default function TopBar() {
   const pathname = usePathname();
   const { theme, toggleTheme } = useThemeStore();
   const { logout } = useAuthStore();
   const title = getPageTitle(pathname);
+  
+  const shouldHideTitle = HIDE_TITLE_PATHS.some(p => pathname === p || pathname.startsWith(p + '/'));
 
   const [settingsOpen, setSettingsOpen] = useState(false);
   const settingsRef = useRef(null);
@@ -58,7 +70,11 @@ export default function TopBar() {
   return (
     <div className="hidden md:flex items-center justify-between h-14 px-6 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-30">
       {/* Page Title */}
-      <h1 className="text-lg font-semibold text-slate-900 dark:text-white">{title}</h1>
+      <div className="flex-1">
+        {!shouldHideTitle && (
+          <h1 className="text-lg font-semibold text-slate-900 dark:text-white">{title}</h1>
+        )}
+      </div>
 
       {/* Right: Search + Actions */}
       <div className="flex items-center gap-3">

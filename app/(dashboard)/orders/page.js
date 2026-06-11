@@ -12,41 +12,43 @@ import DataError from '@/components/dashboard/DataError';
 import { formatDate, formatCurrency } from '@/lib/utils';
 import { useStoreStore } from '@/store/storeStore';
 
-const PER_PAGE = 10;
+
 
 const STATUS_TABS = [
-  { label: 'All Orders',       value: '' },
-  { label: 'Pending',          value: 'pending' },
-  { label: 'Confirmed',        value: 'confirmed' },
-  { label: 'Processing',       value: 'processing' },
-  { label: 'Shipped',          value: 'shipped' },
-  { label: 'Delivered',        value: 'delivered' },
-  { label: 'Cancelled',        value: 'cancelled' },
-  { label: 'Returned',         value: 'returned' },
+  { label: 'All Orders', value: '' },
+  { label: 'Pending', value: 'pending' },
+  { label: 'Confirmed', value: 'confirmed' },
+  { label: 'Processing', value: 'processing' },
+  { label: 'Shipped', value: 'shipped' },
+  { label: 'Delivered', value: 'delivered' },
+  { label: 'Cancelled', value: 'cancelled' },
+  { label: 'Returned', value: 'returned' },
 ];
 
 /* dot color + pill color per status */
 const STATUS_BADGE = {
-  pending:          { dot: 'bg-yellow-500', pill: 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20' },
-  confirmed:        { dot: 'bg-blue-500',   pill: 'bg-blue-500/10 text-blue-400 border border-blue-500/20' },
-  processing:       { dot: 'bg-violet-500', pill: 'bg-violet-500/10 text-violet-400 border border-violet-500/20' },
-  shipped:          { dot: 'bg-cyan-500',   pill: 'bg-cyan-500/10 text-cyan-500 border border-cyan-500/20' },
-  delivered:        { dot: 'bg-green-500',  pill: 'bg-green-500/10 text-green-400 border border-green-500/20' },
-  cancelled:        { dot: 'bg-red-500',    pill: 'bg-red-500/10 text-red-400 border border-red-500/20' },
-  returned:         { dot: 'bg-orange-500', pill: 'bg-orange-500/10 text-orange-400 border border-orange-500/20' },
+  pending: { dot: 'bg-yellow-500', pill: 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20' },
+  confirmed: { dot: 'bg-blue-500', pill: 'bg-blue-500/10 text-blue-400 border border-blue-500/20' },
+  processing: { dot: 'bg-violet-500', pill: 'bg-violet-500/10 text-violet-400 border border-violet-500/20' },
+  shipped: { dot: 'bg-cyan-500', pill: 'bg-cyan-500/10 text-cyan-500 border border-cyan-500/20' },
+  delivered: { dot: 'bg-green-500', pill: 'bg-green-500/10 text-green-400 border border-green-500/20' },
+  cancelled: { dot: 'bg-red-500', pill: 'bg-red-500/10 text-red-400 border border-red-500/20' },
+  returned: { dot: 'bg-orange-500', pill: 'bg-orange-500/10 text-orange-400 border border-orange-500/20' },
 };
 
 export default function OrdersPage() {
   const router = useRouter();
   const { activeStore } = useStoreStore();
 
-  const [orders,       setOrders]       = useState([]);
-  const [loading,      setLoading]      = useState(true);
-  const [error,        setError]        = useState(false);
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [activeStatus, setActiveStatus] = useState('');
-  const [searchQuery,  setSearchQuery]  = useState('');
-  const [page,         setPage]         = useState(1);
-  const [filterOpen,   setFilterOpen]   = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(10);
+  const [totalItems, setTotalItems] = useState(0);
+  const [filterOpen, setFilterOpen] = useState(false);
   const filterRef = useRef(null);
   const fetchingRef = useRef(false);
   const lastStatusRef = useRef('');
@@ -63,47 +65,33 @@ export default function OrdersPage() {
   }, [filterOpen]);
 
   /* ── fetch ── */
-  const fetchOrders = useCallback(async (status) => {
-    if (fetchingRef.current && lastStatusRef.current === status) return;
-    fetchingRef.current = true;
-    lastStatusRef.current = status;
+  const fetchOrders = useCallback(async () => {
     setLoading(true);
     setError(false);
     try {
-      const res  = await orderAPI.list(status);
+      const params = { page, page_size: perPage };
+      if (activeStatus) params.status = activeStatus;
+      if (searchQuery) params.search = searchQuery;
+
+      const res = await orderAPI.list(params);
       const data = res.data;
       setOrders(Array.isArray(data) ? data : (data?.results || []));
+      setTotalItems(data?.count ?? (Array.isArray(data) ? data.length : 0));
     } catch (err) {
       if (!isCancelledError(err)) {
         setError(true);
       }
     } finally {
       setLoading(false);
-      fetchingRef.current = false;
     }
-  }, []);
+  }, [page, perPage, activeStatus, searchQuery]);
 
   useEffect(() => {
-    fetchOrders(activeStatus);
-  }, [activeStatus]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  /* ── search filter ── */
-  const lowerQuery = searchQuery.toLowerCase().trim();
-  const idQuery = lowerQuery.replace(/^#/, '').replace(/^ord-/i, '');
-
-  // Filter by search only (API handles status filtering)
-  const filtered = orders.filter((o) => {
-    if (!lowerQuery) return true;
-    return (
-      o.customer_name?.toLowerCase().includes(lowerQuery) ||
-      o.order_number?.toLowerCase().includes(lowerQuery) ||
-      o.order_number?.replace('ORD-', '').toLowerCase().includes(idQuery)
-    );
-  });
+    fetchOrders();
+  }, [fetchOrders]);
 
   /* ── pagination ── */
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
-  const paginated  = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
+  const totalPages = Math.max(1, Math.ceil(totalItems / perPage));
 
   const switchTab = (value) => {
     setActiveStatus(value);
@@ -118,12 +106,12 @@ export default function OrdersPage() {
 
   /* ── CSV export ── */
   const exportCSV = () => {
-    if (filtered.length === 0) {
+    if (orders.length === 0) {
       toast.error('No orders to export');
       return;
     }
     const headers = ['Order #', 'Customer', 'Email', 'Phone', 'Active Items', 'Total Items', 'Total Price', 'Status', 'Date'];
-    const rows = filtered.map((o) => {
+    const rows = orders.map((o) => {
       const activeCount = o.active_items_count ?? o.items_count ?? 0;
       const totalCount = o.items_count ?? 0;
       const isOrderFinal = ['cancelled', 'returned'].includes(o.status);
@@ -151,69 +139,71 @@ export default function OrdersPage() {
     a.download = `orders-${new Date().toISOString().split('T')[0]}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-    toast.success(`Exported ${filtered.length} orders`);
+    toast.success(`Exported ${orders.length} orders`);
   };
 
   return (
-    <div className="admin-page">
-      <div className="admin-container">
+    <div className="admin-page h-[calc(100vh-64px)] flex flex-col overflow-hidden">
+      <div className="admin-container flex-1 flex flex-col min-h-0">
         {/* Page Header */}
         <div className="admin-page-header">
           <div>
             <h2 className="admin-title">Orders</h2>
             <p className="admin-subtitle">Manage and track all customer transactions and delivery status.</p>
           </div>
-          <button
-            onClick={exportCSV}
-            className="admin-btn-primary"
-          >
-            <Download size={20} />
-            <span>Export CSV</span>
-          </button>
-        </div>
+          <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto mt-4 sm:mt-0">
+            {/* Search Bar */}
+            <div className="admin-search-wrapper !mb-0 w-full sm:w-96" ref={filterRef}>
+              <div className="admin-search-box !h-11">
+                <div className="admin-search-icon">
+                  <Search size={20} />
+                </div>
+                <input
+                  className="admin-search-input"
+                  placeholder="Search orders by customer name or ID"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => { setSearchQuery(''); setPage(1); }}
+                    className="flex items-center justify-center px-3 text-slate-400 hover:text-slate-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors cursor-pointer"
+                  >
+                    <X size={20} strokeWidth={2.5} />
+                  </button>
+                )}
+                <button
+                  onClick={() => setFilterOpen(!filterOpen)}
+                  className={activeStatus !== 'all' ? 'admin-filter-toggle-active' : 'admin-filter-toggle'}
+                >
+                  <SlidersHorizontal size={18} />
+                </button>
+              </div>
 
-        {/* Search Bar */}
-        <div className="admin-search-wrapper" ref={filterRef}>
-          <div className="admin-search-box">
-            <div className="admin-search-icon">
-              <Search size={20} />
+              {filterOpen && (
+                <div className="admin-filters-mobile">
+                  {STATUS_TABS.map((tab) => (
+                    <button
+                      key={tab.value}
+                      onClick={() => { switchTab(tab.value); setFilterOpen(false); }}
+                      className={activeStatus === tab.value ? 'admin-filter-mobile-item-active' : 'admin-filter-mobile-item'}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
-            <input
-              className="admin-search-input"
-              placeholder="Search orders by customer name or order #..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-            {searchQuery && (
-              <button
-                type="button"
-                onClick={() => { setSearchQuery(''); setPage(1); }}
-                className="flex items-center justify-center px-3 text-slate-400 hover:text-slate-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors cursor-pointer"
-              >
-                <X size={20} strokeWidth={2.5} />
-              </button>
-            )}
+
             <button
-              onClick={() => setFilterOpen(!filterOpen)}
-              className={activeStatus !== 'all' ? 'admin-filter-toggle-active' : 'admin-filter-toggle'}
+              onClick={exportCSV}
+              className="admin-btn-primary"
             >
-              <SlidersHorizontal size={18} />
+              <Download size={20} />
+              <span>Export CSV</span>
             </button>
           </div>
-
-          {filterOpen && (
-            <div className="admin-filters-mobile">
-              {STATUS_TABS.map((tab) => (
-                <button
-                  key={tab.value}
-                  onClick={() => { switchTab(tab.value); setFilterOpen(false); }}
-                  className={activeStatus === tab.value ? 'admin-filter-mobile-item-active' : 'admin-filter-mobile-item'}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-          )}
         </div>
 
         {/* Status Filter Pills */}
@@ -230,7 +220,7 @@ export default function OrdersPage() {
         </div>
 
         {/* DataTable Container */}
-        <div className="admin-table-card">
+        <div className="admin-table-card flex-1 flex flex-col min-h-0">
           {loading ? (
             <div className="admin-loading">
               <div className="admin-spinner"></div>
@@ -239,7 +229,7 @@ export default function OrdersPage() {
             <DataError message="Failed to load orders" onRetry={() => fetchOrders(activeStatus)} retrying={loading} />
           ) : (
             <>
-              {paginated.length === 0 ? (
+              {orders.length === 0 ? (
                 <div className="admin-empty">
                   <div className="admin-empty-text">
                     <ShoppingBag className="w-10 h-10 mx-auto mb-3 opacity-40" />
@@ -248,8 +238,8 @@ export default function OrdersPage() {
                   </div>
                 </div>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="admin-table min-w-[800px]">
+                <div className="overflow-auto flex-1 h-0">
+                  <div className="min-w-full"><table className="admin-table min-w-[800px]">
                     <thead>
                       <tr className="admin-thead-row">
                         <th className="admin-th lg:w-[12%]">Order</th>
@@ -261,7 +251,7 @@ export default function OrdersPage() {
                       </tr>
                     </thead>
                     <tbody className="admin-tbody">
-                      {paginated.map((order) => {
+                      {orders.map((order) => {
                         const badge = STATUS_BADGE[order.status] || { dot: 'bg-slate-400', pill: 'bg-slate-500/10 text-slate-400 border border-slate-500/20' };
 
                         const activeCount = order.active_items_count ?? order.items_count ?? 0;
@@ -353,20 +343,20 @@ export default function OrdersPage() {
                         );
                       })}
                     </tbody>
-                  </table>
+                  </table></div>
                 </div>
               )}
 
               {/* Pagination */}
-              {filtered.length > 0 && (
+              {orders.length > 0 && (
                 <Pagination
                   currentPage={page}
                   totalPages={totalPages}
                   onPageChange={setPage}
-                  totalItems={filtered.length}
-                  perPage={PER_PAGE}
+                  totalItems={totalItems}
+                  perPage={perPage}
                   itemLabel="orders"
-                />
+                 onPerPageChange={(val) => { setPerPage(val); setPage(1); }} />
               )}
             </>
           )}
