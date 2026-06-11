@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useRouter, useParams } from 'next/navigation';
+import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { orderAPI } from '@/lib/api';
 import { toast } from 'sonner';
 import {
@@ -56,6 +56,7 @@ const PROGRESS_STEPS = [
 export default function OrderDetailPage() {
   const router = useRouter();
   const { id }  = useParams();
+  const searchParams = useSearchParams();
   const { activeStore } = useStoreStore();
   const invalidateDashboard = useDashboardStore((s) => s.invalidate);
 
@@ -63,6 +64,7 @@ export default function OrderDetailPage() {
   const [loading,      setLoading]      = useState(true);
   const [saving,       setSaving]       = useState(false);
   const [newStatus,    setNewStatus]    = useState('');
+  const [hasPrinted,   setHasPrinted]   = useState(false);
 
   const fetchOrder = useCallback(async () => {
     try {
@@ -95,6 +97,126 @@ export default function OrderDetailPage() {
       setSaving(false);
     }
   };
+  const handlePrintInvoice = useCallback(() => {
+    if (!order) return;
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      toast.error('Please allow popups to print invoice');
+      return;
+    }
+
+    const invoiceHTML = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>${order.order_number}</title>
+        <style>
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          html, body { background: #fff; }
+          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 40px; color: #1f2937; max-width: 800px; margin: 0 auto; }
+          .print-btn { display: flex; justify-content: flex-end; margin-bottom: 20px; }
+          .print-btn button { padding: 10px 24px; font-size: 14px; font-weight: 600; border: none; border-radius: 8px; cursor: pointer; background: #8b5cf6; color: #fff; }
+          .print-btn button:hover { background: #7c3aed; }
+          .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #1f2937; padding-bottom: 20px; margin-bottom: 30px; }
+          .store-name { font-size: 24px; font-weight: bold; color: #111827; }
+          .store-info { font-size: 13px; color: #4b5563; margin-top: 4px; }
+          .invoice-title { font-size: 32px; font-weight: bold; color: #111827; text-align: right; }
+          .invoice-meta { font-size: 13px; color: #4b5563; text-align: right; margin-top: 8px; }
+          .section { margin-bottom: 30px; }
+          .section-title { font-size: 12px; font-weight: bold; color: #111827; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; }
+          .customer-name { font-size: 16px; font-weight: 600; color: #111827; }
+          .customer-info { font-size: 13px; color: #4b5563; margin-top: 4px; }
+          table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+          th { background: #f3f4f6; padding: 12px; font-size: 13px; font-weight: bold; color: #111827; border: 1px solid #d1d5db; text-align: left; }
+          th.center { text-align: center; }
+          th.right { text-align: right; }
+          td { padding: 12px; font-size: 13px; color: #1f2937; border: 1px solid #d1d5db; }
+          td.center { text-align: center; }
+          td.right { text-align: right; }
+          .item-name { font-weight: 500; }
+          .item-variant { font-size: 11px; color: #6b7280; }
+          .totals { display: flex; justify-content: flex-end; }
+          .totals-box { width: 250px; }
+          .total-row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 14px; }
+          .total-row.final { border-top: 2px solid #1f2937; margin-top: 10px; padding-top: 12px; font-size: 18px; font-weight: bold; }
+          @media print { @page { margin: 0; } .print-btn { display: none !important; } body { padding: 15mm; margin: 0; max-width: none; } }
+        </style>
+      </head>
+      <body>
+        <div class="print-btn">
+          <button onclick="window.print()">Print / Save PDF</button>
+        </div>
+        <div class="header">
+          <div>
+            <div class="store-name">${activeStore?.name || 'Store'}</div>
+            ${activeStore?.address ? `<div class="store-info">${activeStore.address}</div>` : ''}
+            ${activeStore?.phone ? `<div class="store-info">Phone: ${activeStore.phone}</div>` : ''}
+            ${activeStore?.email ? `<div class="store-info">Email: ${activeStore.email}</div>` : ''}
+          </div>
+          <div>
+            <div class="invoice-title">INVOICE</div>
+            <div class="invoice-meta">Order #: ${order.order_number}</div>
+            <div class="invoice-meta">Date: ${formatDateTime(order.created_at)}</div>
+            <div class="invoice-meta">Status: ${STATUS_LABELS[order.status] || order.status}</div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Bill To:</div>
+          <div class="customer-name">${order.customer_name || ''}</div>
+          ${order.customer_email ? `<div class="customer-info">${order.customer_email}</div>` : ''}
+          ${order.customer_phone ? `<div class="customer-info">${order.customer_phone}</div>` : ''}
+          ${order.shipping_address ? `<div class="customer-info">${order.shipping_address.replace(/\n/g, '<br>')}</div>` : ''}
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Item</th>
+              <th class="center" style="width:70px">Qty</th>
+              <th class="right" style="width:100px">Price</th>
+              <th class="right" style="width:100px">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${order.items?.map(item => `
+              <tr>
+                <td>
+                  <div class="item-name">${item.product_name}</div>
+                  ${item.variant_attrs ? `<div class="item-variant">${item.variant_attrs}</div>` : ''}
+                </td>
+                <td class="center">${item.quantity}</td>
+                <td class="right">${formatCurrency(item.unit_price, activeStore?.currency)}</td>
+                <td class="right" style="font-weight:500">${formatCurrency(Number.parseFloat(item.unit_price) * item.quantity, activeStore?.currency)}</td>
+              </tr>
+            `).join('') || ''}
+          </tbody>
+        </table>
+
+        <div class="totals">
+          <div class="totals-box">
+            ${order.subtotal != null ? `<div class="total-row"><span>Subtotal:</span><span>${formatCurrency(order.subtotal, activeStore?.currency)}</span></div>` : ''}
+            ${order.shipping_cost != null ? `<div class="total-row"><span>Shipping:</span><span>${formatCurrency(order.shipping_cost, activeStore?.currency)}</span></div>` : ''}
+            <div class="total-row final"><span>Total:</span><span>${formatCurrency(order.total_amount, activeStore?.currency)}</span></div>
+          </div>
+        </div>
+
+      </body>
+      </html>
+    `;
+
+    printWindow.document.write(invoiceHTML);
+    printWindow.document.close();
+  }, [order, activeStore]);
+
+  useEffect(() => {
+    if (order && searchParams.get('print') === 'true' && !hasPrinted) {
+      handlePrintInvoice();
+      setHasPrinted(true);
+      router.replace(`/orders/${order.id}`, { scroll: false });
+    }
+  }, [order, searchParams, hasPrinted, router, handlePrintInvoice]);
+
 
   if (loading) return (
     <div className="admin-loading min-h-[60vh]">
@@ -213,117 +335,6 @@ export default function OrderDetailPage() {
         </div>
       </div>
     );
-  };
-
-  const handlePrintInvoice = () => {
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) {
-      toast.error('Please allow popups to print invoice');
-      return;
-    }
-
-    const invoiceHTML = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>${order.order_number}</title>
-        <style>
-          * { margin: 0; padding: 0; box-sizing: border-box; }
-          html, body { background: #fff; }
-          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 40px; color: #1f2937; max-width: 800px; margin: 0 auto; }
-          .print-btn { display: flex; justify-content: flex-end; margin-bottom: 20px; }
-          .print-btn button { padding: 10px 24px; font-size: 14px; font-weight: 600; border: none; border-radius: 8px; cursor: pointer; background: #8b5cf6; color: #fff; }
-          .print-btn button:hover { background: #7c3aed; }
-          .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #1f2937; padding-bottom: 20px; margin-bottom: 30px; }
-          .store-name { font-size: 24px; font-weight: bold; color: #111827; }
-          .store-info { font-size: 13px; color: #4b5563; margin-top: 4px; }
-          .invoice-title { font-size: 32px; font-weight: bold; color: #111827; text-align: right; }
-          .invoice-meta { font-size: 13px; color: #4b5563; text-align: right; margin-top: 8px; }
-          .section { margin-bottom: 30px; }
-          .section-title { font-size: 12px; font-weight: bold; color: #111827; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; }
-          .customer-name { font-size: 16px; font-weight: 600; color: #111827; }
-          .customer-info { font-size: 13px; color: #4b5563; margin-top: 4px; }
-          table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
-          th { background: #f3f4f6; padding: 12px; font-size: 13px; font-weight: bold; color: #111827; border: 1px solid #d1d5db; text-align: left; }
-          th.center { text-align: center; }
-          th.right { text-align: right; }
-          td { padding: 12px; font-size: 13px; color: #1f2937; border: 1px solid #d1d5db; }
-          td.center { text-align: center; }
-          td.right { text-align: right; }
-          .item-name { font-weight: 500; }
-          .item-variant { font-size: 11px; color: #6b7280; }
-          .totals { display: flex; justify-content: flex-end; }
-          .totals-box { width: 250px; }
-          .total-row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 14px; }
-          .total-row.final { border-top: 2px solid #1f2937; margin-top: 10px; padding-top: 12px; font-size: 18px; font-weight: bold; }
-          @media print { @page { margin: 0; } .print-btn { display: none !important; } body { padding: 15mm; margin: 0; max-width: none; } }
-        </style>
-      </head>
-      <body>
-        <div class="print-btn">
-          <button onclick="window.print()">Print / Save PDF</button>
-        </div>
-        <div class="header">
-          <div>
-            <div class="store-name">${activeStore?.name || 'Store'}</div>
-            ${activeStore?.address ? `<div class="store-info">${activeStore.address}</div>` : ''}
-            ${activeStore?.phone ? `<div class="store-info">Phone: ${activeStore.phone}</div>` : ''}
-            ${activeStore?.email ? `<div class="store-info">Email: ${activeStore.email}</div>` : ''}
-          </div>
-          <div>
-            <div class="invoice-title">INVOICE</div>
-            <div class="invoice-meta">Order #: ${order.order_number}</div>
-            <div class="invoice-meta">Date: ${formatDateTime(order.created_at)}</div>
-            <div class="invoice-meta">Status: ${STATUS_LABELS[order.status] || order.status}</div>
-          </div>
-        </div>
-
-        <div class="section">
-          <div class="section-title">Bill To:</div>
-          <div class="customer-name">${order.customer_name || ''}</div>
-          ${order.customer_email ? `<div class="customer-info">${order.customer_email}</div>` : ''}
-          ${order.customer_phone ? `<div class="customer-info">${order.customer_phone}</div>` : ''}
-          ${order.shipping_address ? `<div class="customer-info">${order.shipping_address.replace(/\n/g, '<br>')}</div>` : ''}
-        </div>
-
-        <table>
-          <thead>
-            <tr>
-              <th>Item</th>
-              <th class="center" style="width:70px">Qty</th>
-              <th class="right" style="width:100px">Price</th>
-              <th class="right" style="width:100px">Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${order.items?.map(item => `
-              <tr>
-                <td>
-                  <div class="item-name">${item.product_name}</div>
-                  ${item.variant_attrs ? `<div class="item-variant">${item.variant_attrs}</div>` : ''}
-                </td>
-                <td class="center">${item.quantity}</td>
-                <td class="right">${formatCurrency(item.unit_price, activeStore?.currency)}</td>
-                <td class="right" style="font-weight:500">${formatCurrency(Number.parseFloat(item.unit_price) * item.quantity, activeStore?.currency)}</td>
-              </tr>
-            `).join('') || ''}
-          </tbody>
-        </table>
-
-        <div class="totals">
-          <div class="totals-box">
-            ${order.subtotal != null ? `<div class="total-row"><span>Subtotal:</span><span>${formatCurrency(order.subtotal, activeStore?.currency)}</span></div>` : ''}
-            ${order.shipping_cost != null ? `<div class="total-row"><span>Shipping:</span><span>${formatCurrency(order.shipping_cost, activeStore?.currency)}</span></div>` : ''}
-            <div class="total-row final"><span>Total:</span><span>${formatCurrency(order.total_amount, activeStore?.currency)}</span></div>
-          </div>
-        </div>
-
-      </body>
-      </html>
-    `;
-
-    printWindow.document.write(invoiceHTML);
-    printWindow.document.close();
   };
 
   return (

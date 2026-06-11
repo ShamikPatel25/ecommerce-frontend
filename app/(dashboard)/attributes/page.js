@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { attributeAPI, categoryAPI, isCancelledError } from '@/lib/api';
 import { toast } from 'sonner';
 import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
@@ -20,12 +20,30 @@ import {
 export default function AttributesPage() {
   const router = useRouter();
   const { fetchCategories, categories } = useSharedDataStore();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
   const [attributes, setAttributes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [perPage, setPerPage] = useState(10);
+  
+  const currentPage = Number(searchParams.get('page')) || 1;
+  const perPage = Number(searchParams.get('perPage')) || 10;
+
+  const setCurrentPage = (val) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('page', val);
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  };
+
+  const setPerPage = (val) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('perPage', val);
+    params.set('page', 1);
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  };
+
   const [deleteModal, setDeleteModal] = useState({ open: false, attr: null });
   const fetchingRef = useRef(false);
 
@@ -102,10 +120,6 @@ export default function AttributesPage() {
     safeCurrentPage * perPage
   );
 
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchQuery]);
-
   const handleCreate = () => {
     sessionStorage.removeItem('form-draft:attribute-create');
     sessionStorage.removeItem('form-draft:attribute-create-values');
@@ -113,49 +127,51 @@ export default function AttributesPage() {
   };
 
   return (
-    <div className="admin-page">
-      <div className="admin-container">
+    <div className="admin-page h-[calc(100vh-64px)] flex flex-col overflow-hidden">
+      <div className="admin-container flex-1 flex flex-col min-h-0">
         {/* Page Header */}
         <div className="admin-page-header">
           <div>
             <h2 className="admin-title">Attributes</h2>
             <p className="admin-subtitle">Manage product attributes and their values.</p>
           </div>
-          <button
-            onClick={handleCreate}
-            className="admin-btn-primary"
-          >
-            <Plus size={20} />
-            <span>Add Attribute</span>
-          </button>
-        </div>
-
-        {/* Search Bar */}
-        <div className="admin-search-wrapper">
-          <div className="admin-search-box">
-            <div className="admin-search-icon">
-              <Search size={20} />
+          <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto mt-4 sm:mt-0">
+            {/* Search Bar */}
+            <div className="admin-search-wrapper !mb-0 w-full sm:w-96">
+              <div className="admin-search-box !h-11">
+                <div className="admin-search-icon">
+                  <Search size={20} />
+                </div>
+                <input
+                  className="admin-search-input"
+                  placeholder="Search by attribute name or category..."
+                  value={searchQuery}
+                  onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => { setSearchQuery(''); setCurrentPage(1); }}
+                    className="flex items-center justify-center px-3 text-slate-400 hover:text-slate-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors cursor-pointer"
+                  >
+                    <X size={20} strokeWidth={2.5} />
+                  </button>
+                )}
+              </div>
             </div>
-            <input
-              className="admin-search-input"
-              placeholder="Search by attribute name or category..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-            {searchQuery && (
-              <button
-                type="button"
-                onClick={() => { setSearchQuery(''); setCurrentPage(1); }}
-                className="flex items-center justify-center px-3 text-slate-400 hover:text-slate-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors cursor-pointer"
-              >
-                <X size={20} strokeWidth={2.5} />
-              </button>
-            )}
+
+            <button
+              onClick={handleCreate}
+              className="admin-btn-primary"
+            >
+              <Plus size={20} />
+              <span>Add Attribute</span>
+            </button>
           </div>
         </div>
 
         {/* DataTable Container */}
-        <div className="admin-table-card">
+        <div className="admin-table-card flex-1 flex flex-col min-h-0">
           {loading ? (
             <div className="admin-loading">
               <div className="admin-spinner"></div>
@@ -164,8 +180,8 @@ export default function AttributesPage() {
             <DataError message="Failed to load attributes" onRetry={fetchData} retrying={loading} />
           ) : (
             <>
-              <div className="overflow-x-auto">
-                <table className="admin-table table-fixed min-w-[800px] w-full">
+              <div className="overflow-auto flex-1 h-0">
+                <div className="min-w-full"><table className="admin-table table-fixed min-w-[800px] w-full">
                   <thead>
                     <tr className="admin-thead-row">
                       <th className="admin-th w-[25%] text-left">Attribute</th>
@@ -285,7 +301,7 @@ export default function AttributesPage() {
                       ))
                     )}
                   </tbody>
-                </table>
+                </table></div>
               </div>
 
               {/* Pagination */}

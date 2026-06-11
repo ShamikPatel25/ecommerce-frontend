@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { productAPI } from '@/lib/api';
 import { toast } from 'sonner';
 import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
@@ -16,11 +16,29 @@ export default function CatalogsPage() {
   const router = useRouter();
   const { activeStore } = useStoreStore();
   const { fetchProducts } = useSharedDataStore();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
   const [catalogs, setCatalogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [perPage, setPerPage] = useState(10);
+  
+  const currentPage = Number(searchParams.get('page')) || 1;
+  const perPage = Number(searchParams.get('perPage')) || 10;
+
+  const setCurrentPage = (val) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('page', val);
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  };
+
+  const setPerPage = (val) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('perPage', val);
+    params.set('page', 1);
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  };
+
   const [deleteModal, setDeleteModal] = useState({ open: false, variant: null });
 
   const fetchCatalogs = useCallback(async () => {
@@ -103,55 +121,52 @@ export default function CatalogsPage() {
     safeCurrentPage * perPage
   );
 
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchQuery]);
-
   return (
-    <div className="admin-page">
-      <div className="admin-container">
+    <div className="admin-page h-[calc(100vh-64px)] flex flex-col overflow-hidden">
+      <div className="admin-container flex-1 flex flex-col min-h-0">
         {/* Page Header */}
         <div className="admin-page-header">
           <div>
             <h2 className="admin-title">Catalogs</h2>
             <p className="admin-subtitle">Manage product variants and catalog items.</p>
           </div>
-        </div>
-
-        {/* Search Bar */}
-        <div className="admin-search-wrapper">
-          <div className="admin-search-box">
-            <div className="admin-search-icon">
-              <Search size={20} />
+          <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto mt-4 sm:mt-0">
+            {/* Search Bar */}
+            <div className="admin-search-wrapper !mb-0 w-full sm:w-96">
+              <div className="admin-search-box !h-11">
+                <div className="admin-search-icon">
+                  <Search size={20} />
+                </div>
+                <input
+                  className="admin-search-input"
+                  placeholder="Search by variant name, SKU or product..."
+                  value={searchQuery}
+                  onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => { setSearchQuery(''); setCurrentPage(1); }}
+                    className="flex items-center justify-center px-3 text-slate-400 hover:text-slate-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors cursor-pointer"
+                  >
+                    <X size={20} strokeWidth={2.5} />
+                  </button>
+                )}
+              </div>
             </div>
-            <input
-              className="admin-search-input"
-              placeholder="Search by variant name, SKU or product..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-            {searchQuery && (
-              <button
-                type="button"
-                onClick={() => { setSearchQuery(''); setCurrentPage(1); }}
-                className="flex items-center justify-center px-3 text-slate-400 hover:text-slate-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors cursor-pointer"
-              >
-                <X size={20} strokeWidth={2.5} />
-              </button>
-            )}
           </div>
         </div>
 
         {/* DataTable Container */}
-        <div className="admin-table-card">
+        <div className="admin-table-card flex-1 flex flex-col min-h-0">
           {loading ? (
             <div className="admin-loading">
               <div className="admin-spinner"></div>
             </div>
           ) : (
             <>
-              <div className="overflow-x-auto">
-                <table className="admin-table min-w-[750px]">
+              <div className="overflow-auto flex-1 h-0">
+                <div className="min-w-full"><table className="admin-table min-w-[750px]">
                   <thead>
                     <tr className="admin-thead-row">
                       <th className="admin-th text-left">Variant Name</th>
@@ -226,7 +241,7 @@ export default function CatalogsPage() {
                       })
                     )}
                   </tbody>
-                </table>
+                </table></div>
               </div>
 
               {/* Pagination */}

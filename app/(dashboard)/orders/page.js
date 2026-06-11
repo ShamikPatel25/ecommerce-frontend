@@ -1,12 +1,18 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { orderAPI, isCancelledError } from '@/lib/api';
 import { toast } from 'sonner';
 import {
-  Download, Search, ShoppingBag, SlidersHorizontal, X,
+  Download, Search, ShoppingBag, SlidersHorizontal, X, MoreHorizontal, Pencil, Printer,
 } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from '@/components/ui/dropdown-menu';
 import Pagination from '@/components/dashboard/Pagination';
 import DataError from '@/components/dashboard/DataError';
 import { formatDate, formatCurrency } from '@/lib/utils';
@@ -40,18 +46,41 @@ export default function OrdersPage() {
   const router = useRouter();
   const { activeStore } = useStoreStore();
 
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const [activeStatus, setActiveStatus] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-  const [page, setPage] = useState(1);
-  const [perPage, setPerPage] = useState(10);
+  
+  const activeStatus = searchParams.get('status') || '';
+  const page = Number(searchParams.get('page')) || 1;
+  const perPage = Number(searchParams.get('perPage')) || 10;
+
+  const setActiveStatus = (val) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('status', val);
+    params.set('page', 1);
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  };
+
+  const setPage = (val) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('page', val);
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  };
+
+  const setPerPage = (val) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('perPage', val);
+    params.set('page', 1);
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  };
+
   const [totalItems, setTotalItems] = useState(0);
   const [filterOpen, setFilterOpen] = useState(false);
   const filterRef = useRef(null);
-  const fetchingRef = useRef(false);
-  const lastStatusRef = useRef('');
 
   useEffect(() => {
     if (!filterOpen) return;
@@ -98,11 +127,6 @@ export default function OrdersPage() {
     setPage(1);
     setSearchQuery('');
   };
-
-  // Reset to page 1 when search changes
-  useEffect(() => {
-    setPage(1);
-  }, [searchQuery]);
 
   /* ── CSV export ── */
   const exportCSV = () => {
@@ -162,7 +186,7 @@ export default function OrdersPage() {
                   className="admin-search-input"
                   placeholder="Search orders by customer name or ID"
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={(e) => { setSearchQuery(e.target.value); setPage(1); }}
                 />
                 {searchQuery && (
                   <button
@@ -248,6 +272,7 @@ export default function OrdersPage() {
                         <th className="admin-th lg:w-[15%]">Total Price</th>
                         <th className="admin-th lg:w-[20%]">Status</th>
                         <th className="admin-th lg:w-[16%]">Date</th>
+                        <th className="admin-th lg:w-[10%] text-center">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="admin-tbody">
@@ -338,6 +363,38 @@ export default function OrdersPage() {
                             </td>
                             <td className="admin-td text-sm text-slate-400 dark:text-gray-500 whitespace-nowrap">
                               {formatDate(order.created_at)}
+                            </td>
+                            <td className="admin-td text-center">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="inline-flex items-center justify-center size-8 rounded-lg text-slate-600 dark:text-gray-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-gray-700 transition-all"
+                                >
+                                  <MoreHorizontal size={18} />
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" sideOffset={8} className="w-44 rounded-xl shadow-lg border border-slate-200 dark:border-gray-700 p-1.5 bg-white dark:bg-gray-800 z-[100]">
+                                  <DropdownMenuItem
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      router.push(`/orders/${order.id}`);
+                                    }}
+                                    className="cursor-pointer flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-700 dark:text-gray-300 hover:bg-slate-50 dark:hover:bg-gray-700"
+                                  >
+                                    <Pencil size={16} className="text-slate-400 dark:text-gray-500" />
+                                    <span>Edit</span>
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      router.push(`/orders/${order.id}?print=true`);
+                                    }}
+                                    className="cursor-pointer flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-700 dark:text-gray-300 hover:bg-slate-50 dark:hover:bg-gray-700"
+                                  >
+                                    <Printer size={16} className="text-slate-400 dark:text-gray-500" />
+                                    <span>Print Invoice</span>
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
                             </td>
                           </tr>
                         );

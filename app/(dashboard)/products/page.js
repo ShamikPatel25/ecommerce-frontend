@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { useRouter } from 'next/navigation';
-import { productAPI, categoryAPI, isCancelledError } from '@/lib/api';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
+import { productAPI, isCancelledError } from '@/lib/api';
 import { toast } from 'sonner';
 import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
 import { Plus, Search, MoreHorizontal, Trash2, Eye, EyeOff, Star, SlidersHorizontal, Pencil, X } from 'lucide-react';
@@ -23,15 +23,39 @@ export default function ProductsPage() {
   const router = useRouter();
   const { activeStore } = useStoreStore();
   const invalidateDashboard = useDashboardStore((s) => s.invalidate);
-  const { fetchCategories, categories, invalidateProducts: invalidateSharedProducts, fetchProducts: fetchSharedProducts } = useSharedDataStore();
+  const { fetchCategories, categories, invalidateProducts: invalidateSharedProducts } = useSharedDataStore();
   const [products, setProducts] = useState([]);
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [perPage, setPerPage] = useState(10);
-  const [totalItems, setTotalItems] = useState(0);
-  const [activeFilter, setActiveFilter] = useState('all');
+  
+  const currentPage = Number(searchParams.get('page')) || 1;
+  const perPage = Number(searchParams.get('perPage')) || 10;
+  const activeFilter = searchParams.get('filter') || 'all';
+
+  const setCurrentPage = (val) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('page', val);
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  };
+
+  const setPerPage = (val) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('perPage', val);
+    params.set('page', 1);
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  };
+
+  const setActiveFilter = (val) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('filter', val);
+    params.set('page', 1);
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  };
+
   const [deleteModal, setDeleteModal] = useState({ open: false, product: null });
   const [filterOpen, setFilterOpen] = useState(false);
   const filterRef = useRef(null);
@@ -195,11 +219,6 @@ export default function ProductsPage() {
 
   const getStockPercent = (stock) => Math.min((stock / 150) * 100, 100);
 
-  // Reset to page 1 when search or filter changes
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchQuery, activeFilter]);
-
   const filterTabs = [
     { key: 'all', label: 'All' },
     { key: 'active', label: 'Active' },
@@ -237,7 +256,7 @@ export default function ProductsPage() {
                   className="admin-search-input"
                   placeholder="Search products by name or SKU"
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
                 />
                 {searchQuery && (
                   <button
@@ -261,7 +280,7 @@ export default function ProductsPage() {
                   {filterTabs.map((tab) => (
                     <button
                       key={tab.key}
-                      onClick={() => { setActiveFilter(tab.key); setFilterOpen(false); }}
+                      onClick={() => { setActiveFilter(tab.key); setFilterOpen(false); setCurrentPage(1); }}
                       className={activeFilter === tab.key ? 'admin-filter-mobile-item-active' : 'admin-filter-mobile-item'}
                     >
                       {tab.label}
@@ -286,7 +305,7 @@ export default function ProductsPage() {
           {filterTabs.map((tab) => (
             <button
               key={tab.key}
-              onClick={() => setActiveFilter(tab.key)}
+              onClick={() => { setActiveFilter(tab.key); setCurrentPage(1); }}
               className={activeFilter === tab.key ? 'admin-filter-btn-active' : 'admin-filter-btn'}
             >
               {tab.label}
@@ -317,7 +336,7 @@ export default function ProductsPage() {
                     </tr>
                   </thead>
                   <tbody className="admin-tbody">
-                    {products.length === 0 ? (
+                    {paginatedProducts.length === 0 ? (
                       <tr>
                         <td colSpan={6} className="admin-empty">
                           <div className="admin-empty-text">
@@ -328,7 +347,7 @@ export default function ProductsPage() {
                         </td>
                       </tr>
                     ) : (
-                      products.map((product) => {
+                      paginatedProducts.map((product) => {
                         const stock = getTotalStock(product);
                         const reserved = getTotalReserved(product);
                         const variantCount = getVariantCount(product);
@@ -482,7 +501,7 @@ export default function ProductsPage() {
                   currentPage={safeCurrentPage}
                   totalPages={totalPages}
                   onPageChange={setCurrentPage}
-                  totalItems={totalItems}
+                  totalItems={filteredProducts.length}
                   perPage={perPage}
                   itemLabel="products"
                  onPerPageChange={(val) => { setPerPage(val); setCurrentPage(1); }} />
