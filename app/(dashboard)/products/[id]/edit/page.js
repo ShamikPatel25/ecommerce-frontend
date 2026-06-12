@@ -343,7 +343,7 @@ export default function EditProductPage() {
         stock: Number.parseInt(c.stock) || 0,
       }));
       await productAPI.generateCatalog(productId, {
-        single_catalog_mode: singleCatalogMode,
+        single_catalog_mode: selectedCombinations.length === 1,
         selected_combinations: selectedCombinations,
       });
       toast.success(`Generated ${newCatalogs.length} variant(s)!`);
