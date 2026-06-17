@@ -24,6 +24,7 @@ export default function AttributesPage() {
   const searchParams = useSearchParams();
 
   const [attributes, setAttributes] = useState([]);
+  const [totalItems, setTotalItems] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -51,18 +52,28 @@ export default function AttributesPage() {
     setLoading(true);
     setError(false);
     try {
-      const attrRes = await attributeAPI.list();
+      const params = { page: currentPage, perPage };
+      if (searchQuery.trim()) params.search = searchQuery.trim();
+
+      const attrRes = await attributeAPI.list(params);
       const attrData = attrRes.data;
-      setAttributes(Array.isArray(attrData) ? attrData : (attrData?.results || []));
+      if (attrData?.results) {
+        setAttributes(attrData.results);
+        setTotalItems(attrData.count || 0);
+      } else {
+        setAttributes(Array.isArray(attrData) ? attrData : []);
+        setTotalItems(Array.isArray(attrData) ? attrData.length : 0);
+      }
     } catch (err) {
       if (!isCancelledError(err)) {
         setError(true);
       }
       setAttributes([]);
+      setTotalItems(0);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [currentPage, perPage, searchQuery]);
 
   const fetchData = useCallback(async () => {
     if (fetchingRef.current) return;
@@ -70,26 +81,36 @@ export default function AttributesPage() {
     setLoading(true);
     setError(false);
     try {
+      const params = { page: currentPage, perPage };
+      if (searchQuery.trim()) params.search = searchQuery.trim();
+
       const [attrRes] = await Promise.all([
-        attributeAPI.list(),
+        attributeAPI.list(params),
         fetchCategories(),
       ]);
       const attrData = attrRes.data;
-      setAttributes(Array.isArray(attrData) ? attrData : (attrData?.results || []));
+      if (attrData?.results) {
+        setAttributes(attrData.results);
+        setTotalItems(attrData.count || 0);
+      } else {
+        setAttributes(Array.isArray(attrData) ? attrData : []);
+        setTotalItems(Array.isArray(attrData) ? attrData.length : 0);
+      }
     } catch (err) {
       if (!isCancelledError(err)) {
         setError(true);
       }
       setAttributes([]);
+      setTotalItems(0);
     } finally {
       setLoading(false);
       fetchingRef.current = false;
     }
-  }, [fetchCategories]);
+  }, [fetchCategories, currentPage, perPage, searchQuery]);
 
   useEffect(() => {
     fetchData();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [currentPage, perPage, searchQuery]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleDelete = async () => {
     if (!deleteModal.attr) return;
@@ -107,18 +128,11 @@ export default function AttributesPage() {
     categories.find((c) => c.id === catId)?.name || 'Uncategorized';
 
   const lowerQuery = searchQuery.toLowerCase().trim();
-  const filteredAttributes = attributes.filter(a =>
-    a.name?.toLowerCase().includes(lowerQuery) ||
-    getCategoryName(a.category)?.toLowerCase().includes(lowerQuery)
-  );
 
   // Pagination
-  const totalPages = Math.max(1, Math.ceil(filteredAttributes.length / perPage));
-  const safeCurrentPage = Math.min(currentPage, totalPages);
-  const paginatedAttributes = filteredAttributes.slice(
-    (safeCurrentPage - 1) * perPage,
-    safeCurrentPage * perPage
-  );
+  const totalPages = Math.max(1, Math.ceil(totalItems / perPage));
+  const safeCurrentPage = Math.min(currentPage, totalPages) || 1;
+  const paginatedAttributes = attributes;
 
   const handleCreate = () => {
     sessionStorage.removeItem('form-draft:attribute-create');
@@ -305,15 +319,15 @@ export default function AttributesPage() {
               </div>
 
               {/* Pagination */}
-              {filteredAttributes.length > 0 && (
+              {attributes.length > 0 && (
                 <Pagination
                   currentPage={safeCurrentPage}
                   totalPages={totalPages}
                   onPageChange={setCurrentPage}
-                  totalItems={filteredAttributes.length}
+                  totalItems={totalItems}
                   perPage={perPage}
                   itemLabel="attributes"
-                 onPerPageChange={(val) => { setPerPage(val); setCurrentPage(1); }} />
+                  onPerPageChange={setPerPage} />
               )}
             </>
           )}

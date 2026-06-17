@@ -38,7 +38,7 @@ export default function AccountPage() {
         storefrontAPI.getAddresses(),
       ]);
       setProfile(profileRes.data);
-      setAddresses(addressRes.data || []);
+      setAddresses(addressRes.data?.results || (Array.isArray(addressRes.data) ? addressRes.data : []));
       const formData = {
         first_name: profileRes.data.first_name || '',
         last_name: profileRes.data.last_name || '',
@@ -224,7 +224,7 @@ export default function AccountPage() {
       }
       setEditingAddress(null);
       const res = await storefrontAPI.getAddresses();
-      setAddresses(res.data || []);
+      setAddresses(res.data?.results || (Array.isArray(res.data) ? res.data : []));
     } catch (err) {
       const msg = err?.response?.data?.label?.[0] || err?.response?.data?.detail || 'Failed to save address';
       toast.error(msg);

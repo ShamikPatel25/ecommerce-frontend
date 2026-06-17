@@ -22,6 +22,7 @@ export default function CatalogsPage() {
   const [catalogs, setCatalogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [totalItems, setTotalItems] = useState(0);
   
   const currentPage = Number(searchParams.get('page')) || 1;
   const perPage = Number(searchParams.get('perPage')) || 10;
@@ -42,39 +43,22 @@ export default function CatalogsPage() {
   const [deleteModal, setDeleteModal] = useState({ open: false, variant: null });
 
   const fetchCatalogs = useCallback(async () => {
+    setLoading(true);
     try {
-      // Use shared cache — avoids re-fetching if products were recently loaded
-      const products = await fetchProducts();
-      const catalogProducts = products.filter(p => p.product_type === 'catalog');
+      const params = { page: currentPage, perPage };
+      if (searchQuery.trim()) params.search = searchQuery.trim();
 
-      // Fetch all catalog product details in parallel
-      const detailResults = await Promise.all(
-        catalogProducts.map(p => productAPI.get(p.id).catch(() => null))
-      );
-
-      const allVariants = [];
-      detailResults.forEach((res, idx) => {
-        if (!res) return;
-        const product = catalogProducts[idx];
-        const variants = res.data?.variants || [];
-        variants.forEach(variant => {
-          const valuesLabel = variant.attribute_values?.map(av => av.value).join('-') || '';
-          allVariants.push({
-            ...variant,
-            variant_name: valuesLabel ? `${product.name} - ${valuesLabel}` : variant.sku,
-            product_name: product.name,
-            product_id: product.id,
-            product_price: product.price,
-          });
-        });
-      });
-      setCatalogs(allVariants);
+      const res = await productAPI.variants(params);
+      const data = res.data;
+      
+      setCatalogs(data?.results || []);
+      setTotalItems(data.count || 0);
     } catch {
       toast.error('Failed to load catalogs');
     } finally {
       setLoading(false);
     }
-  }, [fetchProducts]);
+  }, [currentPage, perPage, searchQuery]);
 
   useEffect(() => {
     fetchCatalogs();
@@ -106,20 +90,9 @@ export default function CatalogsPage() {
 
   const getStockPercent = (stock) => Math.min((stock / 150) * 100, 100);
 
-  const lowerQuery = searchQuery.toLowerCase().trim();
-  const filteredCatalogs = catalogs.filter(c =>
-    c.variant_name?.toLowerCase().includes(lowerQuery) ||
-    c.sku?.toLowerCase().includes(lowerQuery) ||
-    c.product_name?.toLowerCase().includes(lowerQuery)
-  );
-
-  // Pagination
-  const totalPages = Math.max(1, Math.ceil(filteredCatalogs.length / perPage));
-  const safeCurrentPage = Math.min(currentPage, totalPages);
-  const paginatedCatalogs = filteredCatalogs.slice(
-    (safeCurrentPage - 1) * perPage,
-    safeCurrentPage * perPage
-  );
+  const totalPages = Math.max(1, Math.ceil(totalItems / perPage));
+  const safeCurrentPage = Math.min(currentPage, totalPages) || 1;
+  const paginatedCatalogs = catalogs;
 
   return (
     <div className="admin-page h-[calc(100vh-64px)] flex flex-col overflow-hidden">
@@ -245,15 +218,15 @@ export default function CatalogsPage() {
               </div>
 
               {/* Pagination */}
-              {filteredCatalogs.length > 0 && (
+              {catalogs.length > 0 && (
                 <Pagination
                   currentPage={safeCurrentPage}
                   totalPages={totalPages}
                   onPageChange={setCurrentPage}
-                  totalItems={filteredCatalogs.length}
+                  totalItems={totalItems}
                   perPage={perPage}
                   itemLabel="catalogs"
-                 onPerPageChange={(val) => { setPerPage(val); setCurrentPage(1); }} />
+                  onPerPageChange={setPerPage} />
               )}
             </>
           )}

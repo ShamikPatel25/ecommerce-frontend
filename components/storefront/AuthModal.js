@@ -152,7 +152,7 @@ export default function AuthModal({ open, onClose, initialTab = 'signin' }) {
     try {
       const username = suEmail.split('@')[0].replace(/[^a-zA-Z0-9]/g, '') + Date.now().toString().slice(-4);
       await storefrontAPI.register({
-        email: suEmail, password: suPass, password2: suPass2,
+        email: suEmail, password: suPass, password_confirm: suPass2,
         username, first_name: suFirst, last_name: suLast,
       });
       // Auto login after register
@@ -164,7 +164,7 @@ export default function AuthModal({ open, onClose, initialTab = 'signin' }) {
       toast.success('Account created successfully!');
     } catch (err) {
       const data = err.response?.data;
-      const msg = data?.email?.[0] || data?.password?.[0] || data?.password2?.[0]
+      const msg = data?.email?.[0] || data?.password?.[0] || data?.password_confirm?.[0]
         || data?.username?.[0] || data?.non_field_errors?.[0] || data?.detail
         || (typeof data === 'object' ? JSON.stringify(data) : 'Something went wrong');
       setError(msg);

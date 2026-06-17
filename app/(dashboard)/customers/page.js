@@ -42,6 +42,7 @@ export default function CustomersPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [perPage, setPerPage] = useState(10);
+  const [totalItems, setTotalItems] = useState(0);
   const [expandedKey, setExpandedKey] = useState(null);
   const [customerOrders, setCustomerOrders] = useState([]);
   const [loadingOrders, setLoadingOrders] = useState(false);
@@ -56,24 +57,34 @@ export default function CustomersPage() {
     setLoading(true);
     setError(false);
     try {
-      const res = await orderAPI.customers(search);
+      const params = { page: currentPage, perPage };
+      if (search) params.search = search;
+
+      const res = await orderAPI.customers(params);
       const data = res.data;
-      setCustomers(Array.isArray(data) ? data : (data?.results || []));
+      if (data?.results) {
+        setCustomers(data.results);
+        setTotalItems(data.count || 0);
+      } else {
+        setCustomers(Array.isArray(data) ? data : []);
+        setTotalItems(Array.isArray(data) ? data.length : 0);
+      }
     } catch (err) {
       if (!isCancelledError(err)) {
         setError(true);
       }
+      setCustomers([]);
+      setTotalItems(0);
     } finally {
       setLoading(false);
       fetchingRef.current = false;
     }
-  }, []);
+  }, [currentPage, perPage]);
 
-  /* ── debounced search ── */
   useEffect(() => {
     const timer = setTimeout(() => fetchCustomers(searchQuery), 400);
     return () => clearTimeout(timer);
-  }, [searchQuery, fetchCustomers]);
+  }, [searchQuery, fetchCustomers, currentPage, perPage]);
 
   // Reset to page 1 when search changes
   useEffect(() => {
@@ -113,19 +124,9 @@ export default function CustomersPage() {
     }
   };
 
-  /* ── local search filter + pagination ── */
-  const lowerQuery = searchQuery.toLowerCase().trim();
-  const filteredCustomers = customers.filter(c =>
-    c.customer_name?.toLowerCase().includes(lowerQuery) ||
-    c.customer_email?.toLowerCase().includes(lowerQuery)
-  );
-
-  const totalPages = Math.max(1, Math.ceil(filteredCustomers.length / perPage));
-  const safeCurrentPage = Math.min(currentPage, totalPages);
-  const paginatedCustomers = filteredCustomers.slice(
-    (safeCurrentPage - 1) * perPage,
-    safeCurrentPage * perPage
-  );
+  const totalPages = Math.max(1, Math.ceil(totalItems / perPage));
+  const safeCurrentPage = Math.min(currentPage, totalPages) || 1;
+  const paginatedCustomers = customers;
 
   return (
     <div className="admin-page h-[calc(100vh-64px)] flex flex-col overflow-hidden">
@@ -313,12 +314,12 @@ export default function CustomersPage() {
               )}
 
               {/* Pagination */}
-              {filteredCustomers.length > 0 && (
+              {customers.length > 0 && (
                 <Pagination
                   currentPage={safeCurrentPage}
                   totalPages={totalPages}
                   onPageChange={setCurrentPage}
-                  totalItems={filteredCustomers.length}
+                  totalItems={totalItems}
                   perPage={perPage}
                   itemLabel="customers"
                  onPerPageChange={(val) => { setPerPage(val); setCurrentPage(1); }} />

@@ -34,6 +34,7 @@ export default function ProductsPage() {
   
   const currentPage = Number(searchParams.get('page')) || 1;
   const perPage = Number(searchParams.get('perPage')) || 10;
+  const [totalItems, setTotalItems] = useState(0);
   const activeFilter = searchParams.get('filter') || 'all';
 
   const setCurrentPage = (val) => {
@@ -77,8 +78,21 @@ export default function ProductsPage() {
     setLoading(true);
     setError(false);
     try {
-      const prodRes = await productAPI.list().catch(() => ({ data: [] }));
-      setProducts(Array.isArray(prodRes.data) ? prodRes.data : prodRes.data?.results || []);
+      const params = { page: currentPage, perPage };
+      if (searchQuery.trim()) params.search = searchQuery.trim();
+      if (activeFilter === 'active') params.is_active = 'true';
+      if (activeFilter === 'inactive') params.is_active = 'false';
+      if (activeFilter === 'featured') params.is_featured = 'true';
+      if (activeFilter === 'low_stock') params.stock_status = 'low_stock';
+
+      const prodRes = await productAPI.list(params).catch(() => ({ data: [] }));
+      if (prodRes.data?.results) {
+        setProducts(prodRes.data.results);
+        setTotalItems(prodRes.data.count || 0);
+      } else {
+        setProducts(Array.isArray(prodRes.data) ? prodRes.data : []);
+        setTotalItems(Array.isArray(prodRes.data) ? prodRes.data.length : 0);
+      }
     } catch (err) {
       if (!isCancelledError(err)) {
         setError(true);
@@ -87,7 +101,7 @@ export default function ProductsPage() {
       setLoading(false);
       fetchingRef.current = false;
     }
-  }, []);
+  }, [currentPage, perPage, searchQuery, activeFilter]);
 
   const fetchData = useCallback(async () => {
     if (fetchingRef.current) return;
@@ -95,11 +109,24 @@ export default function ProductsPage() {
     setLoading(true);
     setError(false);
     try {
+      const params = { page: currentPage, perPage };
+      if (searchQuery.trim()) params.search = searchQuery.trim();
+      if (activeFilter === 'active') params.is_active = 'true';
+      if (activeFilter === 'inactive') params.is_active = 'false';
+      if (activeFilter === 'featured') params.is_featured = 'true';
+      if (activeFilter === 'low_stock') params.stock_status = 'low_stock';
+
       const [prodRes] = await Promise.all([
-        productAPI.list().catch(() => ({ data: [] })),
+        productAPI.list(params).catch(() => ({ data: [] })),
         fetchCategories(),
       ]);
-      setProducts(Array.isArray(prodRes.data) ? prodRes.data : prodRes.data?.results || []);
+      if (prodRes.data?.results) {
+        setProducts(prodRes.data.results);
+        setTotalItems(prodRes.data.count || 0);
+      } else {
+        setProducts(Array.isArray(prodRes.data) ? prodRes.data : []);
+        setTotalItems(Array.isArray(prodRes.data) ? prodRes.data.length : 0);
+      }
     } catch (err) {
       if (!isCancelledError(err)) {
         setError(true);
@@ -108,11 +135,11 @@ export default function ProductsPage() {
       setLoading(false);
       fetchingRef.current = false;
     }
-  }, [fetchCategories]);
+  }, [fetchCategories, currentPage, perPage, searchQuery, activeFilter]);
 
   useEffect(() => {
     fetchData();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [currentPage, perPage, searchQuery, activeFilter]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleDelete = async () => {
     if (!deleteModal.product) return;
@@ -181,30 +208,11 @@ export default function ProductsPage() {
 
   // Filter + search
   const lowerQuery = searchQuery.toLowerCase().trim();
-  const filteredProducts = useMemo(() => {
-    let filtered = products;
-    switch (activeFilter) {
-      case 'active': filtered = products.filter(p => p.is_active); break;
-      case 'inactive': filtered = products.filter(p => !p.is_active); break;
-      case 'featured': filtered = products.filter(p => p.is_featured); break;
-      case 'low_stock': filtered = products.filter(p => getTotalStock(p) <= 15); break;
-    }
-    if (lowerQuery) {
-      filtered = filtered.filter(p =>
-        p.name.toLowerCase().includes(lowerQuery) ||
-        p.sku.toLowerCase().includes(lowerQuery)
-      );
-    }
-    return filtered;
-  }, [products, activeFilter, lowerQuery]);
 
   // Pagination
-  const totalPages = Math.max(1, Math.ceil(products.length / perPage));
-  const safeCurrentPage = Math.min(currentPage, totalPages);
-  const paginatedProducts = filteredProducts.slice(
-    (safeCurrentPage - 1) * perPage,
-    safeCurrentPage * perPage
-  );
+  const totalPages = Math.max(1, Math.ceil(totalItems / perPage));
+  const safeCurrentPage = Math.min(currentPage, totalPages) || 1;
+  const paginatedProducts = products;
 
   const getStockColor = (stock) => {
     if (stock <= 15) return 'bg-red-500';
@@ -280,7 +288,7 @@ export default function ProductsPage() {
                   {filterTabs.map((tab) => (
                     <button
                       key={tab.key}
-                      onClick={() => { setActiveFilter(tab.key); setFilterOpen(false); setCurrentPage(1); }}
+                      onClick={() => { setActiveFilter(tab.key); setFilterOpen(false); }}
                       className={activeFilter === tab.key ? 'admin-filter-mobile-item-active' : 'admin-filter-mobile-item'}
                     >
                       {tab.label}
@@ -305,7 +313,7 @@ export default function ProductsPage() {
           {filterTabs.map((tab) => (
             <button
               key={tab.key}
-              onClick={() => { setActiveFilter(tab.key); setCurrentPage(1); }}
+              onClick={() => setActiveFilter(tab.key)}
               className={activeFilter === tab.key ? 'admin-filter-btn-active' : 'admin-filter-btn'}
             >
               {tab.label}
@@ -501,10 +509,10 @@ export default function ProductsPage() {
                   currentPage={safeCurrentPage}
                   totalPages={totalPages}
                   onPageChange={setCurrentPage}
-                  totalItems={filteredProducts.length}
+                  totalItems={totalItems}
                   perPage={perPage}
                   itemLabel="products"
-                 onPerPageChange={(val) => { setPerPage(val); setCurrentPage(1); }} />
+                  onPerPageChange={setPerPage} />
               )}
             </>
           )}

@@ -31,27 +31,7 @@ const TABS = [
   { key: 'Sub', label: 'Subcategories' },
 ];
 
-/* Flatten a category list into tree order:
-   parent → its children → grandchildren → next parent …
-   Within each level, sort by created_at descending (newest first) */
-function buildTreeOrder(items) {
-  const result = [];
-  const sortByNewest = (arr) => [...arr].sort((a, b) =>
-    new Date(b.created_at) - new Date(a.created_at)
-  );
-  const insertChildren = (parentId) => {
-    sortByNewest(items.filter((c) => c.parent === parentId))
-      .forEach((child) => {
-        result.push(child);
-        insertChildren(child.id);
-      });
-  };
-  sortByNewest(items.filter((c) => !c.parent)).forEach((root) => {
-    result.push(root);
-    insertChildren(root.id);
-  });
-  return result;
-}
+// Removed buildTreeOrder as it requires the full dataset which is incompatible with server-side pagination.
 
 export default function CategoriesPage() {
   const router = useRouter();
@@ -59,6 +39,7 @@ export default function CategoriesPage() {
   const invalidateDashboard = useDashboardStore((s) => s.invalidate);
 
   const [categories, setCategories] = useState([]);
+  const [totalItems, setTotalItems] = useState(0);
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
@@ -114,25 +95,35 @@ export default function CategoriesPage() {
     setLoading(true);
     setError(false);
     try {
-      const res = await categoryAPI.list();
+      const params = { page, perPage };
+      if (searchQuery.trim()) params.search = searchQuery.trim();
+      if (activeTab === 'Main') params.level = 'main';
+      if (activeTab === 'Sub') params.level = 'sub';
+
+      const res = await categoryAPI.list(params);
       const data = res.data;
-      if (Array.isArray(data)) setCategories(data);
-      else if (data?.results) setCategories(data.results);
-      else setCategories([]);
+      if (data?.results) {
+        setCategories(data.results);
+        setTotalItems(data.count || 0);
+      } else {
+        setCategories(Array.isArray(data) ? data : []);
+        setTotalItems(Array.isArray(data) ? data.length : 0);
+      }
     } catch (err) {
       if (!isCancelledError(err)) {
         setError(true);
       }
       setCategories([]);
+      setTotalItems(0);
     } finally {
       setLoading(false);
       fetchingRef.current = false;
     }
-  }, []);
+  }, [page, perPage, searchQuery, activeTab]);
 
   useEffect(() => {
     fetchCategories();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [fetchCategories]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* ── delete ── */
   const handleDelete = async () => {
@@ -177,22 +168,12 @@ export default function CategoriesPage() {
   };
 
   /* ── filter + paginate ── */
-  const lowerQuery = searchQuery.toLowerCase().trim();
-  const baseFiltered = categories.filter((c) => {
-    const matchSearch = c.name?.toLowerCase().includes(lowerQuery);
-    if (!matchSearch) return false;
-    if (activeTab === 'Main') return c.level === 0;
-    if (activeTab === 'Sub') return c.level >= 1;
-    return true;
-  });
+  // Pagination
+  const filtered = categories;
 
-  const filtered =
-    activeTab === 'All' && !lowerQuery
-      ? buildTreeOrder(baseFiltered)
-      : [...baseFiltered].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-
-  const totalPages = Math.max(1, Math.ceil(filtered.length / perPage));
-  const paginated = filtered.slice((page - 1) * perPage, page * perPage);
+  const totalPages = Math.max(1, Math.ceil(totalItems / perPage));
+  const safePage = Math.min(page, totalPages) || 1;
+  const paginated = filtered;
 
   const handleCreate = () => {
     sessionStorage.removeItem('form-draft:category-create');
@@ -244,7 +225,7 @@ export default function CategoriesPage() {
                   {TABS.map(({ key, label }) => (
                     <button
                       key={key}
-                      onClick={() => { setActiveTab(key); setPage(1); setFilterOpen(false); }}
+                      onClick={() => { setActiveTab(key); setFilterOpen(false); }}
                       className={activeTab === key ? 'admin-filter-mobile-item-active' : 'admin-filter-mobile-item'}
                     >
                       {label}
@@ -269,7 +250,7 @@ export default function CategoriesPage() {
           {TABS.map(({ key, label }) => (
             <button
               key={key}
-              onClick={() => { setActiveTab(key); setPage(1); }}
+              onClick={() => setActiveTab(key)}
               className={activeTab === key ? 'admin-filter-btn-active' : 'admin-filter-btn'}
             >
               {label}
@@ -428,14 +409,14 @@ export default function CategoriesPage() {
 
           {/* Pagination */}
           {!loading && filtered.length > 0 && (
-            <Pagination
-              currentPage={page}
+              <Pagination
+              currentPage={safePage}
               totalPages={totalPages}
               onPageChange={setPage}
-              totalItems={filtered.length}
+              totalItems={totalItems}
               perPage={perPage}
               itemLabel="categories"
-              onPerPageChange={(val) => { setPerPage(val); setPage(1); }}
+              onPerPageChange={setPerPage}
             />
           )}
         </div>

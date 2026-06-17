@@ -104,11 +104,10 @@ export default function StorefrontLoginPage() {
               <button
                 key={tab}
                 onClick={() => setMode(tab)}
-                className={`flex-1 py-3 text-sm font-bold rounded-xl transition-all duration-300 ${
-                  mode === tab
+                className={`flex-1 py-3 text-sm font-bold rounded-xl transition-all duration-300 ${mode === tab
                     ? 'bg-card text-card-foreground shadow-sm'
                     : 'text-muted-foreground hover:text-foreground'
-                }`}
+                  }`}
               >
                 {tab === 'login' ? 'Sign In' : 'Sign Up'}
               </button>

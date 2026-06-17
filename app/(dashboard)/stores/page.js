@@ -38,26 +38,34 @@ export default function StoresPage() {
     setLoading(true);
     setError(false);
     try {
-      const response = await storeAPI.list();
+      const params = { page: currentPage, perPage };
+      if (searchQuery.trim()) params.search = searchQuery.trim();
+
+      const response = await storeAPI.list(params);
       const data = response.data;
-      if (Array.isArray(data)) setStores(data);
-      else if (data?.results) setStores(data.results);
-      else if (typeof data === 'object') setStores([data]);
-      else setStores([]);
+      if (data?.results) {
+        setStores(data.results);
+        setTotalItems(data.count || 0);
+      } else {
+        const storeList = Array.isArray(data) ? data : (typeof data === 'object' && data ? [data] : []);
+        setStores(storeList);
+        setTotalItems(storeList.length);
+      }
     } catch (err) {
       if (!isCancelledError(err)) {
         setError(true);
       }
       setStores([]);
+      setTotalItems(0);
     } finally {
       setLoading(false);
       fetchingRef.current = false;
     }
-  }, []);
+  }, [currentPage, perPage, searchQuery]);
 
   useEffect(() => {
     fetchStores();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [fetchStores]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleDelete = async () => {
     if (!deleteModal.store) return;
@@ -120,19 +128,9 @@ export default function StoresPage() {
     }
   };
 
-  const lowerQuery = searchQuery.toLowerCase().trim();
-  const filteredStores = stores.filter(s =>
-    s.name?.toLowerCase().includes(lowerQuery) ||
-    s.subdomain?.toLowerCase().includes(lowerQuery)
-  );
-
-  // Pagination
-  const totalPages = Math.max(1, Math.ceil(stores.length / perPage));
-  const safeCurrentPage = Math.min(currentPage, totalPages);
-  const paginatedStores = filteredStores.slice(
-    (safeCurrentPage - 1) * perPage,
-    safeCurrentPage * perPage
-  );
+  const totalPages = Math.max(1, Math.ceil(totalItems / perPage));
+  const safeCurrentPage = Math.min(currentPage, totalPages) || 1;
+  const paginatedStores = stores;
 
   useEffect(() => {
     setCurrentPage(1);

@@ -124,7 +124,6 @@ export default function OrdersPage() {
 
   const switchTab = (value) => {
     setActiveStatus(value);
-    setPage(1);
     setSearchQuery('');
   };
 
@@ -413,7 +412,7 @@ export default function OrdersPage() {
                   totalItems={totalItems}
                   perPage={perPage}
                   itemLabel="orders"
-                 onPerPageChange={(val) => { setPerPage(val); setPage(1); }} />
+                 onPerPageChange={setPerPage} />
               )}
             </>
           )}
