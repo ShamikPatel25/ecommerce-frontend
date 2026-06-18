@@ -10,7 +10,7 @@ import {
   Trash2, MoreHorizontal,
   Tag, Eye, EyeOff,
   SlidersHorizontal,
-  Pencil, X,
+  Pencil, X, CornerDownRight
 } from 'lucide-react';
 import Pagination from '@/components/dashboard/Pagination';
 import DataError from '@/components/dashboard/DataError';
@@ -46,7 +46,7 @@ export default function CategoriesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  
+
   const activeTab = searchParams.get('tab') || 'All';
   const page = Number(searchParams.get('page')) || 1;
   const perPage = Number(searchParams.get('perPage')) || 10;
@@ -158,8 +158,7 @@ export default function CategoriesPage() {
   };
 
   /* ── helpers ── */
-  const getParentName = (parentId) =>
-    categories.find((c) => c.id === parentId)?.name || '—';
+
 
   const getLevelBadge = (level) => {
     if (level === 0) return { cls: 'bg-blue-500/10 text-blue-400 border border-blue-500/20', label: 'Main' };
@@ -184,14 +183,25 @@ export default function CategoriesPage() {
     <div className="admin-page h-[calc(100vh-64px)] flex flex-col overflow-hidden">
       <div className="admin-container flex-1 flex flex-col min-h-0">
 
-        {/* ── Page Header ── */}
-        <div className="admin-page-header">
-          <div>
-            <h2 className="admin-title">Categories</h2>
-            <p className="admin-subtitle">Organize your store hierarchy for better customer navigation.</p>
+        {/* Page Header */}
+        <div className="admin-page-header !mb-6">
+          <div className="flex flex-col w-full sm:w-auto">
+            <div className="flex items-center justify-between w-full sm:w-auto">
+              <h2 className="admin-title !mb-0 sm:!mb-1">Categories</h2>
+              {/* Mobile Button */}
+              <button
+                onClick={handleCreate}
+                className="admin-btn-primary sm:hidden"
+              >
+                <Plus size={20} />
+                <span>Add Category</span>
+              </button>
+            </div>
+            <p className="admin-subtitle !mt-1 sm:mt-1 mb-2 sm:mb-0">Organize your products into collections.</p>
           </div>
-          <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto mt-4 sm:mt-0">
-            {/* ── Search Bar ── */}
+
+          <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto mt-2 sm:mt-0">
+            {/* Search Bar */}
             <div className="admin-search-wrapper !mb-0 w-full sm:w-96" ref={filterRef}>
               <div className="admin-search-box !h-11">
                 <div className="admin-search-icon">
@@ -199,7 +209,7 @@ export default function CategoriesPage() {
                 </div>
                 <input
                   className="admin-search-input"
-                  placeholder="Search categories by name..."
+                  placeholder="Search categories"
                   value={searchQuery}
                   onChange={(e) => { setSearchQuery(e.target.value); setPage(1); }}
                 />
@@ -235,9 +245,10 @@ export default function CategoriesPage() {
               )}
             </div>
 
+            {/* Desktop Button */}
             <button
               onClick={handleCreate}
-              className="admin-btn-primary"
+              className="admin-btn-primary hidden sm:flex"
             >
               <Plus size={20} />
               <span>Add Category</span>
@@ -301,7 +312,7 @@ export default function CategoriesPage() {
                         <td className="admin-td text-left">
                           <div className="flex items-center justify-start gap-3 w-full min-w-0">
                             <span
-                              className="font-medium text-sm text-slate-900 dark:text-white truncate max-w-[150px] md:max-w-[200px] lg:max-w-[250px] block"
+                              className="font-medium text-sm text-slate-900 dark:text-white truncate w-full block"
                               title={cat.name}
                             >
                               {cat.name}
@@ -311,23 +322,27 @@ export default function CategoriesPage() {
 
                         {/* URL Handle */}
                         <td className="admin-td text-left">
-                          <code
-                            className="text-xs font-mono bg-slate-100 dark:bg-gray-700 px-2 py-1 rounded text-slate-500 dark:text-gray-400 truncate max-w-[150px] md:max-w-[200px] lg:max-w-[250px] inline-block align-bottom"
-                            title={`/${cat.full_slug || cat.slug}`}
-                          >
-                            /{cat.full_slug || cat.slug}
-                          </code>
+                          <div className="w-full min-w-0">
+                            <code
+                              className="text-xs font-mono bg-slate-100 dark:bg-gray-700 px-2 py-1 rounded text-slate-500 dark:text-gray-400 truncate inline-block max-w-full align-bottom"
+                              title={`/${cat.full_slug || cat.slug}`}
+                            >
+                              /{cat.full_slug || cat.slug}
+                            </code>
+                          </div>
                         </td>
 
                         {/* Parent */}
                         <td className="admin-td text-sm text-slate-500 dark:text-gray-400 text-left">
                           {cat.parent ? (
-                            <span
-                              className="inline-block px-2.5 py-1 rounded-md bg-slate-100 dark:bg-gray-700 text-xs font-medium text-slate-600 dark:text-gray-300 truncate max-w-[120px] md:max-w-[150px] lg:max-w-[200px] align-bottom"
-                              title={getParentName(cat.parent)}
-                            >
-                              {getParentName(cat.parent)}
-                            </span>
+                            <div className="w-full min-w-0">
+                              <span
+                                className="inline-block px-2.5 py-1 rounded-md bg-slate-100 dark:bg-gray-700 text-xs font-medium text-slate-600 dark:text-gray-300 truncate max-w-full align-bottom"
+                                title={cat.parent_name || '—'}
+                              >
+                                {cat.parent_name || '—'}
+                              </span>
+                            </div>
                           ) : (
                             <span className="text-slate-300 dark:text-gray-600">—</span>
                           )}
@@ -343,8 +358,8 @@ export default function CategoriesPage() {
                         {/* Status */}
                         <td className="admin-td whitespace-nowrap">
                           <span className={`inline-flex items-center justify-center gap-1.5 min-w-[5.5rem] px-3 py-1 rounded-full text-xs font-bold ${cat.is_active
-                              ? 'bg-green-500/10 text-green-400 border border-green-500/20'
-                              : 'bg-red-500/10 text-red-400 border border-red-500/20'
+                            ? 'bg-green-500/10 text-green-400 border border-green-500/20'
+                            : 'bg-red-500/10 text-red-400 border border-red-500/20'
                             }`}>
                             <span className={`w-1.5 h-1.5 rounded-full ${cat.is_active ? 'bg-green-500' : 'bg-red-500'}`} />
                             {cat.is_active ? 'Active' : 'Inactive'}
@@ -409,7 +424,7 @@ export default function CategoriesPage() {
 
           {/* Pagination */}
           {!loading && filtered.length > 0 && (
-              <Pagination
+            <Pagination
               currentPage={safePage}
               totalPages={totalPages}
               onPageChange={setPage}

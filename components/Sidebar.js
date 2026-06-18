@@ -87,11 +87,12 @@ export default function Sidebar() {
   }, []);
 
   const handleStoreSwitch = (store) => {
-    if (!store.is_active) {
-      setStoreDropdownOpen(false);
-      setShowDeactivatedModal(true);
-      return;
-    }
+    // Allow owners to switch to deactivated stores so they can manage data
+    // if (!store.is_active) {
+    //   setStoreDropdownOpen(false);
+    //   setShowDeactivatedModal(true);
+    //   return;
+    // }
     if (activeStore?.id === store.id) {
       setStoreDropdownOpen(false);
       setOpen(false);
@@ -192,7 +193,11 @@ export default function Sidebar() {
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate">{storeName}</p>
-            <p className="text-xs text-gray-500">Store Owner</p>
+            {activeStore && !activeStore.is_active ? (
+              <span className="inline-block mt-0.5 text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-red-500/10 text-red-500 border border-red-500/20">Inactive Store</span>
+            ) : (
+              <p className="text-xs text-gray-500">Store Owner</p>
+            )}
           </div>
           <ChevronDown
             className={`w-4 h-4 text-gray-400 transition-transform flex-shrink-0 ${storeDropdownOpen ? 'rotate-180' : ''}`}
@@ -304,7 +309,7 @@ export default function Sidebar() {
         ))}
 
         {/* Account section — mobile only */}
-        <div className="md:hidden" ref={settingsAccountRef}>
+        <div className="xl:hidden" ref={settingsAccountRef}>
           <div className="px-3 pt-4 pb-1.5 text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
             Account
           </div>
@@ -388,7 +393,7 @@ export default function Sidebar() {
   return (
     <>
       {/* Mobile Topbar */}
-      <div className="md:hidden fixed top-0 left-0 right-0 z-40 bg-white dark:bg-gray-900 text-slate-900 dark:text-white flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-800">
+      <div className="xl:hidden fixed top-0 left-0 right-0 z-40 bg-white dark:bg-gray-900 text-slate-900 dark:text-white flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-800">
         <div className="flex items-center gap-3">
           <button
             onClick={() => setOpen(true)}
@@ -416,14 +421,14 @@ export default function Sidebar() {
       {/* Mobile Overlay */}
       {open && (
         <div
-          className="md:hidden fixed inset-0 bg-black/50 z-40 transition-opacity"
+          className="xl:hidden fixed inset-0 bg-black/50 z-40 transition-opacity"
           onClick={() => setOpen(false)}
         />
       )}
 
       {/* Mobile Drawer */}
       <div
-        className={`md:hidden fixed top-0 left-0 h-full w-64 bg-white dark:bg-[#0f1629] text-slate-900 dark:text-white z-50 flex flex-col transform transition-transform duration-300 ease-in-out ${open ? 'translate-x-0' : '-translate-x-full'}`}
+        className={`xl:hidden fixed top-0 left-0 h-full w-64 bg-white dark:bg-[#0f1629] text-slate-900 dark:text-white z-50 flex flex-col transform transition-transform duration-300 ease-in-out ${open ? 'translate-x-0' : '-translate-x-full'}`}
       >
         <button
           onClick={() => setOpen(false)}
@@ -436,7 +441,7 @@ export default function Sidebar() {
       </div>
 
       {/* Desktop Fixed Sidebar */}
-      <div className="hidden md:flex w-64 bg-white dark:bg-[#0f1629] text-slate-900 dark:text-white min-h-screen flex-col fixed left-0 top-0 border-r border-gray-200 dark:border-gray-800">
+      <div className="hidden xl:flex w-64 bg-white dark:bg-[#0f1629] text-slate-900 dark:text-white min-h-screen flex-col fixed left-0 top-0 border-r border-gray-200 dark:border-gray-800">
         {renderNavContent()}
       </div>
 

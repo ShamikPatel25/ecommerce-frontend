@@ -28,9 +28,9 @@ export default function ConfirmDeleteModal({
             <Trash2 className="w-8 h-8 text-red-600" />
           </div>
           <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">{title}</h3>
-          <p className="text-slate-500 dark:text-gray-400 text-base leading-relaxed">
+          <p className="text-slate-500 dark:text-gray-400 text-base leading-relaxed break-words">
             Are you sure you want to delete{' '}
-            <span className="font-semibold text-slate-700 dark:text-gray-300">&ldquo;{itemName}&rdquo;</span>?{' '}
+            <span className="font-semibold text-slate-700 dark:text-gray-300 break-all">&ldquo;{itemName}&rdquo;</span>?{' '}
             {description}
           </p>
         </div>

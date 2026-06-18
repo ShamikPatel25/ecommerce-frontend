@@ -68,7 +68,7 @@ export default function TopBar() {
   }, []);
 
   return (
-    <div className="hidden md:flex items-center justify-between h-14 px-6 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-30">
+    <div className="hidden xl:flex items-center justify-between h-14 px-6 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-30">
       {/* Page Title */}
       <div className="flex-1">
         {!shouldHideTitle && (

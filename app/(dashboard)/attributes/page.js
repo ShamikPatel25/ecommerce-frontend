@@ -28,7 +28,7 @@ export default function AttributesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  
+
   const currentPage = Number(searchParams.get('page')) || 1;
   const perPage = Number(searchParams.get('perPage')) || 10;
 
@@ -144,12 +144,23 @@ export default function AttributesPage() {
     <div className="admin-page h-[calc(100vh-64px)] flex flex-col overflow-hidden">
       <div className="admin-container flex-1 flex flex-col min-h-0">
         {/* Page Header */}
-        <div className="admin-page-header">
-          <div>
-            <h2 className="admin-title">Attributes</h2>
-            <p className="admin-subtitle">Manage product attributes and their values.</p>
+        <div className="admin-page-header !mb-6">
+          <div className="flex flex-col w-full sm:w-auto">
+            <div className="flex items-center justify-between w-full sm:w-auto">
+              <h2 className="admin-title !mb-0 sm:!mb-1">Attributes</h2>
+              {/* Mobile Button */}
+              <button
+                onClick={handleCreate}
+                className="admin-btn-primary sm:hidden"
+              >
+                <Plus size={20} />
+                <span>Add Attribute</span>
+              </button>
+            </div>
+            <p className="admin-subtitle !mt-1 sm:mt-1 mb-2 sm:mb-0">Manage product attributes and their values.</p>
           </div>
-          <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto mt-4 sm:mt-0">
+
+          <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto mt-2 sm:mt-0">
             {/* Search Bar */}
             <div className="admin-search-wrapper !mb-0 w-full sm:w-96">
               <div className="admin-search-box !h-11">
@@ -158,7 +169,7 @@ export default function AttributesPage() {
                 </div>
                 <input
                   className="admin-search-input"
-                  placeholder="Search by attribute name or category..."
+                  placeholder="Search by attribute name or category"
                   value={searchQuery}
                   onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
                 />
@@ -174,9 +185,10 @@ export default function AttributesPage() {
               </div>
             </div>
 
+            {/* Desktop Button */}
             <button
               onClick={handleCreate}
-              className="admin-btn-primary"
+              className="admin-btn-primary hidden sm:flex"
             >
               <Plus size={20} />
               <span>Add Attribute</span>

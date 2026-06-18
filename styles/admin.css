@@ -26,7 +26,7 @@
   }
 
   .admin-btn-primary {
-    @apply flex items-center justify-center gap-2 cursor-pointer rounded-lg h-11 px-6 bg-violet-500 text-white text-sm font-bold shadow-lg shadow-violet-500/20 hover:bg-violet-600 transition-all whitespace-nowrap;
+    @apply flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer rounded-lg h-9 sm:h-11 px-4 sm:px-6 bg-violet-500 text-white text-sm font-bold shadow-md sm:shadow-lg shadow-violet-500/20 hover:bg-violet-600 transition-all whitespace-nowrap;
   }
 
   /* ── Search Bar ── */
@@ -60,11 +60,11 @@
   }
 
   .admin-table {
-    @apply w-full text-center border-collapse;
+    @apply w-full text-center border-collapse h-fit;
   }
 
   .admin-th {
-    @apply px-3 lg:px-6 py-3 text-[11px] font-semibold uppercase tracking-wider text-violet-600 dark:text-violet-400 whitespace-nowrap text-center bg-gray-50 dark:bg-gray-800/80 sticky top-0 z-10 backdrop-blur-md border-b border-gray-200 dark:border-gray-700;
+    @apply px-4 lg:px-6 py-3 lg:py-4 text-[11px] font-semibold uppercase tracking-wider text-violet-600 dark:text-violet-400 whitespace-nowrap text-center bg-gray-50 dark:bg-gray-800/80 sticky top-0 z-10 backdrop-blur-md border-b border-gray-200 dark:border-gray-700;
   }
 
   .admin-thead-row {
@@ -76,11 +76,11 @@
   }
 
   .admin-tr {
-    @apply hover:bg-slate-50/50 dark:hover:bg-gray-700/30 transition-colors cursor-pointer;
+    @apply hover:bg-slate-50/50 dark:hover:bg-gray-700/30 transition-colors cursor-pointer h-[60px];
   }
 
   .admin-td {
-    @apply px-3 lg:px-6 py-3 lg:py-4 text-center;
+    @apply px-4 lg:px-6 py-2 text-center h-[60px];
   }
 
   .admin-td .flex {

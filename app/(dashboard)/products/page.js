@@ -248,12 +248,23 @@ export default function ProductsPage() {
     <div className="admin-page h-[calc(100vh-64px)] flex flex-col overflow-hidden">
       <div className="admin-container flex-1 flex flex-col min-h-0">
         {/* Page Header */}
-        <div className="admin-page-header">
-          <div>
-            <h2 className="admin-title">Products</h2>
-            <p className="admin-subtitle">Manage your catalog, stock levels, and pricing.</p>
+        <div className="admin-page-header !mb-6">
+          <div className="flex flex-col w-full sm:w-auto">
+            <div className="flex items-center justify-between w-full sm:w-auto">
+              <h2 className="admin-title !mb-0 sm:!mb-1">Products</h2>
+              {/* Mobile Button */}
+              <button
+                onClick={handleCreate}
+                className="admin-btn-primary sm:hidden"
+              >
+                <Plus size={20} />
+                <span>Add Product</span>
+              </button>
+            </div>
+            <p className="admin-subtitle !mt-1 sm:mt-1 mb-2 sm:mb-0">Manage your product catalog, pricing, and inventory.</p>
           </div>
-          <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto mt-4 sm:mt-0">
+
+          <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto mt-2 sm:mt-0">
             {/* Search Bar */}
             <div className="admin-search-wrapper !mb-0 w-full sm:w-96" ref={filterRef}>
               <div className="admin-search-box !h-11">
@@ -283,6 +294,7 @@ export default function ProductsPage() {
                 </button>
               </div>
 
+              {/* Mobile Filter Dropdown */}
               {filterOpen && (
                 <div className="admin-filters-mobile">
                   {filterTabs.map((tab) => (
@@ -298,9 +310,10 @@ export default function ProductsPage() {
               )}
             </div>
 
+            {/* Desktop Button */}
             <button
               onClick={handleCreate}
-              className="admin-btn-primary"
+              className="admin-btn-primary hidden sm:flex"
             >
               <Plus size={20} />
               <span>Add Product</span>

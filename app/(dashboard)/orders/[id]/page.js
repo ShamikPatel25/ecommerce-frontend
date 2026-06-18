@@ -364,34 +364,26 @@ export default function OrderDetailPage() {
             </h1>
           </div>
 
-          <div className="flex flex-wrap items-start justify-between gap-4 w-full">
-            <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-3 w-full">
+            <div className="flex flex-wrap items-center justify-between gap-4 w-full">
               <span className={`w-max px-3 py-1 rounded-full text-xs font-bold ${STATUS_STYLES[effectiveStatus] || ''}`}>
                 {STATUS_LABELS[effectiveStatus] || effectiveStatus}
               </span>
-              <span className="text-sm text-slate-500 dark:text-gray-400">
-                Placed on {formatDateTime(order.created_at)}
-              </span>
+
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handlePrintInvoice}
+                  className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-lg text-slate-700 dark:text-gray-300 text-sm font-bold hover:bg-slate-50 dark:hover:bg-gray-700 transition-all shadow-sm"
+                >
+                  <Printer className="w-4 h-4" />
+                  Print Invoice
+                </button>
+              </div>
             </div>
 
-            <div className="flex items-center gap-3">
-              <button
-                onClick={handlePrintInvoice}
-                className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-lg text-slate-700 dark:text-gray-300 text-sm font-bold hover:bg-slate-50 dark:hover:bg-gray-700 transition-all shadow-sm"
-              >
-                <Printer className="w-4 h-4" />
-                Print Invoice
-              </button>
-              {!isOrderFinal && allowedNext.includes('shipped') && (
-                <button
-                  onClick={() => { setNewStatus('shipped'); }}
-                  className="admin-btn-primary"
-                >
-                  <Truck className="w-4 h-4" />
-                  Fulfill Order
-                </button>
-              )}
-            </div>
+            <span className="text-sm text-slate-500 dark:text-gray-400">
+              Placed on {formatDateTime(order.created_at)}
+            </span>
           </div>
         </div>
 

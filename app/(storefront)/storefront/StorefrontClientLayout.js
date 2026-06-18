@@ -69,6 +69,27 @@ export default function StorefrontClientLayout({ children }) {
     );
   }
 
+  if (store && store.is_active === false) {
+    return (
+      <ThemeProvider
+        attribute="class"
+        defaultTheme="light"
+        enableSystem={false}
+        forcedTheme="light"
+      >
+        <div className={`storefront-theme ${outfit.className} min-h-screen flex flex-col items-center justify-center antialiased bg-background text-foreground`}>
+          <div className="text-center max-w-md px-6">
+            <div className="mb-6 text-6xl font-extrabold text-muted-foreground/30">CLOSED</div>
+            <h1 className="text-2xl font-bold tracking-tight mb-3">{store.name} is currently closed.</h1>
+            <p className="text-muted-foreground mb-8">
+              Check back later.
+            </p>
+          </div>
+        </div>
+      </ThemeProvider>
+    );
+  }
+
   return (
     <ThemeProvider
       attribute="class"

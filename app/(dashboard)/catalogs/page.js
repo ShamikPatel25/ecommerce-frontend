@@ -23,7 +23,7 @@ export default function CatalogsPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [totalItems, setTotalItems] = useState(0);
-  
+
   const currentPage = Number(searchParams.get('page')) || 1;
   const perPage = Number(searchParams.get('perPage')) || 10;
 
@@ -50,7 +50,7 @@ export default function CatalogsPage() {
 
       const res = await productAPI.variants(params);
       const data = res.data;
-      
+
       setCatalogs(data?.results || []);
       setTotalItems(data.count || 0);
     } catch {
@@ -112,7 +112,7 @@ export default function CatalogsPage() {
                 </div>
                 <input
                   className="admin-search-input"
-                  placeholder="Search by variant name, SKU or product..."
+                  placeholder="Search by variant name, SKU or product"
                   value={searchQuery}
                   onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
                 />

@@ -42,10 +42,13 @@ export default function EditCategoryPage() {
 
   const fetchData = useCallback(async () => {
     try {
-      // Single call — get the category from the list, no separate get() needed
-      const allRes = await categoryAPI.list();
+      const [catRes, allRes] = await Promise.all([
+        categoryAPI.get(categoryId),
+        categoryAPI.list({ perPage: 1000 })
+      ]);
+      
+      const c = catRes.data;
       const all = Array.isArray(allRes.data) ? allRes.data : (allRes.data?.results || []);
-      const c = all.find((cat) => String(cat.id) === String(categoryId));
 
       if (!c) {
         toast.error('Category not found');

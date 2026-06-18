@@ -117,7 +117,7 @@ export default function DashboardLayout({ children }) {
     return (
       <div className="flex min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors">
         <Sidebar />
-        <div className="flex-1 pt-14 md:pt-0 md:ml-64 min-w-0 flex flex-col">
+        <div className="flex-1 pt-14 xl:pt-0 xl:ml-64 min-w-0 flex flex-col">
           <main className="flex-1 min-w-0 flex items-center justify-center">
             <div className="text-center max-w-md px-6">
               <div className="w-20 h-20 bg-violet-500/10 rounded-2xl flex items-center justify-center mx-auto mb-6">
@@ -141,7 +141,7 @@ export default function DashboardLayout({ children }) {
   return (
     <div className="flex min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors">
       <Sidebar />
-      <main className="flex-1 pt-14 md:pt-0 md:ml-64 min-w-0">
+      <main className="flex-1 pt-14 xl:pt-0 xl:ml-64 min-w-0">
         <TopBar />
         {children}
       </main>

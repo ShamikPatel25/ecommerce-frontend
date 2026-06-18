@@ -111,15 +111,9 @@ export default function StoresPage() {
       setStores(updatedStores);
       setGlobalStores(updatedStores);
 
-      // If we deactivated the currently active store, auto-switch
-      if (isDeactivating && activeStore?.id === store.id) {
-        const otherActive = updatedStores.find(s => s.is_active && s.id !== store.id);
-        if (otherActive) {
-          setActiveStore(otherActive);
-          globalThis.location.reload();
-        } else {
-          setShowDeactivatedModal(true);
-        }
+      // If we deactivated the currently active store, update its state
+      if (activeStore?.id === store.id) {
+        setActiveStore({ ...activeStore, is_active: !isDeactivating });
       }
     } catch (err) {
       const detail = err.response?.data;
@@ -145,11 +139,22 @@ export default function StoresPage() {
     <div className="admin-page h-[calc(100vh-64px)] flex flex-col overflow-hidden">
       <div className="admin-container flex-1 flex flex-col min-h-0">
         {/* Page Header */}
-        <div className="admin-page-header">
-          <div>
-            <h2 className="admin-title">Stores</h2>
+        <div className="admin-page-header !mb-6">
+          <div className="flex flex-col w-full sm:w-auto">
+            <div className="flex items-center justify-between w-full sm:w-auto">
+              <h2 className="admin-title !mb-0 sm:!mb-1">Stores</h2>
+              {/* Mobile Button */}
+              <button
+                onClick={handleCreate}
+                className="admin-btn-primary sm:hidden"
+              >
+                <Plus size={20} />
+                <span>Create Store</span>
+              </button>
+            </div>
           </div>
-          <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto mt-4 sm:mt-0">
+
+          <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto mt-2 sm:mt-0">
             {/* Search Bar */}
             <div className="admin-search-wrapper !mb-0 w-full sm:w-96">
               <div className="admin-search-box !h-11">
@@ -174,9 +179,10 @@ export default function StoresPage() {
               </div>
             </div>
 
+            {/* Desktop Button */}
             <button
               onClick={handleCreate}
-              className="admin-btn-primary"
+              className="admin-btn-primary hidden sm:flex"
             >
               <Plus size={20} />
               <span>Create Store</span>

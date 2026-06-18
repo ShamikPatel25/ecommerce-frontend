@@ -53,7 +53,7 @@ export default function OrdersPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  
+
   const activeStatus = searchParams.get('status') || '';
   const page = Number(searchParams.get('page')) || 1;
   const perPage = Number(searchParams.get('perPage')) || 10;
@@ -169,12 +169,23 @@ export default function OrdersPage() {
     <div className="admin-page h-[calc(100vh-64px)] flex flex-col overflow-hidden">
       <div className="admin-container flex-1 flex flex-col min-h-0">
         {/* Page Header */}
-        <div className="admin-page-header">
-          <div>
-            <h2 className="admin-title">Orders</h2>
-            <p className="admin-subtitle">Manage and track all customer transactions and delivery status.</p>
+        <div className="admin-page-header !mb-6">
+          <div className="flex flex-col w-full sm:w-auto">
+            <div className="flex items-center justify-between w-full sm:w-auto">
+              <h2 className="admin-title !mb-0 sm:!mb-1">Orders</h2>
+              {/* Mobile Button */}
+              <button
+                onClick={exportCSV}
+                className="admin-btn-primary sm:hidden"
+              >
+                <Download size={20} />
+                <span>Export CSV</span>
+              </button>
+            </div>
+            <p className="admin-subtitle !mt-1 sm:mt-1 mb-2 sm:mb-0">Manage and track all customer transactions and delivery status.</p>
           </div>
-          <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto mt-4 sm:mt-0">
+
+          <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto mt-2 sm:mt-0">
             {/* Search Bar */}
             <div className="admin-search-wrapper !mb-0 w-full sm:w-96" ref={filterRef}>
               <div className="admin-search-box !h-11">
@@ -183,7 +194,7 @@ export default function OrdersPage() {
                 </div>
                 <input
                   className="admin-search-input"
-                  placeholder="Search orders by customer name or ID"
+                  placeholder="Search orders by customer name or number"
                   value={searchQuery}
                   onChange={(e) => { setSearchQuery(e.target.value); setPage(1); }}
                 />
@@ -219,9 +230,10 @@ export default function OrdersPage() {
               )}
             </div>
 
+            {/* Desktop Button */}
             <button
               onClick={exportCSV}
-              className="admin-btn-primary"
+              className="admin-btn-primary hidden sm:flex"
             >
               <Download size={20} />
               <span>Export CSV</span>
@@ -412,7 +424,7 @@ export default function OrdersPage() {
                   totalItems={totalItems}
                   perPage={perPage}
                   itemLabel="orders"
-                 onPerPageChange={setPerPage} />
+                  onPerPageChange={setPerPage} />
               )}
             </>
           )}
