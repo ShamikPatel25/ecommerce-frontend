@@ -29,8 +29,8 @@ const INPUT_ERROR_CLS =
 
 const SELECT_CLS = INPUT_CLS + ' appearance-none pr-10';
 
-const MAX_NAME_LENGTH = 100;
-const MAX_SKU_LENGTH = 30;
+const MAX_NAME_LENGTH = 30;
+const MAX_SKU_LENGTH = 20;
 const MAX_DESCRIPTION_LENGTH = 500;
 
 const CURRENCY_SYMBOLS = {
@@ -205,6 +205,7 @@ export default function EditProductPage() {
           dirtyVariants.map(v => productAPI.updateVariant(productId, v.id, {
             stock: Number.parseInt(v.stock) || 0,
             price: v.price ? Number.parseFloat(v.price) : null,
+            sku: v.sku || null,
           }).catch(() => null))
         );
         setCatalogs(prev => prev.map(c => dirtyVariants.find(d => d.id === c.id) ? { ...c, isDirty: false } : c));
@@ -341,6 +342,7 @@ export default function EditProductPage() {
         attribute_values: c.attribute_values,
         price: Number.parseFloat(c.price) || Number.parseFloat(product.price),
         stock: Number.parseInt(c.stock) || 0,
+        sku: c.sku || null,
       }));
       await productAPI.generateCatalog(productId, {
         single_catalog_mode: selectedCombinations.length === 1,
@@ -387,6 +389,7 @@ export default function EditProductPage() {
       await productAPI.updateVariant(productId, catalog.id, {
         stock: Number.parseInt(catalog.stock) || 0,
         price: catalog.price ? Number.parseFloat(catalog.price) : null,
+        sku: catalog.sku || null,
       });
       toast.success('Variant updated!');
       setCatalogs(prev => prev.map(c => c.id === catalog.id ? { ...c, isDirty: false } : c));
@@ -771,7 +774,7 @@ export default function EditProductPage() {
                   <thead className="bg-slate-50 dark:bg-gray-700/50 border-b border-violet-500/5">
                     <tr>
                       <th className="px-4 py-3 text-left text-xs font-bold text-slate-400 dark:text-gray-500 uppercase tracking-wider">Attributes</th>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-slate-400 dark:text-gray-500 uppercase tracking-wider">Name / SKU</th>
+                      <th className="px-4 py-3 text-left text-xs font-bold text-slate-400 dark:text-gray-500 uppercase tracking-wider">SKU</th>
                       <th className="px-4 py-3 text-left text-xs font-bold text-slate-400 dark:text-gray-500 uppercase tracking-wider">Stock</th>
                       <th className="px-4 py-3 text-left text-xs font-bold text-slate-400 dark:text-gray-500 uppercase tracking-wider">Price</th>
                       <th className="px-4 py-3 text-left text-xs font-bold text-slate-400 dark:text-gray-500 uppercase tracking-wider">Actions</th>
@@ -812,9 +815,22 @@ export default function EditProductPage() {
                             </div>
                           </td>
 
-                          <td className={`px-4 py-3 text-sm text-slate-900 dark:text-white font-mono ${isPendingDelete ? 'line-through text-slate-400 dark:text-gray-500' : ''}`}>
-                            {catalog.variant_name || catalog.sku || (
-                              isNew ? <span className="text-violet-500 text-xs italic">New</span> : '—'
+                          <td className="px-4 py-3">
+                            <input
+                              type="text"
+                              placeholder={isNew ? 'Auto-generated' : 'SKU'}
+                              value={catalog.sku || ''}
+                              maxLength={20}
+                              disabled={isPendingDelete}
+                              onChange={(e) => {
+                                const val = e.target.value.replace(/[^a-zA-Z0-9-]/g, '');
+                                updateCatalogField(catalog.id, 'sku', val);
+                                if (!isNew) updateCatalogField(catalog.id, 'isDirty', true);
+                              }}
+                              className="w-full h-10 px-2 border border-violet-500/20 bg-violet-500/5 rounded-lg text-sm font-mono focus:outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                            />
+                            {!isNew && catalog.variant_name && catalog.variant_name !== catalog.sku && (
+                                <p className="text-[10px] text-slate-400 mt-1">{catalog.variant_name}</p>
                             )}
                           </td>
 

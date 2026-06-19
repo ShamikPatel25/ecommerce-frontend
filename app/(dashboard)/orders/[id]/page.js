@@ -14,57 +14,57 @@ import { useStoreStore } from '@/store/storeStore';
 import { useDashboardStore } from '@/store/dashboardStore';
 
 const STATUS_STYLES = {
-  pending:          'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20',
-  confirmed:        'bg-blue-500/10 text-blue-400 border border-blue-500/20',
-  processing:       'bg-violet-500/10 text-violet-400 border border-violet-500/20',
-  shipped:          'bg-cyan-500/10 text-cyan-500 border border-cyan-500/20',
-  delivered:        'bg-green-500/10 text-green-400 border border-green-500/20',
-  cancelled:        'bg-red-500/10 text-red-400 border border-red-500/20',
-  returned:         'bg-orange-500/10 text-orange-400 border border-orange-500/20',
+  pending: 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20',
+  confirmed: 'bg-blue-500/10 text-blue-400 border border-blue-500/20',
+  processing: 'bg-violet-500/10 text-violet-400 border border-violet-500/20',
+  shipped: 'bg-cyan-500/10 text-cyan-500 border border-cyan-500/20',
+  delivered: 'bg-green-500/10 text-green-400 border border-green-500/20',
+  cancelled: 'bg-red-500/10 text-red-400 border border-red-500/20',
+  returned: 'bg-orange-500/10 text-orange-400 border border-orange-500/20',
 };
 
 const VALID_TRANSITIONS = {
-  pending:          ['confirmed', 'cancelled'],
-  confirmed:        ['processing', 'cancelled'],
-  processing:       ['shipped', 'cancelled'],
-  shipped:          ['delivered'],
-  delivered:        ['returned'],
-  cancelled:        [],
-  returned:         [],
+  pending: ['confirmed', 'cancelled'],
+  confirmed: ['processing', 'cancelled'],
+  processing: ['shipped', 'cancelled'],
+  shipped: ['delivered'],
+  delivered: ['returned'],
+  cancelled: [],
+  returned: [],
 };
 
 const STATUS_LABELS = {
-  pending:          'Pending',
-  confirmed:        'Confirmed',
-  processing:       'Processing',
-  shipped:          'Shipped',
-  delivered:        'Delivered',
-  cancelled:        'Cancelled',
-  returned:         'Returned',
+  pending: 'Pending',
+  confirmed: 'Confirmed',
+  processing: 'Processing',
+  shipped: 'Shipped',
+  delivered: 'Delivered',
+  cancelled: 'Cancelled',
+  returned: 'Returned',
 };
 
 const STATUS_FLOW = ['pending', 'confirmed', 'processing', 'shipped', 'delivered'];
 
 const PROGRESS_STEPS = [
-  { key: 'pending',    label: 'Order Placed',  Icon: Package      },
-  { key: 'confirmed',  label: 'Confirmed',     Icon: CheckCircle2 },
-  { key: 'processing', label: 'Processing',    Icon: Clock        },
-  { key: 'shipped',    label: 'Shipped',       Icon: Truck        },
-  { key: 'delivered',  label: 'Delivered',     Icon: CheckCircle2 },
+  { key: 'pending', label: 'Order Placed', Icon: Package },
+  { key: 'confirmed', label: 'Confirmed', Icon: CheckCircle2 },
+  { key: 'processing', label: 'Processing', Icon: Clock },
+  { key: 'shipped', label: 'Shipped', Icon: Truck },
+  { key: 'delivered', label: 'Delivered', Icon: CheckCircle2 },
 ];
 
 export default function OrderDetailPage() {
   const router = useRouter();
-  const { id }  = useParams();
+  const { id } = useParams();
   const searchParams = useSearchParams();
   const { activeStore } = useStoreStore();
   const invalidateDashboard = useDashboardStore((s) => s.invalidate);
 
-  const [order,        setOrder]        = useState(null);
-  const [loading,      setLoading]      = useState(true);
-  const [saving,       setSaving]       = useState(false);
-  const [newStatus,    setNewStatus]    = useState('');
-  const [hasPrinted,   setHasPrinted]   = useState(false);
+  const [order, setOrder] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [newStatus, setNewStatus] = useState('');
+  const [hasPrinted, setHasPrinted] = useState(false);
 
   const fetchOrder = useCallback(async () => {
     try {
@@ -237,12 +237,12 @@ export default function OrderDetailPage() {
     effectiveStatus = hasReturnedItems ? 'returned' : 'cancelled';
   }
 
-  const isCancelled   = effectiveStatus === 'cancelled';
-  const isReturned    = effectiveStatus === 'returned';
-  const isOrderFinal  = isCancelled || isReturned || allItemsInactive;
-  const customerInit  = order.customer_name?.charAt(0).toUpperCase() || '?';
+  const isCancelled = effectiveStatus === 'cancelled';
+  const isReturned = effectiveStatus === 'returned';
+  const isOrderFinal = isCancelled || isReturned || allItemsInactive;
+  const customerInit = order.customer_name?.charAt(0).toUpperCase() || '?';
   // If order is final (cancelled/returned/all items inactive), no status changes allowed
-  const allowedNext   = isOrderFinal ? [] : (VALID_TRANSITIONS[order.status] || []);
+  const allowedNext = isOrderFinal ? [] : (VALID_TRANSITIONS[order.status] || []);
 
   const renderProgressTracker = () => {
     if (isCancelled) {
@@ -281,7 +281,7 @@ export default function OrderDetailPage() {
       <div className="py-3 select-none">
         <div className="flex items-center w-full">
           {PROGRESS_STEPS.map((step, idx) => {
-            const done   = idx < activeIdx;
+            const done = idx < activeIdx;
             const active = idx === activeIdx;
             const isLast = idx === PROGRESS_STEPS.length - 1;
             const { Icon } = step;
@@ -289,13 +289,12 @@ export default function OrderDetailPage() {
             return (
               <div key={step.key} className={`flex items-center ${isLast ? 'shrink-0' : 'flex-1'}`}>
                 <div
-                  className={`w-10 h-10 shrink-0 rounded-full flex items-center justify-center border-2 transition-colors ${
-                    done
-                      ? 'bg-violet-500 border-violet-500 text-white shadow-lg shadow-violet-500/20'
-                      : active
+                  className={`w-10 h-10 shrink-0 rounded-full flex items-center justify-center border-2 transition-colors ${done
+                    ? 'bg-violet-500 border-violet-500 text-white shadow-lg shadow-violet-500/20'
+                    : active
                       ? 'bg-violet-500/15 border-violet-500 text-violet-500'
                       : 'bg-white dark:bg-gray-800 border-slate-200 dark:border-gray-600 text-slate-400 dark:text-gray-500'
-                  }`}
+                    }`}
                 >
                   {done ? <CheckCircle2 className="w-4 h-4" /> : <Icon className="w-4 h-4" />}
                 </div>
@@ -315,16 +314,15 @@ export default function OrderDetailPage() {
 
         <div className="flex items-start mt-2 w-full">
           {PROGRESS_STEPS.map((step, idx) => {
-            const done   = idx < activeIdx;
+            const done = idx < activeIdx;
             const active = idx === activeIdx;
             const isLast = idx === PROGRESS_STEPS.length - 1;
 
             return (
               <div key={step.key} className={`flex ${isLast ? 'shrink-0' : 'flex-1'}`}>
                 <div className="w-10 shrink-0 flex justify-center">
-                  <span className={`text-[10px] font-bold text-center leading-tight w-14 -mx-2 ${
-                    done || active ? 'text-slate-900 dark:text-white' : 'text-slate-400 dark:text-gray-500'
-                  }`}>
+                  <span className={`text-[10px] font-bold text-center leading-tight w-14 -mx-2 ${done || active ? 'text-slate-900 dark:text-white' : 'text-slate-400 dark:text-gray-500'
+                    }`}>
                     {step.label}
                   </span>
                 </div>

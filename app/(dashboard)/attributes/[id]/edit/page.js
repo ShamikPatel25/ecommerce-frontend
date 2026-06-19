@@ -25,7 +25,7 @@ const INPUT_ERROR_CLS =
 const SELECT_CLS = INPUT_CLS + ' pr-10 appearance-none';
 const SELECT_ERROR_CLS = INPUT_ERROR_CLS + ' pr-10 appearance-none';
 
-const MAX_NAME_LENGTH = 50;
+const MAX_NAME_LENGTH = 30;
 
 export default function EditAttributePage() {
   const router      = useRouter();
@@ -355,14 +355,14 @@ export default function EditAttributePage() {
             <input
               type="text"
               placeholder="Add value (e.g. XL, Red, 10oz)"
-              maxLength={30}
+              maxLength={20}
               className="w-full h-12 rounded-lg border border-violet-500/20 bg-violet-500/5 pl-10 pr-14 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 transition-all dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder:text-gray-500"
               value={newValue}
               onChange={(e) => setNewValue(e.target.value.replace(/[^a-zA-Z0-9- ]/g, ''))}
               onKeyDown={handleKeyDown}
             />
             <span className="absolute right-3 bottom-1.5 text-[10px] font-medium text-slate-400 dark:text-gray-500 pointer-events-none">
-              {newValue.length}/30
+              {newValue.length}/20
             </span>
           </div>
           <button

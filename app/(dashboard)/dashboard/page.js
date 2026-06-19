@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { orderAPI, isCancelledError } from '@/lib/api';
 import { useStoreStore } from '@/store/storeStore';
 import { useDashboardStore } from '@/store/dashboardStore';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, formatCompactNumber } from '@/lib/utils';
 import { PIE_COLORS } from '@/lib/constants';
 import { toast } from 'sonner';
 import Link from 'next/link';
@@ -30,13 +30,13 @@ function useWindowWidth() {
 }
 
 const STATUS_BADGE = {
-  pending:    { dot: 'bg-yellow-500', pill: 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20' },
-  confirmed:  { dot: 'bg-blue-500',   pill: 'bg-blue-500/10 text-blue-400 border border-blue-500/20' },
+  pending: { dot: 'bg-yellow-500', pill: 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20' },
+  confirmed: { dot: 'bg-blue-500', pill: 'bg-blue-500/10 text-blue-400 border border-blue-500/20' },
   processing: { dot: 'bg-violet-500', pill: 'bg-violet-500/10 text-violet-400 border border-violet-500/20' },
-  shipped:    { dot: 'bg-cyan-500',   pill: 'bg-cyan-500/10 text-cyan-500 border border-cyan-500/20' },
-  delivered:  { dot: 'bg-green-500',  pill: 'bg-green-500/10 text-green-400 border border-green-500/20' },
-  cancelled:  { dot: 'bg-red-500',    pill: 'bg-red-500/10 text-red-400 border border-red-500/20' },
-  returned:   { dot: 'bg-orange-500', pill: 'bg-orange-500/10 text-orange-400 border border-orange-500/20' },
+  shipped: { dot: 'bg-cyan-500', pill: 'bg-cyan-500/10 text-cyan-500 border border-cyan-500/20' },
+  delivered: { dot: 'bg-green-500', pill: 'bg-green-500/10 text-green-400 border border-green-500/20' },
+  cancelled: { dot: 'bg-red-500', pill: 'bg-red-500/10 text-red-400 border border-red-500/20' },
+  returned: { dot: 'bg-orange-500', pill: 'bg-orange-500/10 text-orange-400 border border-orange-500/20' },
 };
 
 function getInitials(name) {
@@ -91,7 +91,7 @@ export default function DashboardPage() {
       const nextRecent = data.recent_orders || [];
       const nextLowStock = data.low_stock_products || [];
       const nextRevenue = data.revenue_by_day || [];
-      
+
       const statusChartData = (data.status_data || []).map((item, index) => ({
         name: item.name,
         value: item.value,
@@ -128,11 +128,13 @@ export default function DashboardPage() {
     fetchAll();
   }, [fetchAll]);
 
+  const currencySymbol = activeStore?.currency === 'USD' ? '$' : activeStore?.currency === 'EUR' ? '€' : activeStore?.currency === 'GBP' ? '£' : '₹';
+
   const statCards = [
     {
       label: 'Total Revenue',
       value: loading ? '\u2014' : formatCurrency(stats.revenue || 0, activeStore?.currency),
-      change: '+12.5%',
+      // change: '+12.5%',
       changeUp: true,
       barColor: 'bg-blue-500',
       barPercent: 78,
@@ -140,7 +142,7 @@ export default function DashboardPage() {
     {
       label: 'Orders',
       value: loading ? '\u2014' : (stats.orders ?? 0).toLocaleString(),
-      change: '+8.2%',
+      // change: '+8.2%',
       changeUp: true,
       barColor: 'bg-slate-300 dark:bg-slate-200',
       barPercent: 65,
@@ -148,7 +150,7 @@ export default function DashboardPage() {
     {
       label: 'Customers',
       value: loading ? '\u2014' : (stats.customers ?? 0).toLocaleString(),
-      change: '+5.1%',
+      // change: '+5.1%',
       changeUp: true,
       barColor: 'bg-teal-500',
       barPercent: 52,
@@ -156,7 +158,7 @@ export default function DashboardPage() {
     {
       label: 'Pending',
       value: loading ? '\u2014' : (stats.pending ?? 0).toLocaleString(),
-      change: `+${stats.pending ?? 0}`,
+      // change: `+${stats.pending ?? 0}`,
       changeUp: false,
       barColor: 'bg-slate-500',
       barPercent: 25,
@@ -204,7 +206,7 @@ export default function DashboardPage() {
             </tr>
           </thead>
           <tbody>
-            {recentOrders.map(order => (
+            {recentOrders.slice(0, isMobile ? 5 : Math.max(5, 5 + lowStockProducts.length)).map(order => (
               <tr
                 key={order.id}
                 onClick={() => router.push(`/orders/${order.id}`)}
@@ -263,19 +265,17 @@ export default function DashboardPage() {
     return (
       <div className="space-y-1">
         {lowStockProducts.map(p => {
-          const stock = p.product_type === 'catalog'
-            ? (p.variants || []).reduce((s, v) => s + (v.stock ?? 0), 0)
-            : (p.stock ?? 0);
+          const stock = p.stock ?? 0;
           return (
             <button
               type="button"
-              key={p.id}
+              key={`${p.id}-${p.sku}`}
               onClick={() => router.push(`/products/${p.id}/edit`)}
               className="flex items-center justify-between cursor-pointer hover:bg-slate-50 dark:hover:bg-gray-700/50 rounded-lg p-3 transition-colors appearance-none bg-transparent border-none w-full text-left border-b border-gray-100 dark:border-gray-700/50 last:border-b-0"
             >
-              <div className="min-w-0">
-                <p className="text-sm font-medium text-slate-800 dark:text-slate-200">{p.name}</p>
-                <p className="text-xs text-slate-400 dark:text-gray-500 font-mono">{p.sku}</p>
+              <div className="min-w-0 flex-1 overflow-hidden">
+                <p className="text-sm font-medium text-slate-800 dark:text-slate-200 truncate pr-2" title={p.name}>{p.name}</p>
+                <p className="text-xs text-slate-400 dark:text-gray-500 font-mono truncate pr-2" title={p.sku}>{p.sku}</p>
               </div>
               <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-lg shrink-0 ml-3 ${stock <= 5 ? 'bg-red-500/10 text-red-400 border border-red-500/20' : 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20'}`}>
                 {stock === 0 ? 'Out of stock' : `${stock} left`}
@@ -348,7 +348,7 @@ export default function DashboardPage() {
                   <YAxis
                     yAxisId="revenue"
                     tick={{ fontSize: isMobile ? 9 : 12, fill: '#64748b' }}
-                    tickFormatter={(v) => v >= 1000 ? `$${(v / 1000).toFixed(0)}k` : `$${v}`}
+                    tickFormatter={(v) => `${currencySymbol}${formatCompactNumber(v, activeStore?.currency, 0)}`}
                     axisLine={false}
                     tickLine={false}
                     width={isMobile ? 32 : 60}
@@ -444,8 +444,8 @@ export default function DashboardPage() {
               ) : (
                 <ResponsiveContainer width="100%" height={isMobile ? 240 : 300}>
                   <BarChart accessibilityLayer={false} data={topProducts} margin={isMobile ? { top: 20, right: 5, left: -15, bottom: 5 } : { top: 25, right: 20, left: 10, bottom: 5 }}>
-                    <XAxis dataKey="sku" tick={{ fontSize: isMobile ? 9 : 12, fill: '#64748b' }} interval={0} angle={isMobile ? -45 : 0} textAnchor={isMobile ? 'end' : 'middle'} height={isMobile ? 50 : 30} axisLine={{ stroke: '#e5e7eb' }} tickLine={false} />
-                    <YAxis tick={{ fontSize: isMobile ? 10 : 12, fill: '#64748b' }} tickFormatter={(v) => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v} width={isMobile ? 40 : 60} axisLine={false} tickLine={false} />
+                    <XAxis dataKey="sku" tickFormatter={(value) => value && value.length > 10 ? value.substring(0, 10) + '...' : value} tick={{ fontSize: isMobile ? 9 : 12, fill: '#64748b' }} interval={0} angle={isMobile ? -45 : 0} textAnchor={isMobile ? 'end' : 'middle'} height={isMobile ? 50 : 30} axisLine={{ stroke: '#e5e7eb' }} tickLine={false} />
+                    <YAxis tick={{ fontSize: isMobile ? 10 : 12, fill: '#64748b' }} tickFormatter={(v) => `${currencySymbol}${formatCompactNumber(v, activeStore?.currency, 0)}`} width={isMobile ? 40 : 60} axisLine={false} tickLine={false} />
                     <Tooltip isAnimationActive={false} animationDuration={0} wrapperStyle={{ transition: 'none' }} cursor={false} content={({ active, payload }) => {
                       if (!active || !payload?.length) return null;
                       const { name, revenue } = payload[0].payload;
@@ -456,8 +456,8 @@ export default function DashboardPage() {
                         </div>
                       );
                     }} />
-                    <Bar dataKey="revenue" fill="#8b5cf6" radius={[4, 4, 0, 0]} barSize={isMobile ? 24 : 36} stroke="none">
-                      <LabelList dataKey="revenue" position="top" formatter={(v) => v >= 1000 ? `$${(v / 1000).toFixed(1)}k` : `$${v}`} style={{ fontSize: isMobile ? 9 : 11, fontWeight: 600, fill: '#64748b' }} />
+                    <Bar dataKey="revenue" fill="#8b5cf6" radius={[4, 4, 0, 0]} barSize={isMobile ? 24 : 36} minPointSize={4} stroke="none">
+                      <LabelList dataKey="revenue" position="top" formatter={(v) => `${currencySymbol}${formatCompactNumber(v, activeStore?.currency, 1)}`} style={{ fontSize: isMobile ? 9 : 11, fontWeight: 600, fill: '#64748b' }} />
                     </Bar>
                   </BarChart>
                 </ResponsiveContainer>
@@ -480,7 +480,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Right Column */}
-        <div className="lg:col-span-2 space-y-5">
+        <div className="lg:col-span-2 flex flex-col gap-5">
           {/* Low Stock Alert */}
           <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
@@ -493,20 +493,19 @@ export default function DashboardPage() {
           </div>
 
           {/* Quick Actions */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden flex-1 flex flex-col">
             <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
               <h3 className="text-[15px] font-semibold text-slate-900 dark:text-slate-100">Quick Actions</h3>
             </div>
-            <div>
+            <div className="flex-1 flex flex-col">
               {quickActions.map(a => (
                 <Link
                   key={a.href}
                   href={a.href}
-                  className={`flex items-center gap-3.5 px-6 py-3.5 border-b border-gray-100 dark:border-gray-700/50 last:border-b-0 transition-colors text-sm font-medium ${
-                    a.highlight
-                      ? 'bg-violet-500/5 text-violet-500 hover:bg-violet-500/10'
-                      : 'text-slate-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-gray-700/50'
-                  }`}
+                  className={`flex items-center gap-3.5 px-6 py-5 border-b border-gray-100 dark:border-gray-700/50 last:border-b-0 transition-colors text-sm font-medium ${a.highlight
+                    ? 'bg-violet-500/5 text-violet-500 hover:bg-violet-500/10'
+                    : 'text-slate-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                    }`}
                 >
                   <span className="text-violet-500">{a.icon}</span>
                   {a.label}

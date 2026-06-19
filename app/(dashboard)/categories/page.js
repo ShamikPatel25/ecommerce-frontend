@@ -296,7 +296,6 @@ export default function CategoriesPage() {
                     <th className="admin-th w-[15%] text-left">Parent</th>
                     <th className="admin-th w-[10%]">Products</th>
                     <th className="admin-th w-[12%]">Status</th>
-                    <th className="admin-th w-[10%]">Updated</th>
                     <th className="admin-th w-[8%]">Actions</th>
                   </tr>
                 </thead>
@@ -366,10 +365,6 @@ export default function CategoriesPage() {
                           </span>
                         </td>
 
-                        {/* Updated */}
-                        <td className="admin-td whitespace-nowrap text-sm text-slate-500 dark:text-gray-400">
-                          {formatDate(cat.updated_at)}
-                        </td>
 
                         {/* Actions */}
                         <td className="admin-td whitespace-nowrap text-center">

@@ -28,8 +28,8 @@ const INPUT_ERROR_CLS =
 const SELECT_CLS = INPUT_CLS + ' appearance-none pr-10';
 const SELECT_ERROR_CLS = INPUT_ERROR_CLS + ' appearance-none pr-10';
 
-const MAX_NAME_LENGTH = 100;
-const MAX_SKU_LENGTH = 30;
+const MAX_NAME_LENGTH = 30;
+const MAX_SKU_LENGTH = 20;
 const MAX_DESCRIPTION_LENGTH = 500;
 
 /* ── Pure utility helpers (outside component) ────────────── */
@@ -619,6 +619,7 @@ export default function CreateProductPage() {
         attribute_values: c.values.map((v) => v.valId),
         price: c.price ? Number.parseFloat(c.price).toFixed(2) : null,
         stock: Number.parseInt(c.stock, 10) || 0,
+        sku: c.sku || null,
       }));
       console.log('Sending combinations:', JSON.stringify(combinations, null, 2));
       await productAPI.generateCatalog(productId, {
@@ -1010,6 +1011,7 @@ export default function CreateProductPage() {
                         {attr.name}
                       </th>
                     ))}
+                    <th className="py-3 px-3 text-left font-semibold text-slate-500 dark:text-gray-400 text-xs uppercase tracking-wider">SKU</th>
                     <th className="py-3 px-3 text-left font-semibold text-slate-500 dark:text-gray-400 text-xs uppercase tracking-wider">Price</th>
                     <th className="py-3 px-3 text-left font-semibold text-slate-500 dark:text-gray-400 text-xs uppercase tracking-wider">Stock</th>
                     <th className="py-3 px-3 text-right font-semibold text-slate-500 dark:text-gray-400 text-xs uppercase tracking-wider">Action</th>
@@ -1029,6 +1031,19 @@ export default function CreateProductPage() {
                           </td>
                         );
                       })}
+                      <td className="py-3 px-3">
+                        <input
+                          type="text"
+                          placeholder="Auto-generated"
+                          value={combo.sku || ''}
+                          maxLength={20}
+                          onChange={(e) => {
+                            const val = e.target.value.replace(/[^a-zA-Z0-9-]/g, '');
+                            updateComboField(idx, 'sku', val);
+                          }}
+                          className="w-32 px-2 py-1.5 rounded-md border border-violet-500/20 bg-violet-500/5 text-sm focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/20 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                        />
+                      </td>
                       <td className="py-3 px-3">
                         <input
                           type="text"

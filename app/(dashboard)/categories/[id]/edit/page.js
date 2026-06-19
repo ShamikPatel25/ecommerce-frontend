@@ -23,8 +23,8 @@ const INPUT_ERROR_CLS =
 
 const SELECT_CLS = INPUT_CLS + ' appearance-none pr-10';
 
-const MAX_NAME_LENGTH = 100;
-const MAX_SLUG_LENGTH = 100;
+const MAX_NAME_LENGTH = 30;
+const MAX_SLUG_LENGTH = 20;
 
 export default function EditCategoryPage() {
   const router = useRouter();
@@ -80,7 +80,7 @@ export default function EditCategoryPage() {
   }, [categoryId, fetchData]);
 
   const generateSlug = (name) =>
-    name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+    name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '').slice(0, MAX_SLUG_LENGTH);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

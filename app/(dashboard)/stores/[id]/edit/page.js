@@ -127,12 +127,12 @@ export default function EditStorePage() {
       clearDraft();
 
       // Update active store if this is the active one
-      if (activeStore?.id === Number(storeId)) {
+      if (activeStore?.id === storeId) {
         const res = await storeAPI.list();
         const data = res.data;
         const allStores = Array.isArray(data) ? data : data?.results || [];
         setGlobalStores(allStores);
-        const updatedStore = allStores.find(s => s.id === Number(storeId));
+        const updatedStore = allStores.find(s => s.id === storeId);
         if (updatedStore) {
           setActiveStore(updatedStore);
         }

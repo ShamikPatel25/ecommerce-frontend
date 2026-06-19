@@ -53,7 +53,7 @@ export default function CreateCategoryPage() {
   };
 
   const generateSlug = (name) =>
-    name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+    name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '').slice(0, MAX_SLUG_LENGTH);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -143,20 +143,20 @@ export default function CreateCategoryPage() {
               <div className="relative">
                 <input
                   type="text"
-                  maxLength={100}
+                  maxLength={30}
                   className={(errors.name ? INPUT_ERROR_CLS : INPUT_CLS) + ' pr-14'}
                   placeholder="e.g. Clothes, Electronics"
                   value={formData.name}
                   onChange={(e) => {
                     const value = e.target.value;
-                    if (value.length <= 100) {
-                      setFormData({ ...formData, name: value, slug: generateSlug(value) });
+                    if (value.length <= 30) {
+                      setFormData({ ...formData, name: value, slug: generateSlug(value).substring(0, 20) });
                       if (errors.name) setErrors({ ...errors, name: null });
                     }
                   }}
                 />
                 <span className="absolute right-3 bottom-1 text-[10px] font-medium text-slate-400 dark:text-gray-500 pointer-events-none">
-                  {formData.name.length}/100
+                  {formData.name.length}/30
                 </span>
               </div>
               {errors.name ? (
@@ -174,20 +174,20 @@ export default function CreateCategoryPage() {
               <div className="relative">
                 <input
                   type="text"
-                  maxLength={100}
+                  maxLength={20}
                   className={(errors.slug ? INPUT_ERROR_CLS : INPUT_CLS) + ' pr-14'}
                   placeholder="auto-generated"
                   value={formData.slug}
                   onChange={(e) => {
                     const value = e.target.value;
-                    if (value.length <= 100) {
+                    if (value.length <= 20) {
                       setFormData({ ...formData, slug: value });
                       if (errors.slug) setErrors({ ...errors, slug: null });
                     }
                   }}
                 />
                 <span className="absolute right-3 bottom-1 text-[10px] font-medium text-slate-400 dark:text-gray-500 pointer-events-none">
-                  {formData.slug.length}/100
+                  {formData.slug.length}/20
                 </span>
               </div>
               {errors.slug ? (

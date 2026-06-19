@@ -36,7 +36,7 @@ export const useSharedDataStore = create((set, get) => ({
 
     set({ categoriesLoading: true });
     try {
-      const res = await categoryAPI.list();
+      const res = await categoryAPI.list({ perPage: 100 });
       const data = Array.isArray(res.data) ? res.data : (res.data?.results || []);
       set({ 
         categories: data, 
